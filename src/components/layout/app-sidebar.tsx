@@ -24,23 +24,17 @@ import {
   SidebarMenuSubItem,
   SidebarRail
 } from '@/components/ui/sidebar';
-import { UserAvatarProfile } from '@/components/user-avatar-profile';
 import { navGroups } from '@/config/nav-config';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { useClerk, useOrganization, useUser } from '@clerk/nextjs';
 import { useFilteredNavGroups } from '@/hooks/use-nav';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
-import { Icons } from '../icons';
-import { OrgSwitcher } from '../org-switcher';
+import { Icons } from '@/components/icons';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { isOpen } = useMediaQuery();
-  const { user } = useUser();
-  const { organization } = useOrganization();
-  const { signOut } = useClerk();
   const router = useRouter();
   const filteredGroups = useFilteredNavGroups(navGroups);
 
@@ -50,8 +44,25 @@ export default function AppSidebar() {
 
   return (
     <Sidebar collapsible='icon'>
-      <SidebarHeader className='group-data-[collapsible=icon]:pt-4'>
-        <OrgSwitcher />
+      <SidebarHeader className='border-b border-sidebar-border px-3 py-3'>
+        <Link href='/dashboard/overview' className='flex items-center gap-2.5 px-1'>
+          <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-primary to-emerald-500 text-primary-foreground shadow-md shadow-primary/20'>
+            <Icons.shoppingCart className='h-5 w-5' />
+          </div>
+          <div className='flex flex-col min-w-0'>
+            <div className='flex items-center gap-1.5'>
+              <span className='font-bold text-sm tracking-tight text-sidebar-foreground truncate'>
+                Tiệm Nhỏ
+              </span>
+              <span className='rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-bold text-primary'>
+                PRO
+              </span>
+            </div>
+            <span className='text-[11px] text-muted-foreground truncate'>
+              tiemnho.vn/@giangdinh
+            </span>
+          </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent className='overflow-x-hidden'>
         {filteredGroups.map((group) => (
@@ -111,7 +122,7 @@ export default function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className='border-t border-sidebar-border p-2'>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -123,47 +134,66 @@ export default function AppSidebar() {
                   />
                 }
               >
-                {user && <UserAvatarProfile className='h-8 w-8 rounded-lg' showInfo user={user} />}
-                <Icons.chevronsDown className='ml-auto size-4' />
+                <div className='h-8 w-8 rounded-full overflow-hidden shrink-0 border border-border'>
+                  <img
+                    src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80'
+                    alt='Giang Định'
+                    className='h-full w-full object-cover'
+                  />
+                </div>
+                <div className='flex flex-col min-w-0 text-left flex-1'>
+                  <span className='truncate text-xs font-semibold text-sidebar-foreground'>
+                    Giang Định
+                  </span>
+                  <span className='truncate text-[10px] text-emerald-500 font-medium'>
+                    ● VietQR Hoạt động
+                  </span>
+                </div>
+                <Icons.chevronsDown className='ml-auto size-4 text-muted-foreground' />
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className='w-(--anchor-width) min-w-56 rounded-lg'
-                side='bottom'
-                align='end'
-                sideOffset={4}
+                className='w-60 rounded-xl p-1.5'
+                side='top'
+                align='start'
+                sideOffset={8}
               >
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className='p-0 font-normal'>
-                    <div className='px-1 py-1.5'>
-                      {user && (
-                        <UserAvatarProfile className='h-8 w-8 rounded-lg' showInfo user={user} />
-                      )}
+                  <DropdownMenuLabel className='p-2 font-normal'>
+                    <div className='flex items-center gap-2.5'>
+                      <div className='h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border'>
+                        <img
+                          src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80'
+                          alt='Giang Định'
+                          className='h-full w-full object-cover'
+                        />
+                      </div>
+                      <div className='flex flex-col min-w-0'>
+                        <span className='font-semibold text-xs text-foreground'>Giang Định</span>
+                        <span className='text-[11px] text-muted-foreground'>@giangdinh</span>
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-                    <Icons.account className='mr-2 h-4 w-4' />
-                    Profile
+                  <DropdownMenuItem onClick={() => window.open('/@giangdinh', '_blank')}>
+                    <Icons.externalLink className='mr-2 h-4 w-4 text-primary' />
+                    Xem Bio Storefront
                   </DropdownMenuItem>
-                  {organization && (
-                    <DropdownMenuItem onClick={() => router.push('/dashboard/billing')}>
-                      <Icons.creditCard className='mr-2 h-4 w-4' />
-                      Billing
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/notifications')}>
-                    <Icons.notification className='mr-2 h-4 w-4' />
-                    Notifications
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/preview')}>
+                    <Icons.deviceMobile className='mr-2 h-4 w-4' />
+                    Live Mobile Preview
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/settings/payment')}>
+                    <Icons.qrcode className='mr-2 h-4 w-4' />
+                    Cài đặt VietQR
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => signOut({ redirectUrl: '/auth/sign-in' })}>
-                    <Icons.logout aria-hidden className='mr-2 h-4 w-4' />
-                    Sign out
+                  <DropdownMenuItem onClick={() => router.push('/')}>
+                    <Icons.world className='mr-2 h-4 w-4' />
+                    Trang chủ Tiệm Nhỏ
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>

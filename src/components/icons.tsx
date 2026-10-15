@@ -87,7 +87,25 @@ import {
   IconUsers,
   IconVideo,
   IconCrown,
-  IconX
+  IconX,
+  IconQrcode,
+  IconDownload,
+  IconCopy,
+  IconBuildingBank,
+  IconDeviceMobile,
+  IconEye,
+  IconLink,
+  IconGift,
+  IconShoppingCart,
+  IconBolt,
+  IconReceipt,
+  IconBrandTiktok,
+  IconBrandInstagram,
+  IconBrandYoutube,
+  IconBrandFacebook,
+  IconFileSpreadsheet,
+  IconRefresh,
+  IconWorld
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -219,5 +237,25 @@ export const Icons = {
   slash: IconSlash,
   calendar: IconCalendar,
   galleryVerticalEnd: IconStack2,
-  moreHorizontal: IconDots
+  moreHorizontal: IconDots,
+
+  // Tiệm Nhỏ specific
+  qrcode: IconQrcode,
+  download: IconDownload,
+  copy: IconCopy,
+  buildingBank: IconBuildingBank,
+  deviceMobile: IconDeviceMobile,
+  eye: IconEye,
+  link: IconLink,
+  gift: IconGift,
+  shoppingCart: IconShoppingCart,
+  bolt: IconBolt,
+  receipt: IconReceipt,
+  tiktok: IconBrandTiktok,
+  instagram: IconBrandInstagram,
+  youtube: IconBrandYoutube,
+  facebook: IconBrandFacebook,
+  fileSpreadsheet: IconFileSpreadsheet,
+  refresh: IconRefresh,
+  world: IconWorld
 };
