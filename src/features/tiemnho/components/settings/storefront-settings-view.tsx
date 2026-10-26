@@ -16,7 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PhoneMockup } from '../mobile-preview/phone-mockup';
 import { Icons } from '@/components/icons';
+import { Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export function StorefrontSettingsView() {
   const [profile, setProfile] = React.useState<CreatorProfile | null>(null);
@@ -30,6 +32,7 @@ export function StorefrontSettingsView() {
   const [username, setUsername] = React.useState('');
   const [bio, setBio] = React.useState('');
   const [avatarUrl, setAvatarUrl] = React.useState('');
+  const [selectedTheme, setSelectedTheme] = React.useState<CreatorProfile['theme']>('obsidian');
   const [tiktok, setTiktok] = React.useState('');
   const [instagram, setInstagram] = React.useState('');
   const [youtube, setYoutube] = React.useState('');
@@ -51,6 +54,7 @@ export function StorefrontSettingsView() {
       setUsername(prof.username);
       setBio(prof.bio);
       setAvatarUrl(prof.avatarUrl);
+      setSelectedTheme(prof.theme || 'obsidian');
       setTiktok(prof.socials.tiktok || '');
       setInstagram(prof.socials.instagram || '');
       setYoutube(prof.socials.youtube || '');
@@ -80,6 +84,7 @@ export function StorefrontSettingsView() {
         username: username.trim().toLowerCase(),
         bio: bio.trim(),
         avatarUrl: avatarUrl.trim() || profile?.avatarUrl,
+        theme: selectedTheme,
         socials: {
           tiktok: tiktok.trim() || undefined,
           instagram: instagram.trim() || undefined,
@@ -107,7 +112,7 @@ export function StorefrontSettingsView() {
         avatarUrl ||
         'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&h=400&q=80',
       verified: true,
-      theme: profile?.theme || 'obsidian',
+      theme: selectedTheme || 'obsidian',
       socials: {
         tiktok: tiktok || undefined,
         instagram: instagram || undefined,
@@ -115,7 +120,18 @@ export function StorefrontSettingsView() {
         facebook: facebook || undefined
       }
     };
-  }, [profile, displayName, username, bio, avatarUrl, tiktok, instagram, youtube, facebook]);
+  }, [
+    profile,
+    displayName,
+    username,
+    bio,
+    avatarUrl,
+    selectedTheme,
+    tiktok,
+    instagram,
+    youtube,
+    facebook
+  ]);
 
   if (loading || !profile || !paymentConfig) {
     return (
@@ -197,6 +213,78 @@ export function StorefrontSettingsView() {
                   placeholder='https://images.unsplash.com/...'
                   className='h-10 text-xs rounded-xl'
                 />
+              </div>
+
+              {/* Theme / Phong cách Giao diện */}
+              <div className='space-y-2 pt-2 border-t border-border/60'>
+                <label className='font-semibold text-foreground text-xs flex items-center gap-1.5'>
+                  <Icons.palette className='h-3.5 w-3.5 text-primary' />
+                  Phong cách Giao diện Storefront
+                </label>
+                <div className='grid grid-cols-2 sm:grid-cols-3 gap-2.5'>
+                  {[
+                    {
+                      id: 'tiktok' as const,
+                      name: 'TikTok Dark',
+                      desc: 'Dark theme, badge & chỉ số chuẩn TikTok',
+                      color: 'bg-zinc-950 border-rose-500/60 text-white ring-1 ring-rose-500/30'
+                    },
+                    {
+                      id: 'obsidian' as const,
+                      name: 'Obsidian Minimal',
+                      desc: 'Phong cách tối giản hiện đại',
+                      color: 'bg-zinc-900 border-zinc-700 text-white'
+                    },
+                    {
+                      id: 'minimal' as const,
+                      name: 'Clean Light',
+                      desc: 'Nền sáng thanh lịch, tinh tế',
+                      color: 'bg-white border-zinc-200 text-zinc-900'
+                    },
+                    {
+                      id: 'emerald' as const,
+                      name: 'Emerald Clean',
+                      desc: 'Xanh lá tài chính & thiên nhiên',
+                      color: 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400'
+                    },
+                    {
+                      id: 'latte' as const,
+                      name: 'Warm Latte',
+                      desc: 'Tone nâu ấm cúng, vintage',
+                      color: 'bg-amber-950/30 border-amber-600/40 text-amber-300'
+                    },
+                    {
+                      id: 'rose' as const,
+                      name: 'Rose Glow',
+                      desc: 'Tone hồng pastel sáng tạo',
+                      color: 'bg-pink-950/30 border-pink-500/40 text-pink-300'
+                    }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type='button'
+                      onClick={() => setSelectedTheme(t.id)}
+                      className={cn(
+                        'p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden',
+                        selectedTheme === t.id
+                          ? 'border-primary ring-2 ring-primary/20 shadow-xs'
+                          : 'border-border hover:border-border/80'
+                      )}
+                    >
+                      <div className='flex items-center justify-between mb-1'>
+                        <span className='font-bold text-xs'>{t.name}</span>
+                        {selectedTheme === t.id && (
+                          <div className='h-4 w-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center'>
+                            <Check className='w-2.5 h-2.5 stroke-[3]' />
+                          </div>
+                        )}
+                      </div>
+                      <p className='text-[10px] text-muted-foreground line-clamp-1 leading-snug'>
+                        {t.desc}
+                      </p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

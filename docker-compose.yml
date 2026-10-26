@@ -1,0 +1,51 @@
+services:
+  # ============================================
+  # Next.js Application (Tiệm Nhỏ)
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/auth/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/auth/sign-up}
+        NEXT_PUBLIC_SENTRY_DISABLED: ${NEXT_PUBLIC_SENTRY_DISABLED:-true}
+    container_name: tiemnho-app
+    restart: unless-stopped
+    ports:
+      - '3006:3006'
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=postgresql://tiemnho:tiemnho_secret_password@postgres:5432/tiemnho_db?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ============================================
+  # Database: PostgreSQL
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: tiemnho-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: tiemnho
+      POSTGRES_PASSWORD: tiemnho_secret_password
+      POSTGRES_DB: tiemnho_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tiemnho -d tiemnho_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

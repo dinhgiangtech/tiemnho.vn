@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
+import { FileText, Gift, Package, Link2, ExternalLink } from 'lucide-react';
 import { Product, ProductType } from '@/constants/mock-tiemnho';
 import { createProduct, updateProduct } from '../../api/service';
 
@@ -156,29 +157,74 @@ export function ProductFormSheet({ product, isOpen, onClose, onSuccess }: Produc
           onSubmit={handleSubmit}
           className='flex-1 overflow-y-auto p-6 space-y-5 text-xs'
         >
-          {/* 1. Chọn loại sản phẩm */}
-          <div className='space-y-2'>
+          {/* 1. Chọn loại sản phẩm (Chuẩn 4 ô trực quan với icon lớn) */}
+          <div className='space-y-2.5'>
             <label className='font-semibold text-foreground block text-sm'>
-              Loại sản phẩm (Phase 1 MVP)
+              Chọn loại hình sản phẩm
             </label>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-2.5'>
-              {PRODUCT_TYPE_OPTIONS.map((opt) => (
-                <div
-                  key={opt.type}
-                  onClick={() => {
-                    setType(opt.type);
-                    if (opt.type === 'LEAD_MAGNET') setPrice(0);
-                  }}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    type === opt.type
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'border-border hover:border-primary/40'
-                  }`}
-                >
-                  <div className='font-semibold text-xs text-foreground mb-0.5'>{opt.label}</div>
-                  <div className='text-[11px] text-muted-foreground leading-snug'>{opt.desc}</div>
-                </div>
-              ))}
+              {[
+                {
+                  type: 'DIGITAL' as ProductType,
+                  label: 'Sản phẩm số (Digital)',
+                  desc: 'Bán file Ebook, template Notion, preset, PDF/Zip...',
+                  icon: FileText,
+                  color: 'text-blue-500 bg-blue-500/10'
+                },
+                {
+                  type: 'LEAD_MAGNET' as ProductType,
+                  label: 'Quà tặng 0đ (Lead Magnet)',
+                  desc: 'Thu thập Email/SĐT người mua bằng checklist miễn phí',
+                  icon: Gift,
+                  color: 'text-emerald-500 bg-emerald-500/10'
+                },
+                {
+                  type: 'PHYSICAL' as ProductType,
+                  label: 'Hàng vật lý / Thủ công',
+                  desc: 'Áo merch, sách in, đồ handmade (thu địa chỉ chi tiết)',
+                  icon: Package,
+                  color: 'text-amber-500 bg-amber-500/10'
+                },
+                {
+                  type: 'EXTERNAL_LINK' as ProductType,
+                  label: 'Nút link liên kết',
+                  desc: 'Dẫn sang Shopee, TikTok Shop, nhóm Zalo, YouTube...',
+                  icon: Link2,
+                  color: 'text-purple-500 bg-purple-500/10'
+                }
+              ].map((opt) => {
+                const IconComp = opt.icon;
+                const isSelected = type === opt.type;
+                return (
+                  <div
+                    key={opt.type}
+                    onClick={() => {
+                      setType(opt.type);
+                      if (opt.type === 'LEAD_MAGNET') setPrice(0);
+                    }}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 ring-1.5 ring-primary shadow-xs'
+                        : 'border-border hover:border-primary/40 bg-card hover:bg-muted/30'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${opt.color}`}>
+                      <IconComp className='h-4 w-4' />
+                    </div>
+                    <div className='min-w-0'>
+                      <div className='font-semibold text-xs text-foreground mb-0.5 flex items-center gap-1.5'>
+                        <span>{opt.label}</span>
+                        {isSelected && (
+                          <Icons.circleCheck className='h-3.5 w-3.5 text-primary shrink-0' />
+                        )}
+                      </div>
+                      <div className='text-[11px] text-muted-foreground leading-snug'>
+                        {opt.desc}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -258,9 +304,9 @@ export function ProductFormSheet({ product, isOpen, onClose, onSuccess }: Produc
 
           {/* 5. Cấu hình theo từng loại */}
           {(type === 'DIGITAL' || type === 'LEAD_MAGNET') && (
-            <div className='rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-3'>
-              <div className='font-semibold text-xs text-primary flex items-center gap-1.5'>
-                <Icons.download className='h-4 w-4' />
+            <div className='rounded-xl border border-border bg-muted/40 p-3.5 space-y-3'>
+              <div className='font-semibold text-xs text-foreground flex items-center gap-1.5'>
+                <Icons.download className='h-4 w-4 text-[#FE2C55]' />
                 Cấu hình Tài nguyên Tự Động Giao (Fulfillment)
               </div>
               <div className='space-y-1.5'>

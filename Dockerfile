@@ -16,7 +16,7 @@ COPY package.json bun.lock* ./
 
 # Install dependencies with frozen lockfile for reproducible builds
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --no-save --frozen-lockfile
+    bun install --no-save
 
 # ============================================
 # Stage 2: Build the Next.js application
@@ -38,8 +38,13 @@ ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL=/auth/sign-in
 ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL=/auth/sign-up
 ARG NEXT_PUBLIC_SENTRY_DISABLED=true
 
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
+ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
+ENV NEXT_PUBLIC_SENTRY_DISABLED=$NEXT_PUBLIC_SENTRY_DISABLED
 ENV BUILD_STANDALONE=true
 
+RUN npx prisma generate
 RUN npm run build
 
 # ============================================
@@ -58,16 +63,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Copy public assets
 COPY --from=builder --chown=node:node /app/public ./public
 
-# Create .next dir with correct permissions for prerender cache
-RUN mkdir .next && chown node:node .next
-
 # Copy standalone output and static files
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
+# Set permissions for cache
+RUN mkdir -p .next && chown -R node:node .next
+
 # Run as non-root user
 USER node
 
-EXPOSE 3000
+EXPOSE 3006
 
 CMD ["node", "server.js"]

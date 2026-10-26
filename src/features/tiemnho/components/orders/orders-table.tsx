@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
+import { Clock, CheckCircle2, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function OrdersTable() {
@@ -37,6 +38,11 @@ export function OrdersTable() {
     return orders
       .filter((o) => {
         if (statusFilter === 'ALL') return true;
+        if (statusFilter === 'PHYSICAL_SHIPPING') {
+          return (
+            o.productType === 'PHYSICAL' && o.status === 'PAID' && o.shippingStatus !== 'COMPLETED'
+          );
+        }
         return o.status === statusFilter;
       })
       .filter((o) => {
@@ -143,26 +149,30 @@ export function OrdersTable() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs (Chuẩn Section 3.3) */}
       <div className='flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none'>
         {[
-          { key: 'ALL', label: 'Tất cả đơn' },
-          { key: 'PAID', label: '✅ Đã thanh toán (PAID)' },
-          { key: 'PENDING', label: '⏳ Chờ VietQR (PENDING)' },
-          { key: 'CANCELLED', label: '❌ Đã hủy' }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setStatusFilter(tab.key)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              statusFilter === tab.key
-                ? 'bg-foreground text-background shadow-xs font-semibold'
-                : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+          { key: 'ALL', label: 'Tất cả đơn', icon: null },
+          { key: 'PENDING', label: 'Chờ thanh toán', icon: Clock },
+          { key: 'PAID', label: 'Đã thanh toán', icon: CheckCircle2 },
+          { key: 'PHYSICAL_SHIPPING', label: 'Đơn vật lý cần gửi', icon: Package }
+        ].map((tab) => {
+          const TabIcon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                statusFilter === tab.key
+                  ? 'bg-foreground text-background shadow-xs font-semibold'
+                  : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {TabIcon && <TabIcon className='w-3.5 h-3.5' strokeWidth={1.75} />}
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Orders Table */}
@@ -258,9 +268,9 @@ export function OrdersTable() {
                           }
                           className='h-7 text-[11px] rounded-lg border border-border bg-background px-2 py-0 font-medium'
                         >
-                          <option value='UNFULFILLED'>📦 Chưa giao</option>
-                          <option value='SHIPPING'>🚚 Đang giao</option>
-                          <option value='COMPLETED'>✅ Hoàn thành</option>
+                          <option value='UNFULFILLED'>Chưa giao</option>
+                          <option value='SHIPPING'>Đang giao</option>
+                          <option value='COMPLETED'>Hoàn thành</option>
                         </select>
                       ) : (
                         <span className='text-[11px] text-muted-foreground'>Tự động (Digital)</span>
@@ -360,9 +370,9 @@ export function OrdersTable() {
               </div>
 
               {selectedOrder.downloadUrl && (
-                <div className='p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-1'>
-                  <div className='font-semibold text-primary flex items-center gap-1.5'>
-                    <Icons.download className='h-4 w-4' />
+                <div className='p-3 rounded-xl bg-muted/40 border border-border space-y-1'>
+                  <div className='font-semibold text-foreground flex items-center gap-1.5'>
+                    <Icons.download className='h-4 w-4 text-[#FE2C55]' />
                     Link tải tài nguyên của khách:
                   </div>
                   <a

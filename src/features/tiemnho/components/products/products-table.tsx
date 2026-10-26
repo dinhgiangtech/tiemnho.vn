@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
+import { FileText, Gift, Package, Link2, ExternalLink } from 'lucide-react';
 
 export function ProductsTable() {
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -115,27 +116,41 @@ export function ProductsTable() {
         </div>
       </div>
 
-      {/* Filter Category Tabs */}
+      {/* Filter Category Tabs with Lucide-React Icons */}
       <div className='flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none'>
         {[
-          { key: 'ALL', label: 'Tất cả sản phẩm' },
-          { key: 'DIGITAL', label: '💻 Sản phẩm số (Digital)' },
-          { key: 'LEAD_MAGNET', label: '🎁 Quà tặng 0đ (Lead Magnet)' },
-          { key: 'PHYSICAL', label: '📦 Hàng vật lý' },
-          { key: 'EXTERNAL_LINK', label: '🔗 Nút chuyển hướng' }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setFilterType(tab.key)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-              filterType === tab.key
-                ? 'bg-foreground text-background shadow-xs font-semibold'
-                : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+          { key: 'ALL', label: 'Tất cả sản phẩm', icon: null },
+          { key: 'DIGITAL', label: 'Sản phẩm số', icon: FileText, color: 'text-blue-500' },
+          { key: 'LEAD_MAGNET', label: 'Quà 0đ', icon: Gift, color: 'text-emerald-500' },
+          { key: 'PHYSICAL', label: 'Hàng vật lý', icon: Package, color: 'text-amber-500' },
+          {
+            key: 'EXTERNAL_LINK',
+            label: 'Nút link liên kết',
+            icon: Link2,
+            color: 'text-purple-500'
+          }
+        ].map((tab) => {
+          const TabIcon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setFilterType(tab.key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                filterType === tab.key
+                  ? 'bg-foreground text-background shadow-xs font-semibold'
+                  : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {TabIcon && (
+                <TabIcon
+                  className={`w-3.5 h-3.5 ${filterType === tab.key ? 'text-inherit' : tab.color}`}
+                  strokeWidth={1.75}
+                />
+              )}
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Products Table Card */}

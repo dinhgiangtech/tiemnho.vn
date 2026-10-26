@@ -2,46 +2,45 @@ import { NavGroup } from '@/types';
 
 export const navGroups: NavGroup[] = [
   {
-    label: 'Kinh doanh & Vận hành',
+    label: 'Cửa hàng & Vận hành',
     items: [
       {
-        title: 'Tổng quan',
+        title: 'Home',
         url: '/dashboard/overview',
         icon: 'dashboard',
         isActive: false,
-        shortcut: ['o', 'o'],
+        shortcut: ['h', 'h'],
         items: []
       },
       {
-        title: 'Sản phẩm',
+        title: 'My Store',
         url: '/dashboard/products',
-        icon: 'product',
-        shortcut: ['p', 'p'],
+        icon: 'store',
+        shortcut: ['m', 's'],
         isActive: false,
         items: []
       },
       {
-        title: 'Đơn hàng',
+        title: 'Income',
         url: '/dashboard/orders',
         icon: 'receipt',
-        shortcut: ['d', 'd'],
+        shortcut: ['i', 'n'],
         isActive: false,
         items: []
       },
       {
-        title: 'Khách hàng & Leads',
+        title: 'Customers',
         url: '/dashboard/leads',
-        icon: 'teams',
-        shortcut: ['l', 'l'],
+        icon: 'users',
+        shortcut: ['c', 'u'],
         isActive: false,
         items: []
       },
       {
-        title: 'Live Mobile Preview',
+        title: 'Live Preview',
         url: '/dashboard/preview',
-        icon: 'deviceMobile',
-        shortcut: ['m', 'm'],
-        isActive: false,
+        icon: 'smartphone',
+        shortcut: ['p', 'v'],
         items: []
       }
     ]
@@ -73,7 +72,7 @@ export const navGroups: NavGroup[] = [
       {
         title: 'Trang chủ Tiệm Nhỏ',
         url: '/',
-        icon: 'world',
+        icon: 'home',
         isActive: false,
         items: []
       },

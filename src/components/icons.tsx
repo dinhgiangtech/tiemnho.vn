@@ -2,6 +2,7 @@ import {
   IconAdjustmentsHorizontal,
   IconAlertCircle,
   IconAlertTriangle,
+  IconArrowLeft,
   IconArrowRight,
   IconBell,
   IconBold,
@@ -105,7 +106,9 @@ import {
   IconBrandFacebook,
   IconFileSpreadsheet,
   IconRefresh,
-  IconWorld
+  IconWorld,
+  IconBuildingStore,
+  IconHome
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -114,6 +117,7 @@ export const Icons = {
   // General
   alertCircle: IconAlertCircle,
   warning: IconAlertTriangle,
+  arrowLeft: IconArrowLeft,
   arrowRight: IconArrowRight,
   check: IconCheck,
   checks: IconChecks,
@@ -240,6 +244,10 @@ export const Icons = {
   moreHorizontal: IconDots,
 
   // Tiệm Nhỏ specific
+  store: IconBuildingStore,
+  users: IconUsers,
+  smartphone: IconDeviceMobile,
+  home: IconHome,
   qrcode: IconQrcode,
   download: IconDownload,
   copy: IconCopy,
@@ -247,6 +255,7 @@ export const Icons = {
   deviceMobile: IconDeviceMobile,
   eye: IconEye,
   link: IconLink,
+  link2: IconLink,
   gift: IconGift,
   shoppingCart: IconShoppingCart,
   bolt: IconBolt,

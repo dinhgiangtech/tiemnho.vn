@@ -16,7 +16,7 @@ export type CreatorProfile = {
   avatarUrl: string;
   coverUrl?: string;
   verified: boolean;
-  theme: 'obsidian' | 'minimal' | 'latte' | 'emerald' | 'rose';
+  theme: 'obsidian' | 'minimal' | 'latte' | 'emerald' | 'rose' | 'tiktok';
   socials: {
     tiktok?: string;
     instagram?: string;

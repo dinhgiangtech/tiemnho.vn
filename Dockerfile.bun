@@ -33,6 +33,10 @@ ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL=/auth/sign-in
 ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL=/auth/sign-up
 ARG NEXT_PUBLIC_SENTRY_DISABLED=true
 
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
+ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
+ENV NEXT_PUBLIC_SENTRY_DISABLED=$NEXT_PUBLIC_SENTRY_DISABLED
 ENV BUILD_STANDALONE=true
 
 RUN bun run build
@@ -53,12 +57,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Copy public assets
 COPY --from=builder --chown=bun:bun /app/public ./public
 
-# Create .next dir with correct permissions for prerender cache
-RUN mkdir .next && chown bun:bun .next
-
 # Copy standalone output and static files
 COPY --from=builder --chown=bun:bun /app/.next/standalone ./
 COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
+
+# Set permissions for cache
+RUN mkdir -p .next && chown -R bun:bun .next
 
 # Run as non-root user
 USER bun

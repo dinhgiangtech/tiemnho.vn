@@ -1,0 +1,122 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ProductType {
+  DIGITAL
+  LEAD_MAGNET
+  PHYSICAL
+  EXTERNAL_LINK
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum ShippingStatus {
+  UNFULFILLED
+  SHIPPING
+  COMPLETED
+}
+
+model CreatorProfile {
+  id          String   @id @default(cuid())
+  username    String   @unique @default("tiemnho")
+  displayName String   @default("Tiệm Nhỏ Creator")
+  bio         String   @default("Chào mừng bạn ghé Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số chất lượng cao.")
+  avatarUrl   String   @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80")
+  coverUrl    String?  @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80")
+  verified    Boolean  @default(true)
+  theme       String   @default("obsidian")
+  tiktok      String?  @default("https://tiktok.com/@tiemnho")
+  instagram   String?  @default("https://instagram.com/tiemnho")
+  youtube     String?  @default("https://youtube.com/@tiemnho")
+  threads     String?  @default("https://threads.net/@tiemnho")
+  facebook    String?  @default("https://facebook.com/tiemnho")
+  zalo        String?  @default("0987654321")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  creatorId     String      @default("creator-1")
+  type          ProductType @default(DIGITAL)
+  title         String
+  description   String      @db.Text
+  price         Float       @default(0)
+  originalPrice Float?
+  coverImage    String      @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80")
+  fileUrl       String?
+  fileName      String?
+  externalUrl   String?
+  buttonText    String?     @default("Tải ngay")
+  isPublished   Boolean     @default(true)
+  isFeatured    Boolean     @default(false)
+  displayOrder  Int         @default(0)
+  soldCount     Int         @default(0)
+  stock         Int?        @default(999)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  orders        Order[]
+}
+
+model Order {
+  id              String          @id @default(cuid())
+  orderCode       String          @unique
+  creatorId       String          @default("creator-1")
+  productId       String?
+  product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productTitle    String
+  productType     ProductType     @default(DIGITAL)
+  amount          Float
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  shippingAddress String?
+  customerNote    String?
+  status          OrderStatus     @default(PENDING)
+  shippingStatus  ShippingStatus? @default(UNFULFILLED)
+  paymentMethod   String          @default("VIETQR")
+  paidAt          DateTime?
+  downloadUrl     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Lead {
+  id            String   @id @default(cuid())
+  creatorId     String   @default("creator-1")
+  name          String
+  email         String
+  phone         String
+  sourceProduct String
+  sourceType    String   @default("LEAD_MAGNET")
+  totalSpent    Float    @default(0)
+  ordersCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PaymentConfig {
+  id             String    @id @default("default-payment")
+  bankId         String    @default("MB")
+  bankName       String    @default("MB Bank - Ngân hàng Quân Đội")
+  accountNumber  String    @default("0987654321")
+  accountName    String    @default("NGUYEN VAN TIEM")
+  provider       String    @default("payOS")
+  apiKey         String    @default("test_api_key_123456")
+  checksumKey    String    @default("test_checksum_key_abcdef")
+  webhookUrl     String    @default("https://tiemnho.vn/api/webhooks/vietqr")
+  isActive       Boolean   @default(true)
+  lastPingTestAt DateTime?
+  updatedAt      DateTime  @updatedAt
+}

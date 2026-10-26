@@ -31,11 +31,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { Icons } from '@/components/icons';
+import { Logo } from '@/components/common/logo';
+import { useClerk } from '@clerk/nextjs';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { isOpen } = useMediaQuery();
   const router = useRouter();
+  const { signOut } = useClerk();
   const filteredGroups = useFilteredNavGroups(navGroups);
 
   React.useEffect(() => {
@@ -45,24 +48,12 @@ export default function AppSidebar() {
   return (
     <Sidebar collapsible='icon'>
       <SidebarHeader className='border-b border-sidebar-border px-3 py-3'>
-        <Link href='/dashboard/overview' className='flex items-center gap-2.5 px-1'>
-          <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-primary to-emerald-500 text-primary-foreground shadow-md shadow-primary/20'>
-            <Icons.shoppingCart className='h-5 w-5' />
-          </div>
-          <div className='flex flex-col min-w-0'>
-            <div className='flex items-center gap-1.5'>
-              <span className='font-bold text-sm tracking-tight text-sidebar-foreground truncate'>
-                Tiệm Nhỏ
-              </span>
-              <span className='rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-bold text-primary'>
-                PRO
-              </span>
-            </div>
-            <span className='text-[11px] text-muted-foreground truncate'>
-              tiemnho.vn/@giangdinh
-            </span>
-          </div>
-        </Link>
+        <div className='flex items-center justify-between px-1'>
+          <Logo size='md' href='/dashboard/overview' showIconBadge={true} />
+          <span className='rounded-full bg-zinc-100 dark:bg-zinc-800 border border-border/60 px-1.5 py-0.2 text-[10px] font-bold text-foreground'>
+            PRO
+          </span>
+        </div>
       </SidebarHeader>
       <SidebarContent className='overflow-x-hidden'>
         {filteredGroups.map((group) => (
@@ -86,9 +77,18 @@ export default function AppSidebar() {
                         />
                       }
                     >
-                      {item.icon && <Icon />}
+                      {item.icon && (
+                        <Icon
+                          className={
+                            pathname === item.url
+                              ? 'w-4 h-4 text-[#FE2C55] shrink-0'
+                              : 'w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0'
+                          }
+                          strokeWidth={1.75}
+                        />
+                      )}
                       <span>{item.title}</span>
-                      <Icons.chevronRight className='ml-auto transition-transform duration-200 group-data-panel-open/collapsible:rotate-90' />
+                      <Icons.chevronRight className='ml-auto h-4 w-4 transition-transform duration-200 group-data-panel-open/collapsible:rotate-90' />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
@@ -111,8 +111,20 @@ export default function AppSidebar() {
                       render={<Link href={item.url} aria-label={item.title} />}
                       tooltip={item.title}
                       isActive={pathname === item.url}
+                      className={
+                        pathname === item.url
+                          ? 'font-bold text-[#161823] dark:text-white bg-sidebar-accent'
+                          : 'text-neutral-600 dark:text-neutral-400 hover:text-foreground'
+                      }
                     >
-                      <Icon />
+                      <Icon
+                        className={
+                          pathname === item.url
+                            ? 'w-4 h-4 text-[#FE2C55] shrink-0'
+                            : 'w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0'
+                        }
+                        strokeWidth={1.75}
+                      />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -194,6 +206,13 @@ export default function AppSidebar() {
                   <DropdownMenuItem onClick={() => router.push('/')}>
                     <Icons.world className='mr-2 h-4 w-4' />
                     Trang chủ Tiệm Nhỏ
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => signOut({ redirectUrl: '/' })}
+                    className='text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer font-medium'
+                  >
+                    <Icons.logout className='mr-2 h-4 w-4' />
+                    Đăng xuất
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </DropdownMenuContent>

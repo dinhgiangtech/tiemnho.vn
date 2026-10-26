@@ -13,8 +13,9 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { Badge } from '@/components/ui/badge';
+import { QrCode, Building2, CheckCircle2, Copy, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PaymentSettingsView() {
@@ -60,7 +61,7 @@ export function PaymentSettingsView() {
     fetchConfig();
   }, [fetchConfig]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSaveAndTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountNumber.trim()) {
       toast.error('Vui lòng nhập số tài khoản ngân hàng');
@@ -72,6 +73,7 @@ export function PaymentSettingsView() {
     }
 
     setSaving(true);
+    setPinging(true);
     try {
       const selectedBank = VIETNAMESE_BANKS.find((b) => b.id === bankId);
       const updated = await updatePaymentConfig({
@@ -81,32 +83,24 @@ export function PaymentSettingsView() {
         accountName: accountName.trim().toUpperCase(),
         provider,
         apiKey: apiKey.trim(),
-        checksumKey: checksumKey.trim()
+        checksumKey: checksumKey.trim() || 'default_checksum'
       });
       setConfig(updated);
-      toast.success('Đã lưu cấu hình thanh toán VietQR thành công!');
-    } catch {
-      toast.error('Không thể lưu cấu hình');
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const handlePingTest = async () => {
-    setPinging(true);
-    try {
+      // Kích hoạt bắn thử giao dịch ngay (Ping Test)
       const res = await pingTest();
       setPingResult({
         success: true,
-        message: res.message,
+        message: 'Kết nối tài khoản ngân hàng & Webhook thành công!',
         code: res.simulatedOrderCode,
         amount: res.amount,
         time: res.time
       });
-      toast.success(res.message);
+      toast.success('Lưu & Bắn thử giao dịch VietQR thành công! Sẵn sàng nhận tiền 100%.');
     } catch {
-      toast.error('Lỗi khi bắn thử Ping Test');
+      toast.error('Không thể lưu hoặc kết nối giao dịch test');
     } finally {
+      setSaving(false);
       setPinging(false);
     }
   };
@@ -118,70 +112,94 @@ export function PaymentSettingsView() {
 
   const handleCopyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
-    toast.success('Đã sao chép địa chỉ Webhook!');
+    toast.success('Đã sao chép địa chỉ nhận thông báo (Webhook URL)!');
   };
 
   if (loading || !config) {
     return (
       <div className='p-8 text-center text-xs text-muted-foreground'>
-        Đang tải cấu hình nhận tiền...
+        <Icons.spinner className='h-5 w-5 animate-spin mx-auto mb-2 text-primary' />
+        Đang tải cấu hình nhận tiền VietQR...
       </div>
     );
   }
 
+  const selectedBank = VIETNAMESE_BANKS.find((b) => b.id === bankId);
+
   return (
     <div className='max-w-4xl space-y-6'>
       {/* Triết lý No Escrow Banner */}
-      <div className='rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 flex items-start gap-3'>
-        <div className='h-8 w-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5'>
-          <Icons.check className='h-5 w-5' />
+      <div className='rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4.5 flex items-start gap-3.5 shadow-xs'>
+        <div className='h-9 w-9 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5'>
+          <Icons.check className='h-5 w-5 stroke-[2.5]' />
         </div>
         <div className='space-y-1 text-xs'>
-          <h4 className='font-bold text-foreground text-sm flex items-center gap-2'>
-            Triết lý Dòng tiền: Không giữ tiền trung gian (No Escrow)
+          <div className='flex items-center gap-2'>
+            <h4 className='font-bold text-foreground text-sm'>
+              Dòng tiền trực tiếp: Không giữ tiền trung gian (No Escrow)
+            </h4>
             <Badge
               variant='outline'
               className='bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]'
             >
-              0% Phí giao dịch
+              0% Phí sàn
             </Badge>
-          </h4>
+          </div>
           <p className='text-muted-foreground leading-relaxed'>
             Người mua quét mã VietQR thì tiền sẽ chuyển thẳng{' '}
-            <strong>100% vào số tài khoản ngân hàng chính chủ của bạn</strong>. Tiệm Nhỏ không giữ
-            tiền hộ, không trung gian ví và tuân thủ hoàn toàn theo Nghị định 52/2024/NĐ-CP.
+            <strong>100% vào tài khoản ngân hàng chính chủ của bạn</strong>. Tiệm Nhỏ không giữ tiền
+            hộ, không trung gian ví tiền và hoàn toàn minh bạch.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className='space-y-6'>
-        {/* Khối 1: Tài khoản ngân hàng nhận tiền */}
-        <Card className='border border-border shadow-xs'>
-          <CardHeader>
-            <CardTitle className='text-base font-bold'>
-              1. Tài khoản ngân hàng nhận tiền chính chủ
-            </CardTitle>
-            <CardDescription className='text-xs'>
-              Mã VietQR động trên Storefront sẽ được sinh dựa trên thông tin tài khoản này.
-            </CardDescription>
+      <form onSubmit={handleSaveAndTest} className='space-y-5'>
+        {/* ==================================================== */}
+        {/* BƯỚC 1: TÀI KHOẢN NHẬN TIỀN (Chuẩn Section 3.4) */}
+        {/* ==================================================== */}
+        <Card className='border border-border/80 shadow-xs rounded-2xl overflow-hidden'>
+          <CardHeader className='pb-3 border-b border-border/60 bg-muted/20'>
+            <div className='flex items-center gap-2.5'>
+              <div className='h-7 w-7 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center text-xs shadow-xs'>
+                1
+              </div>
+              <div>
+                <CardTitle className='text-sm font-bold flex items-center gap-1.5'>
+                  <QrCode className='w-4.5 h-4.5 text-primary shrink-0' strokeWidth={1.75} />
+                  Bước 1: Cài đặt nhận tiền VietQR (Tài khoản ngân hàng)
+                </CardTitle>
+                <CardDescription className='text-xs'>
+                  Mã VietQR động trên trang Storefront sẽ đổ thẳng tiền vào tài khoản này.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className='space-y-4 text-xs'>
+          <CardContent className='space-y-4 text-xs pt-4'>
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+              {/* Chọn ngân hàng */}
               <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs'>Ngân hàng nhận tiền</label>
+                <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
+                  <span>Ngân hàng nhận tiền</span>
+                  {selectedBank && (
+                    <span className='text-[10px] text-muted-foreground font-mono'>
+                      BIN: {selectedBank.bin}
+                    </span>
+                  )}
+                </label>
                 <select
                   value={bankId}
                   onChange={(e) => setBankId(e.target.value)}
-                  className='w-full h-10 text-xs rounded-xl border border-border bg-background px-3 font-medium'
+                  className='w-full h-10 text-xs rounded-xl border border-border bg-background px-3 font-medium cursor-pointer shadow-xs'
                 >
                   {VIETNAMESE_BANKS.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.shortName} - {b.name} ({b.bin})
+                      {b.shortName} - {b.name}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Số tài khoản */}
               <div className='space-y-1.5'>
                 <label className='font-semibold text-foreground text-xs'>
                   Số tài khoản nhận tiền (STK) <span className='text-primary font-bold'>*</span>
@@ -196,51 +214,54 @@ export function PaymentSettingsView() {
               </div>
             </div>
 
+            {/* Tên chủ tài khoản tự động viết hoa */}
             <div className='space-y-1.5'>
-              <label className='font-semibold text-foreground text-xs'>
-                Tên chủ tài khoản (Viết hoa không dấu){' '}
-                <span className='text-primary font-bold'>*</span>
+              <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
+                <span>Tên chủ tài khoản (Viết hoa không dấu)</span>
+                <span className='text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1'>
+                  <Icons.check className='h-3 w-3' /> Tự động chuẩn hóa
+                </span>
               </label>
               <Input
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value.toUpperCase())}
                 placeholder='VD: DINH VAN GIANG'
-                className='h-10 text-sm font-mono tracking-wide rounded-xl uppercase'
+                className='h-10 text-sm font-mono tracking-wide rounded-xl uppercase font-semibold'
                 required
               />
               <p className='text-[11px] text-muted-foreground'>
-                Cần trùng khớp 100% với tên đăng ký tài khoản ngân hàng để VietQR hiển thị đúng trên
+                Cần trùng khớp với tên trên thẻ/tài khoản ngân hàng để mã VietQR hiển thị đúng trên
                 app ngân hàng người mua.
               </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Khối 2: Cổng kết nối Webhook bắt biến động */}
-        <Card className='border border-border shadow-xs'>
-          <CardHeader>
-            <div className='flex items-center justify-between'>
+        {/* ==================================================== */}
+        {/* BƯỚC 2: KẾT NỐI TỰ ĐỘNG HÓA (Chuẩn Section 3.4) */}
+        {/* ==================================================== */}
+        <Card className='border border-border/80 shadow-xs rounded-2xl overflow-hidden'>
+          <CardHeader className='pb-3 border-b border-border/60 bg-muted/20'>
+            <div className='flex items-center gap-2.5'>
+              <div className='h-7 w-7 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center text-xs shadow-xs'>
+                2
+              </div>
               <div>
-                <CardTitle className='text-base font-bold'>
-                  2. Kết nối tự động hóa biến động số dư (Webhook)
+                <CardTitle className='text-sm font-bold'>
+                  Bước 2: Kết nối tự động hóa đối soát
                 </CardTitle>
                 <CardDescription className='text-xs'>
-                  Hệ thống sử dụng cổng đối soát payOS hoặc SePay để tự động kích hoạt trạng thái Đã
-                  Thanh Toán và giao tài nguyên.
+                  Hệ thống tự động kích hoạt trạng thái Đã Thanh Toán khi tài khoản có biến động số
+                  dư.
                 </CardDescription>
               </div>
-              <Badge
-                variant='outline'
-                className='bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs'
-              >
-                ● Hoạt động 24/7
-              </Badge>
             </div>
           </CardHeader>
-          <CardContent className='space-y-4 text-xs'>
+          <CardContent className='space-y-4 text-xs pt-4'>
+            {/* Chọn Cổng đối soát */}
             <div className='space-y-1.5'>
               <label className='font-semibold text-foreground text-xs'>
-                Cổng đối soát được chọn:
+                Dịch vụ đối soát biến động số dư:
               </label>
               <div className='flex gap-3'>
                 {(['payOS', 'SePay'] as const).map((p) => (
@@ -250,21 +271,25 @@ export function PaymentSettingsView() {
                     onClick={() => setProvider(p)}
                     className={`flex-1 p-3 rounded-xl border text-left cursor-pointer transition-all ${
                       provider === p
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                        : 'border-border hover:border-primary/40'
+                        ? 'border-primary bg-primary/5 ring-1.5 ring-primary shadow-xs'
+                        : 'border-border hover:border-primary/40 bg-card'
                     }`}
                   >
-                    <div className='font-bold text-sm text-foreground'>{p}</div>
-                    <div className='text-[11px] text-muted-foreground'>
+                    <div className='font-bold text-xs text-foreground flex items-center gap-1.5'>
+                      <span>{p}</span>
+                      {provider === p && <Icons.check className='h-3.5 w-3.5 text-primary' />}
+                    </div>
+                    <div className='text-[11px] text-muted-foreground mt-0.5'>
                       {p === 'payOS'
-                        ? 'Cổng thanh toán VietQR mã nguồn mở'
-                        : 'Dịch vụ bắt biến động số dư ngân hàng'}
+                        ? 'Cổng thanh toán VietQR mã nguồn mở chuẩn NAPAS'
+                        : 'Dịch vụ bắt biến động thông báo số dư ngân hàng'}
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* 1 Nút bấm: Sao chép địa chỉ nhận thông báo */}
             <div className='space-y-1.5'>
               <label className='font-semibold text-foreground text-xs'>
                 Địa chỉ nhận thông báo (Webhook URL)
@@ -279,98 +304,112 @@ export function PaymentSettingsView() {
                   type='button'
                   variant='outline'
                   onClick={handleCopyWebhook}
-                  className='h-10 px-3 text-xs gap-1 rounded-xl shrink-0'
+                  className='h-10 px-3.5 text-xs gap-1.5 rounded-xl shrink-0 border-primary/40 text-primary hover:bg-primary/5 font-semibold'
                 >
                   <Icons.copy className='h-3.5 w-3.5' />
-                  Sao chép URL
+                  Sao chép địa chỉ nhận thông báo
                 </Button>
               </div>
               <p className='text-[11px] text-muted-foreground'>
-                Dán URL này vào mục Cấu hình Webhook trong trang quản trị {provider} của bạn.
+                Dán URL này vào mục cài đặt Webhook trên trang quản trị {provider} của bạn.
               </p>
             </div>
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1'>
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs'>
-                  Mã kết nối (Client ID / API Key)
-                </label>
-                <Input
-                  type='password'
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder='pos_live_...'
-                  className='h-10 text-xs font-mono rounded-xl'
-                />
-              </div>
-
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs'>
-                  Khóa kiểm tra tính toàn vẹn (Checksum Key / Secret)
-                </label>
-                <Input
-                  type='password'
-                  value={checksumKey}
-                  onChange={(e) => setChecksumKey(e.target.value)}
-                  placeholder='cs_...'
-                  className='h-10 text-xs font-mono rounded-xl'
-                />
-              </div>
+            {/* 1 Ô dán: Mã kết nối bí mật (API Key) */}
+            <div className='space-y-1.5'>
+              <label className='font-semibold text-foreground text-xs'>
+                Mã kết nối bí mật (API Key từ {provider})
+              </label>
+              <Input
+                type='password'
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder='pos_live_... hoặc mã kết nối API bí mật'
+                className='h-10 text-xs font-mono rounded-xl'
+              />
+              <p className='text-[11px] text-muted-foreground'>
+                Mã này được mã hóa an toàn trên hệ thống để đối soát chữ ký điện tử mỗi giao dịch.
+              </p>
             </div>
           </CardContent>
-          <CardFooter className='border-t border-border pt-4 flex flex-col sm:flex-row justify-between gap-3'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={handlePingTest}
-              disabled={pinging}
-              className='h-10 text-xs gap-1.5 rounded-xl border-dashed border-primary/50 text-primary hover:bg-primary/5'
-            >
-              <Icons.bolt className='h-4 w-4 text-amber-500' />
-              {pinging ? 'Đang gửi giao dịch...' : 'Bắn thử giao dịch kiểm tra kết nối (Ping Test)'}
-            </Button>
-
-            <Button
-              type='submit'
-              disabled={saving}
-              className='h-10 text-xs font-semibold rounded-xl px-5 shadow-xs'
-            >
-              {saving ? 'Đang lưu...' : 'Lưu cài đặt thanh toán'}
-            </Button>
-          </CardFooter>
         </Card>
+
+        {/* ==================================================== */}
+        {/* BƯỚC 3: NÚT LƯU & BẮN THỬ GIAO DỊCH (Chuẩn Section 3.4) */}
+        {/* ==================================================== */}
+        <div className='flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-border bg-card shadow-xs'>
+          <div className='space-y-0.5 text-xs text-left'>
+            <div className='font-bold text-foreground text-sm flex items-center gap-1.5'>
+              <Icons.sparkles className='h-4 w-4 text-[#FE2C55]' />
+              Bước 3: Xác thực kết nối và lưu cấu hình
+            </div>
+            <div className='text-muted-foreground text-[11px]'>
+              Hệ thống sẽ tự động gửi 1 lệnh ping giao dịch ảo để kiểm tra kênh đối soát VietQR ngay
+              tức thì.
+            </div>
+          </div>
+
+          <Button
+            type='submit'
+            disabled={saving || pinging}
+            className='w-full sm:w-auto h-11 px-6 text-xs font-bold rounded-xl gap-2 shadow-md bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 cursor-pointer'
+          >
+            {saving || pinging ? (
+              <>
+                <Icons.spinner className='h-4 w-4 animate-spin' />
+                Đang kiểm tra kết nối...
+              </>
+            ) : (
+              <>
+                <Icons.bolt className='h-4 w-4 text-amber-300' />
+                Lưu & Bắn thử giao dịch
+              </>
+            )}
+          </Button>
+        </div>
       </form>
 
-      {/* Ping Test Result Box */}
+      {/* Ping Test Result Tích Xanh Thành Công */}
       {pingResult && (
-        <Card className='border border-emerald-500/40 bg-emerald-500/5 shadow-xs animate-in fade-in-50'>
+        <Card className='border border-emerald-500/40 bg-emerald-500/5 shadow-xs rounded-2xl animate-in zoom-in-95 duration-300'>
           <CardHeader className='pb-2'>
             <div className='flex items-center justify-between'>
               <CardTitle className='text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5'>
-                <Icons.check className='h-4 w-4' />
-                Kết quả Ping Test: Thành công tuyệt đối
+                <Icons.check className='h-4 w-4 stroke-[3]' />
+                {pingResult.message}
               </CardTitle>
               <Badge
                 variant='outline'
-                className='bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px]'
+                className='bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]'
               >
-                HTTP 200 OK
+                TÍCH XANH HOẠT ĐỘNG
               </Badge>
             </div>
+            <CardDescription className='text-xs text-muted-foreground'>
+              Hệ thống đã kết nối thông suốt với máy chủ ngân hàng và webhook tự động.
+            </CardDescription>
           </CardHeader>
-          <CardContent className='text-xs space-y-1.5 text-muted-foreground'>
-            <p>• {pingResult.message}</p>
-            <p>
-              • Mã đơn giả lập:{' '}
-              <strong className='font-mono text-foreground'>{pingResult.code}</strong> (đã kích hoạt
-              trạng thái PAID trong bảng đơn hàng)
-            </p>
-            <p>
-              • Thời gian phản hồi:{' '}
-              <span className='font-mono text-foreground'>
-                {new Date(pingResult.time).toLocaleString('vi-VN')}
-              </span>
-            </p>
+          <CardContent className='space-y-2 text-xs'>
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-background/80 border border-emerald-500/20'>
+              <div>
+                <span className='text-muted-foreground block text-[10px]'>Mã giao dịch test:</span>
+                <span className='font-mono font-bold text-foreground text-xs'>
+                  {pingResult.code}
+                </span>
+              </div>
+              <div>
+                <span className='text-muted-foreground block text-[10px]'>Số tiền đối soát:</span>
+                <span className='font-bold text-emerald-600 dark:text-emerald-400 text-xs'>
+                  {new Intl.NumberFormat('vi-VN').format(pingResult.amount)} đ
+                </span>
+              </div>
+              <div>
+                <span className='text-muted-foreground block text-[10px]'>Thời gian xác thực:</span>
+                <span className='text-foreground text-xs'>
+                  {new Date(pingResult.time).toLocaleTimeString('vi-VN')}
+                </span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

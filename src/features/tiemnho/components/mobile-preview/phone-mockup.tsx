@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { CreatorProfile, Product, PaymentConfig } from '@/constants/mock-tiemnho';
 import { StorefrontView } from '../storefront/storefront-view';
+import { TikTokStorefrontView } from '../storefront/tiktok-storefront-view';
 
 interface PhoneMockupProps {
   profile: CreatorProfile;
@@ -41,12 +42,21 @@ export function PhoneMockup({ profile, products, paymentConfig, className }: Pho
 
           {/* Interactive Storefront Scroll Container */}
           <div className='flex-1 overflow-y-auto overscroll-contain scrollbar-none'>
-            <StorefrontView
-              profile={profile}
-              products={products}
-              paymentConfig={paymentConfig}
-              isPreview={true}
-            />
+            {profile.theme === 'tiktok' ? (
+              <TikTokStorefrontView
+                profile={profile}
+                products={products}
+                paymentConfig={paymentConfig}
+                isPreview={true}
+              />
+            ) : (
+              <StorefrontView
+                profile={profile}
+                products={products}
+                paymentConfig={paymentConfig}
+                isPreview={true}
+              />
+            )}
           </div>
 
           {/* iOS Home Indicator Bar */}

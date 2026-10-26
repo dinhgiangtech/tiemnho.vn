@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { Logo } from '@/components/common/logo';
 import { getProfile, getProducts, getPaymentConfig } from '@/features/tiemnho/api/service';
 import { PhoneMockup } from '@/features/tiemnho/components/mobile-preview/phone-mockup';
 import { auth } from '@clerk/nextjs/server';
+import { UserButton } from '@clerk/nextjs';
 
 export const metadata = {
   title: 'Tiệm Nhỏ (TiemNho.vn) - Nền tảng Bio Storefront Chuẩn Stan Store Cho Creator Việt Nam',
@@ -26,28 +28,20 @@ export default async function LandingPage() {
       <header className='sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md'>
         <div className='max-w-6xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6'>
           {/* Logo */}
-          <Link href='/' className='flex items-center gap-2.5'>
-            <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-emerald-500 text-primary-foreground shadow-md shadow-primary/20'>
-              <Icons.shoppingCart className='h-5 w-5' />
-            </div>
-            <div className='flex items-center gap-1.5'>
-              <span className='font-bold text-lg tracking-tight'>Tiệm Nhỏ</span>
-              <Badge
-                variant='outline'
-                className='text-[10px] uppercase font-bold text-primary border-primary/30'
-              >
-                Stan Store VN
-              </Badge>
-            </div>
-          </Link>
+          <div className='flex items-center gap-3'>
+            <Logo size='md' href='/' showIconBadge={true} />
+            <Badge
+              variant='outline'
+              className='hidden sm:inline-flex text-[10px] uppercase font-bold text-foreground border-border bg-muted/40'
+            >
+              Stan Store VN
+            </Badge>
+          </div>
 
           {/* Nav Links */}
           <nav className='hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground'>
             <a href='#features' className='hover:text-foreground transition-colors'>
               Tính năng
-            </a>
-            <a href='#no-escrow' className='hover:text-foreground transition-colors'>
-              Triết lý 0% Phí
             </a>
             <a href='#pricing' className='hover:text-foreground transition-colors'>
               Bảng giá SaaS
@@ -65,12 +59,15 @@ export default async function LandingPage() {
           {/* Action CTAs */}
           <div className='flex items-center gap-2.5'>
             {userId ? (
-              <Link href='/dashboard/overview'>
-                <Button size='sm' className='rounded-xl font-semibold gap-1.5 shadow-sm'>
-                  <Icons.dashboard className='h-4 w-4' />
-                  Vào Dashboard
-                </Button>
-              </Link>
+              <div className='flex items-center gap-2'>
+                <Link href='/dashboard/overview'>
+                  <Button size='sm' className='rounded-xl font-semibold gap-1.5 shadow-sm'>
+                    <Icons.dashboard className='h-4 w-4' />
+                    Vào Dashboard
+                  </Button>
+                </Link>
+                <UserButton />
+              </div>
             ) : (
               <>
                 <Link href='/auth/sign-in'>
@@ -97,150 +94,84 @@ export default async function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className='relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28 border-b border-border/40'>
+      <section className='relative overflow-hidden pt-14 pb-20 md:pt-24 md:pb-28 border-b border-border/40'>
         {/* Ambient Glows */}
-        <div className='pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[700px] rounded-full bg-primary/10 blur-[130px]' />
+        <div className='pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 h-[450px] w-[700px] rounded-full bg-muted/60 blur-[130px]' />
 
-        <div className='max-w-6xl mx-auto px-4 sm:px-6 relative'>
-          <div className='grid grid-cols-1 lg:grid-cols-12 gap-12 items-center'>
-            {/* Left Column: Value Prop */}
-            <div className='lg:col-span-7 space-y-6 text-center lg:text-left'>
-              <div className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold'>
-                <Icons.sparkles className='h-3.5 w-3.5 text-amber-500' />
-                <span>Nền tảng Bio Storefront số 1 cho Creator Việt Nam 🇻🇳</span>
-              </div>
-
-              <h1 className='text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-[1.15]'>
-                Biến Link-in-Bio thành cỗ máy{' '}
-                <span className='text-transparent bg-clip-text bg-gradient-to-r from-primary via-emerald-500 to-indigo-500'>
-                  bán tài nguyên số & nhận tiền tự động 24/7
-                </span>
-              </h1>
-
-              <p className='text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl mx-auto lg:mx-0'>
-                Chuẩn phong cách <strong>Stan Store</strong> tối ưu riêng cho thị trường Việt Nam.
-                Quét mã <strong>VietQR Napas 247</strong> tự động — tiền chạy thẳng{' '}
-                <strong>100% vào số tài khoản ngân hàng chính chủ</strong> của Creator. Không hoa
-                hồng, không giữ tiền hộ.
-              </p>
-
-              {/* CTAs */}
-              <div className='flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-2'>
-                <Link href={userId ? '/dashboard/overview' : '/auth/sign-up'}>
-                  <Button
-                    size='lg'
-                    className='w-full sm:w-auto h-12 px-7 rounded-2xl text-sm font-bold shadow-lg shadow-primary/25 gap-2'
-                  >
-                    <Icons.shoppingCart className='h-4 w-4' />
-                    Bắt đầu dùng thử 14 ngày miễn phí
-                  </Button>
-                </Link>
-
-                <Link href='/@giangdinh' target='_blank'>
-                  <Button
-                    variant='outline'
-                    size='lg'
-                    className='w-full sm:w-auto h-12 px-6 rounded-2xl text-sm font-semibold gap-2 border-border/80'
-                  >
-                    <Icons.deviceMobile className='h-4 w-4 text-primary' />
-                    Xem Storefront mẫu (@giangdinh)
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Social Proof Badges */}
-              <div className='pt-6 border-t border-border/60 flex flex-wrap items-center justify-center lg:justify-start gap-5 text-xs text-muted-foreground'>
-                <div className='flex items-center gap-1.5'>
-                  <Icons.check className='h-4 w-4 text-emerald-500' />
-                  <span>
-                    <strong>0% Hoa hồng</strong> đơn hàng
-                  </span>
-                </div>
-                <div className='flex items-center gap-1.5'>
-                  <Icons.check className='h-4 w-4 text-emerald-500' />
-                  <span>
-                    <strong>No Escrow:</strong> Tiền về thẳng STK
-                  </span>
-                </div>
-                <div className='flex items-center gap-1.5'>
-                  <Icons.check className='h-4 w-4 text-emerald-500' />
-                  <span>
-                    <strong>1-Tap Checkout:</strong> Dưới 1.5 giây
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Interactive Phone Preview */}
-            <div className='lg:col-span-5 flex justify-center'>
-              <div className='relative'>
-                <div className='absolute -inset-1 rounded-[60px] bg-gradient-to-tr from-primary/30 via-emerald-500/20 to-indigo-500/30 blur-2xl opacity-60' />
-                <PhoneMockup
-                  profile={profile}
-                  products={products}
-                  paymentConfig={paymentConfig}
-                  className='scale-[0.85] sm:scale-[0.95]'
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Triết lý Dòng tiền (No Escrow & 0% Phí) */}
-      <section id='no-escrow' className='py-16 md:py-24 bg-muted/20 border-b border-border/40'>
-        <div className='max-w-6xl mx-auto px-4 sm:px-6'>
-          <div className='text-center max-w-2xl mx-auto mb-12 space-y-3'>
-            <Badge
-              variant='outline'
-              className='text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 border-emerald-500/20'
-            >
-              Triết lý cốt lõi bất di bất dịch
-            </Badge>
-            <h2 className='text-2xl sm:text-4xl font-bold tracking-tight'>
-              Không giữ tiền trung gian. Giữ trọn 100% doanh thu.
-            </h2>
-            <p className='text-xs sm:text-sm text-muted-foreground'>
-              Tiệm Nhỏ đóng vai trò là giải pháp công cụ phần mềm tự động hóa (SaaS). Chúng tôi
-              không mở ví, không giữ tiền hộ.
-            </p>
+        <div className='max-w-4xl mx-auto px-4 sm:px-6 relative text-center space-y-6'>
+          {/* Dòng 1: Kicker / Tag nhỏ trên cùng */}
+          <div className='inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-muted/80 border border-border text-foreground text-xs font-semibold shadow-xs'>
+            <Icons.sparkles className='h-3.5 w-3.5 text-amber-500' />
+            <span>Mở tiệm Bio All-in-One của riêng bạn</span>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-            <div className='rounded-2xl border border-border bg-card p-6 space-y-3 shadow-xs'>
-              <div className='h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center'>
-                <Icons.buildingBank className='h-6 w-6' />
-              </div>
-              <h3 className='font-bold text-base text-foreground'>
-                Tiền chạy thẳng vào STK của bạn
-              </h3>
-              <p className='text-xs text-muted-foreground leading-relaxed'>
-                Người mua quét mã VietQR là tiền chạy thẳng 100% vào tài khoản ngân hàng chính chủ
-                của Creator (MB, VCB, TCB...) mà không qua bất kỳ tài khoản trung gian nào.
-              </p>
-            </div>
+          {/* Dòng 2: Headline H1 chính, font to, đầm chắc */}
+          <h1 className='text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-foreground leading-[1.15] max-w-3xl mx-auto'>
+            Cách đơn giản nhất để biến sáng tạo thành thu nhập tự động
+          </h1>
 
-            <div className='rounded-2xl border border-border bg-card p-6 space-y-3 shadow-xs'>
-              <div className='h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center'>
-                <Icons.qrcode className='h-6 w-6' />
-              </div>
-              <h3 className='font-bold text-base text-foreground'>Xác thực Napas 247 tức thì</h3>
-              <p className='text-xs text-muted-foreground leading-relaxed'>
-                Tích hợp SDK đối soát chuẩn payOS & SePay. Ngay khi có biến động số dư khớp mã đơn,
-                hệ thống tự động mở khóa nút tải tài nguyên và gửi email dự phòng.
-              </p>
-            </div>
+          {/* Dòng 3: Sub-headline / Mô tả phụ */}
+          <p className='text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto'>
+            Tài nguyên số, Template Notion, Ebook và quà tặng 0đ — tất cả được gói gọn và vận hành
+            tự động ngay trong một đường link bio duy nhất.
+          </p>
 
-            <div className='rounded-2xl border border-border bg-card p-6 space-y-3 shadow-xs'>
-              <div className='h-12 w-12 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center'>
-                <Icons.bolt className='h-6 w-6' />
-              </div>
-              <h3 className='font-bold text-base text-foreground'>1-Tap Drawer không rời trang</h3>
-              <p className='text-xs text-muted-foreground leading-relaxed'>
-                Tối ưu đặc biệt cho trình duyệt in-app của TikTok, Instagram Reels và Threads. Toàn
-                bộ quá trình điền thông tin và thanh toán diễn ra trong Drawer mượt mà dưới 1.5
-                giây.
-              </p>
+          {/* CTAs */}
+          <div className='flex flex-col sm:flex-row items-center justify-center gap-3 pt-4'>
+            <Link href={userId ? '/dashboard/overview' : '/auth/sign-up'}>
+              <Button
+                size='lg'
+                className='w-full sm:w-auto h-12 px-7 rounded-2xl text-sm font-bold shadow-md bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 gap-2 cursor-pointer'
+              >
+                <Icons.shoppingCart className='h-4 w-4' />
+                Bắt đầu dùng thử 14 ngày miễn phí
+              </Button>
+            </Link>
+
+            <Link href='/@giangdinh' target='_blank'>
+              <Button
+                variant='outline'
+                size='lg'
+                className='w-full sm:w-auto h-12 px-6 rounded-2xl text-sm font-semibold gap-2 border-border text-foreground hover:bg-muted'
+              >
+                <Icons.deviceMobile className='h-4 w-4 text-foreground' />
+                Xem Storefront mẫu (@giangdinh)
+              </Button>
+            </Link>
+          </div>
+
+          {/* Social Proof Badges */}
+          <div className='pt-6 border-t border-border/60 flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground'>
+            <div className='flex items-center gap-1.5'>
+              <Icons.check className='h-4 w-4 text-emerald-500' />
+              <span>
+                <strong>0% Hoa hồng</strong> đơn hàng
+              </span>
+            </div>
+            <div className='flex items-center gap-1.5'>
+              <Icons.check className='h-4 w-4 text-emerald-500' />
+              <span>
+                <strong>No Escrow:</strong> Tiền về thẳng STK
+              </span>
+            </div>
+            <div className='flex items-center gap-1.5'>
+              <Icons.check className='h-4 w-4 text-emerald-500' />
+              <span>
+                <strong>1-Tap Checkout:</strong> Dưới 1.5 giây
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Phone Preview Mockup Centered */}
+          <div className='pt-10 flex justify-center'>
+            <div className='relative'>
+              <div className='absolute -inset-1 rounded-[60px] bg-gradient-to-tr from-primary/30 via-emerald-500/20 to-indigo-500/30 blur-2xl opacity-60' />
+              <PhoneMockup
+                profile={profile}
+                products={products}
+                paymentConfig={paymentConfig}
+                className='scale-[0.85] sm:scale-95 md:scale-100 shadow-2xl'
+              />
             </div>
           </div>
         </div>
@@ -356,8 +287,8 @@ export default async function LandingPage() {
             </div>
 
             {/* Gói Creator Pro */}
-            <div className='rounded-2xl border-2 border-primary bg-card p-6 space-y-5 shadow-lg relative'>
-              <div className='absolute -top-3 right-6 rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold text-primary-foreground uppercase tracking-wider'>
+            <div className='rounded-2xl border-2 border-zinc-900 dark:border-white bg-card p-6 space-y-5 shadow-lg relative'>
+              <div className='absolute -top-3 right-6 rounded-full bg-zinc-900 dark:bg-white px-3 py-0.5 text-[10px] font-bold text-white dark:text-zinc-900 uppercase tracking-wider'>
                 Phổ biến nhất
               </div>
               <div className='space-y-1.5'>
@@ -386,7 +317,7 @@ export default async function LandingPage() {
                 </li>
               </ul>
               <Link href='/auth/sign-up'>
-                <Button className='w-full rounded-xl text-xs font-bold h-10 shadow-md'>
+                <Button className='w-full rounded-xl text-xs font-bold h-10 shadow-md bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 cursor-pointer'>
                   Đăng ký Creator Pro ngay
                 </Button>
               </Link>
@@ -398,12 +329,9 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className='py-8 border-t border-border/60 bg-background text-xs text-muted-foreground'>
         <div className='max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4'>
-          <div className='flex items-center gap-2'>
-            <div className='flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs'>
-              TN
-            </div>
-            <span className='font-bold text-foreground'>Tiệm Nhỏ (tiemnho.vn)</span>
-            <span>• Nền tảng Bio Storefront cho Creator Việt Nam</span>
+          <div className='flex items-center gap-2.5'>
+            <Logo size='sm' href='/' showIconBadge={true} />
+            <span className='hidden sm:inline'>• Nền tảng Bio Storefront cho Creator Việt Nam</span>
           </div>
 
           <div className='flex items-center gap-4 text-xs'>

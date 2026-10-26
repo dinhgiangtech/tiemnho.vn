@@ -1,1 +1,1 @@
-export { default, generateMetadata } from '../../[username]/page';
+export { default, generateMetadata } from '../../(storefront)/[username]/page';

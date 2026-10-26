@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { Sparkles, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product, PaymentConfig, Order } from '@/constants/mock-tiemnho';
 import { generateVietQrUrl } from '@/constants/mock-tiemnho';
@@ -378,59 +379,53 @@ export function CheckoutDrawer({
                   </span>
                 </div>
 
-                <div className='flex items-center justify-between pt-1 border-t border-border/60'>
-                  <div>
-                    <span className='text-muted-foreground block text-[11px]'>Số tài khoản:</span>
-                    <span className='font-mono font-bold text-sm text-foreground'>
-                      {paymentConfig.accountNumber}
-                    </span>
-                  </div>
+                {/* 3 Nút bấm tiện ích cho khách thao tác trên 1 điện thoại */}
+                <div className='grid grid-cols-2 gap-2 pt-2 border-t border-border/60'>
                   <Button
                     type='button'
                     variant='outline'
                     size='sm'
-                    className='h-7 px-2.5 text-xs gap-1 rounded-lg'
-                    onClick={() => handleCopy(paymentConfig.accountNumber, 'STK')}
+                    className='h-8 text-[11px] gap-1.5 rounded-xl border-border hover:bg-muted font-medium'
+                    onClick={() => {
+                      const text = `${paymentConfig.bankName} - ${paymentConfig.accountNumber} (${paymentConfig.accountName})`;
+                      handleCopy(text, 'STK');
+                      toast.success(
+                        `Đã sao chép: ${paymentConfig.bankName} - ${paymentConfig.accountNumber}`
+                      );
+                    }}
                   >
                     {copiedField === 'STK' ? (
                       <>
                         <Icons.check className='h-3.5 w-3.5 text-emerald-500' />
-                        Đã chép
+                        Đã chép STK
                       </>
                     ) : (
                       <>
                         <Icons.copy className='h-3.5 w-3.5' />
-                        Sao chép
+                        Chép STK & NH
                       </>
                     )}
                   </Button>
-                </div>
 
-                <div className='flex items-center justify-between pt-1 border-t border-border/60'>
-                  <div>
-                    <span className='text-muted-foreground block text-[11px]'>
-                      Nội dung chuyển khoản (Bắt buộc):
-                    </span>
-                    <span className='font-mono font-bold text-sm text-primary'>
-                      {currentOrder.orderCode}
-                    </span>
-                  </div>
                   <Button
                     type='button'
                     variant='outline'
                     size='sm'
-                    className='h-7 px-2.5 text-xs gap-1 rounded-lg border-primary/40 text-primary hover:bg-primary/5'
-                    onClick={() => handleCopy(currentOrder.orderCode, 'CODE')}
+                    className='h-8 text-[11px] gap-1.5 rounded-xl border-primary/40 text-primary hover:bg-primary/5 font-medium'
+                    onClick={() => {
+                      handleCopy(currentOrder.orderCode, 'CODE');
+                      toast.success(`Đã sao chép mã: ${currentOrder.orderCode}`);
+                    }}
                   >
                     {copiedField === 'CODE' ? (
                       <>
                         <Icons.check className='h-3.5 w-3.5 text-emerald-500' />
-                        Đã chép
+                        Đã chép mã
                       </>
                     ) : (
                       <>
                         <Icons.copy className='h-3.5 w-3.5' />
-                        Sao chép
+                        Chép nội dung CK
                       </>
                     )}
                   </Button>
@@ -444,11 +439,11 @@ export function CheckoutDrawer({
                 </div>
               </div>
 
-              {/* Dev Simulation / Fast Test Trigger */}
+              {/* Dev Simulation & Manual Reconciliation Trigger */}
               <div className='rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3 text-center space-y-2'>
                 <p className='text-[11px] text-muted-foreground'>
-                  Chế độ demo thực nghiệm: Bạn có thể chuyển khoản thật hoặc bấm nút test bên dưới
-                  để giả lập webhook ngân hàng ngay tức thì.
+                  Nếu bạn đã chuyển khoản xong nhưng chưa thấy tự động chuyển trạng thái, hãy bấm
+                  nút đối soát bên dưới:
                 </p>
                 <Button
                   type='button'
@@ -456,10 +451,10 @@ export function CheckoutDrawer({
                   size='sm'
                   onClick={handleSimulatePayment}
                   disabled={loading}
-                  className='w-full text-xs font-semibold h-8 rounded-lg gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary'
+                  className='w-full text-xs font-semibold h-8.5 rounded-lg gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer'
                 >
-                  <Icons.bolt className='h-3.5 w-3.5 text-amber-500' />⚡ Mô phỏng Quét QR / Test
-                  Thanh toán tức thì
+                  <RefreshCw className='h-3.5 w-3.5 text-emerald-500' />
+                  Tôi đã chuyển khoản (Đối soát ngay)
                 </Button>
               </div>
             </div>
@@ -473,8 +468,9 @@ export function CheckoutDrawer({
               </div>
 
               <div className='space-y-1.5'>
-                <h3 className='text-xl font-bold text-foreground'>
-                  {isFree ? 'Mở khóa thành công! 🎉' : 'Thanh toán thành công! 🎉'}
+                <h3 className='text-xl font-bold text-foreground flex items-center justify-center gap-1.5'>
+                  <span>{isFree ? 'Mở khóa thành công!' : 'Thanh toán thành công!'}</span>
+                  <Sparkles className='w-5 h-5 text-amber-500' />
                 </h3>
                 <p className='text-xs text-muted-foreground'>
                   Mã đơn hàng:{' '}
