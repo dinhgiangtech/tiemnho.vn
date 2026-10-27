@@ -155,7 +155,7 @@ export function OrdersTable() {
           { key: 'ALL', label: 'Tất cả đơn', icon: null },
           { key: 'PENDING', label: 'Chờ thanh toán', icon: Clock },
           { key: 'PAID', label: 'Đã thanh toán', icon: CheckCircle2 },
-          { key: 'PHYSICAL_SHIPPING', label: 'Đơn vật lý cần gửi', icon: Package }
+          { key: 'PHYSICAL_SHIPPING', label: 'Đơn đặt trước cần gửi', icon: Package }
         ].map((tab) => {
           const TabIcon = tab.icon;
           return (
@@ -229,9 +229,9 @@ export function OrdersTable() {
                         {order.productTitle}
                       </div>
                       <Badge variant='outline' className='text-[9px] px-1 py-0 mt-0.5'>
-                        {order.productType === 'DIGITAL' && 'Tài liệu số'}
-                        {order.productType === 'PHYSICAL' && 'Hàng vật lý'}
-                        {order.productType === 'LEAD_MAGNET' && 'Quà 0đ'}
+                        {order.productType === 'DIGITAL' && 'Sản phẩm số'}
+                        {order.productType === 'PHYSICAL' && 'Hàng đặt trước / Thủ công'}
+                        {order.productType === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
                       </Badge>
                     </td>
 
@@ -252,8 +252,8 @@ export function OrdersTable() {
                               : 'bg-red-500/15 text-red-600 border-red-500/30'
                         }`}
                       >
-                        {isPaid && 'Đã thanh toán (PAID)'}
-                        {isPending && 'Chờ VietQR'}
+                        {isPaid && 'Đã thanh toán'}
+                        {isPending && 'Chờ thanh toán'}
                         {order.status === 'CANCELLED' && 'Đã hủy'}
                       </Badge>
                     </td>
@@ -268,12 +268,12 @@ export function OrdersTable() {
                           }
                           className='h-7 text-[11px] rounded-lg border border-border bg-background px-2 py-0 font-medium'
                         >
-                          <option value='UNFULFILLED'>Chưa giao</option>
+                          <option value='UNFULFILLED'>Chờ gửi hàng</option>
                           <option value='SHIPPING'>Đang giao</option>
-                          <option value='COMPLETED'>Hoàn thành</option>
+                          <option value='COMPLETED'>Đã hoàn thành</option>
                         </select>
                       ) : (
-                        <span className='text-[11px] text-muted-foreground'>Tự động (Digital)</span>
+                        <span className='text-[11px] text-muted-foreground'>Giao tự động</span>
                       )}
                     </td>
 
@@ -323,7 +323,7 @@ export function OrdersTable() {
                     : 'bg-amber-500/10 text-amber-600'
                 }`}
               >
-                {selectedOrder.status === 'PAID' ? 'Đã nhận tiền VietQR' : 'Chờ chuyển khoản'}
+                {selectedOrder.status === 'PAID' ? 'Đã thanh toán' : 'Chờ thanh toán'}
               </Badge>
             </div>
 

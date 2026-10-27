@@ -190,15 +190,15 @@ export default function AppSidebar() {
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={() => window.open('/@giangdinh', '_blank')}>
                     <Icons.externalLink className='mr-2 h-4 w-4 text-primary' />
-                    Xem Bio Storefront
+                    Ghé tiệm (@giangdinh)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/dashboard/preview')}>
                     <Icons.deviceMobile className='mr-2 h-4 w-4' />
-                    Live Mobile Preview
+                    Xem trước tiệm
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/dashboard/settings/payment')}>
                     <Icons.qrcode className='mr-2 h-4 w-4' />
-                    Cài đặt VietQR
+                    Cài đặt nhận tiền
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

@@ -22,12 +22,12 @@ export async function ensureDatabaseSeeded() {
           'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
         verified: true,
         theme: 'obsidian',
-        tiktok: 'https://tiktok.com/@giangdinh',
-        instagram: 'https://instagram.com/giangdinh',
-        youtube: 'https://youtube.com/@giangdinh',
-        threads: 'https://threads.net/@giangdinh',
-        facebook: 'https://facebook.com/giangdinh',
-        zalo: 'https://zalo.me/0988667788'
+        tiktok: null,
+        instagram: null,
+        youtube: null,
+        threads: null,
+        facebook: null,
+        zalo: null
       }
     });
 

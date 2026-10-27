@@ -290,12 +290,22 @@ export function TikTokCheckoutDrawer({
 
             {/* Các trường nhập liệu tối giản */}
             <div className='space-y-3 text-xs'>
+              {/* Thông báo thời gian làm hàng nếu có */}
+              {isPhysical && product.estimatedFulfillment && (
+                <div className='flex items-center gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 font-medium'>
+                  <Clock className='h-3.5 w-3.5 text-amber-600 shrink-0' />
+                  <span>
+                    Thời gian làm hàng: <strong>{product.estimatedFulfillment}</strong>
+                  </span>
+                </div>
+              )}
+
               <div className='space-y-1'>
                 <label className='font-semibold text-[#161823] text-xs flex items-center justify-between'>
                   <span>
-                    Họ và tên <strong className='text-[#FE2C55]'>*</strong>
+                    Họ và tên người nhận <strong className='text-[#FE2C55]'>*</strong>
                   </span>
-                  <span className='text-[10px] text-[#73747B] font-normal'>Để lưu đơn hàng</span>
+                  <span className='text-[10px] text-[#73747B] font-normal'>Bắt buộc</span>
                 </label>
                 <Input
                   value={name}
@@ -309,10 +319,29 @@ export function TikTokCheckoutDrawer({
               <div className='space-y-1'>
                 <label className='font-semibold text-[#161823] text-xs flex items-center justify-between'>
                   <span>
-                    Địa chỉ Email <strong className='text-[#FE2C55]'>*</strong>
+                    Số điện thoại người nhận <strong className='text-[#FE2C55]'>*</strong>
                   </span>
-                  <span className='text-[10px] text-[#FE2C55] font-medium'>
-                    Gửi tài nguyên tải về
+                  <span className='text-[10px] text-[#73747B] font-normal'>
+                    Bắt buộc liên hệ giao
+                  </span>
+                </label>
+                <Input
+                  type='tel'
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder='Số điện thoại để bưu tá liên hệ giao hàng'
+                  className='h-10 text-xs rounded-lg border-[#E3E3E4] bg-[#F8F8F8] focus-visible:ring-1 focus-visible:ring-[#FE2C55]'
+                  required
+                />
+              </div>
+
+              <div className='space-y-1'>
+                <label className='font-semibold text-[#161823] text-xs flex items-center justify-between'>
+                  <span>
+                    Địa chỉ Email {isPhysical ? '' : <strong className='text-[#FE2C55]'>*</strong>}
+                  </span>
+                  <span className='text-[10px] text-[#73747B] font-normal'>
+                    {isPhysical ? 'Khuyến khích (nhận biên nhận)' : 'Gửi tài nguyên'}
                   </span>
                 </label>
                 <Input
@@ -325,45 +354,31 @@ export function TikTokCheckoutDrawer({
                 />
               </div>
 
-              <div className='space-y-1'>
-                <label className='font-semibold text-[#161823] text-xs'>
-                  Số điện thoại <strong className='text-[#FE2C55]'>*</strong>
-                </label>
-                <Input
-                  type='tel'
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder='0988xxxxxx'
-                  className='h-10 text-xs rounded-lg border-[#E3E3E4] bg-[#F8F8F8] focus-visible:ring-1 focus-visible:ring-[#FE2C55]'
-                  required
-                />
-              </div>
-
-              {/* Trường riêng cho HÀNG VẬT LÝ */}
+              {/* Trường riêng cho HÀNG VẬT LÝ / ĐẶT TRƯỚC */}
               {isPhysical && (
                 <>
                   <div className='space-y-1'>
                     <label className='font-semibold text-[#161823] text-xs flex items-center justify-between'>
                       <span>
-                        Địa chỉ nhận hàng chi tiết <strong className='text-[#FE2C55]'>*</strong>
+                        Địa chỉ giao hàng <strong className='text-[#FE2C55]'>*</strong>
                       </span>
                     </label>
                     <Textarea
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder='Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố...'
+                      placeholder='Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố'
                       className='min-h-[60px] text-xs rounded-lg border-[#E3E3E4] bg-[#F8F8F8] focus-visible:ring-1 focus-visible:ring-[#FE2C55] resize-none'
                       required
                     />
                   </div>
                   <div className='space-y-1'>
                     <label className='font-semibold text-[#161823] text-xs'>
-                      Ghi chú thêm (Size, màu sắc...)
+                      Ghi chú đơn hàng (Tùy chọn)
                     </label>
                     <Input
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder='VD: Áo size L màu đen, giao giờ hành chính'
+                      placeholder='Ghi chú size/màu hoặc yêu cầu khắc tên/lời chúc...'
                       className='h-9 text-xs rounded-lg border-[#E3E3E4] bg-[#F8F8F8] focus-visible:ring-1 focus-visible:ring-[#FE2C55]'
                     />
                   </div>
@@ -417,10 +432,10 @@ export function TikTokCheckoutDrawer({
                 <span>Hết hạn sau: {formattedTime}</span>
               </div>
               <DrawerTitle className='text-sm sm:text-base font-bold text-[#161823] pt-1'>
-                Quét mã VietQR để thanh toán
+                Quét mã để thanh toán
               </DrawerTitle>
               <DrawerDescription className='text-xs text-[#73747B]'>
-                Mở app ngân hàng bất kỳ, quét mã QR và xác nhận chuyển khoản
+                Mở ứng dụng ngân hàng bất kỳ để quét mã QR bên dưới
               </DrawerDescription>
             </DrawerHeader>
 
@@ -466,13 +481,19 @@ export function TikTokCheckoutDrawer({
                   </span>
                   <button
                     onClick={() => handleCopy(paymentConfig.accountNumber, 'STK')}
-                    className='p-1 rounded hover:bg-white text-[#73747B] hover:text-[#FE2C55] transition-colors cursor-pointer'
-                    title='Sao chép STK'
+                    className='inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-[#E3E3E4] text-[#73747B] hover:text-[#FE2C55] transition-colors cursor-pointer text-[10px] font-medium'
+                    title='Sao chép số tài khoản'
                   >
                     {copiedField === 'STK' ? (
-                      <CheckCircle2 className='h-3.5 w-3.5 text-emerald-500' strokeWidth={1.75} />
+                      <>
+                        <CheckCircle2 className='h-3 w-3 text-emerald-500' strokeWidth={1.75} />
+                        <span>Đã chép</span>
+                      </>
                     ) : (
-                      <Copy className='h-3.5 w-3.5' strokeWidth={1.75} />
+                      <>
+                        <Copy className='h-3 w-3' strokeWidth={1.75} />
+                        <span>Sao chép số tài khoản</span>
+                      </>
                     )}
                   </button>
                 </div>
@@ -493,13 +514,19 @@ export function TikTokCheckoutDrawer({
                   </span>
                   <button
                     onClick={() => handleCopy(currentOrder.orderCode, 'CODE')}
-                    className='p-1 rounded hover:bg-white text-[#73747B] hover:text-[#FE2C55] transition-colors cursor-pointer'
-                    title='Sao chép nội dung CK'
+                    className='inline-flex items-center gap-1 px-2 py-1 rounded bg-white border border-[#E3E3E4] text-[#73747B] hover:text-[#FE2C55] transition-colors cursor-pointer text-[10px] font-medium'
+                    title='Sao chép nội dung'
                   >
                     {copiedField === 'CODE' ? (
-                      <CheckCircle2 className='h-3.5 w-3.5 text-emerald-500' strokeWidth={1.75} />
+                      <>
+                        <CheckCircle2 className='h-3 w-3 text-emerald-500' strokeWidth={1.75} />
+                        <span>Đã chép</span>
+                      </>
                     ) : (
-                      <Copy className='h-3.5 w-3.5' strokeWidth={1.75} />
+                      <>
+                        <Copy className='h-3 w-3' strokeWidth={1.75} />
+                        <span>Sao chép nội dung</span>
+                      </>
                     )}
                   </button>
                 </div>
@@ -518,7 +545,7 @@ export function TikTokCheckoutDrawer({
                 ) : (
                   <CheckCircle2 className='h-4 w-4' strokeWidth={1.75} />
                 )}
-                <span>Tôi đã chuyển khoản thành công</span>
+                <span>Tôi đã chuyển khoản</span>
               </Button>
 
               <div className='flex items-center justify-center gap-1.5 text-[11px] text-[#73747B]'>

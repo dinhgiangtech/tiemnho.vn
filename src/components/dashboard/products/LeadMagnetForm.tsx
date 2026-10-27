@@ -27,11 +27,12 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
+import { uploadClientFile } from '@/lib/upload-client';
 
 // Schema xác thực cho Sản phẩm 0 đồng (Lead Magnet)
 export const leadMagnetSchema = z.object({
   // 1. Thiết lập ảnh Thumbnail
-  thumbnail: z.string().min(1, 'Vui lòng chọn hoặc tải ảnh đại diện quà tặng'),
+  thumbnail: z.string().optional(),
 
   // 2. Tùy chỉnh hiển thị (Preview)
   title: z.string().min(1, 'Tiêu đề không được để trống').max(50, 'Tiêu đề tối đa 50 ký tự'),
@@ -91,33 +92,24 @@ export function LeadMagnetForm({ initialProduct, onSuccess, onCancel }: LeadMagn
   const form = useForm<LeadMagnetFormValues>({
     resolver: zodResolver(leadMagnetSchema),
     defaultValues: {
-      thumbnail:
-        initialProduct?.coverImage ||
-        'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=400&h=400&q=80',
-      title: initialProduct?.title || 'Nhận Miễn Phí [Checklist / Ebook / Template]!',
-      subtitle: initialProduct?.subtitle || 'Điền email của bạn để nhận link tải ngay lập tức',
+      thumbnail: initialProduct?.coverImage || '',
+      title: initialProduct?.title || '',
+      subtitle: initialProduct?.subtitle || '',
       buttonText: initialProduct?.buttonText || 'Nhận quà 0đ',
 
-      detailTitle:
-        initialProduct?.detailTitle ||
-        initialProduct?.title ||
-        'Nhận Miễn Phí [Checklist / Ebook / Template]!',
-      descriptionBody:
-        initialProduct?.description ||
-        `Món quà đặc biệt này hoàn toàn miễn phí dành riêng cho bạn.\n\nSau khi nhận tài liệu, bạn sẽ có ngay:\n• Bản tóm tắt các bước thực hành từng ngày\n• Bí quyết tiết kiệm 50% thời gian triển khai\n• Bộ công cụ được chọn lọc kỹ càng`,
-      bottomTitle: initialProduct?.bottomTitle || 'Nhận tài liệu miễn phí của bạn ngay hôm nay',
+      detailTitle: initialProduct?.detailTitle || initialProduct?.title || '',
+      descriptionBody: initialProduct?.description || '',
+      bottomTitle: initialProduct?.bottomTitle || '',
       ctaButton: initialProduct?.ctaButton || 'NHẬN MIỄN PHÍ NGAY',
       successMessage: initialProduct?.successMessage || 'Tài liệu đã được gửi vào Email của bạn!',
 
       deliveryType: initialProduct?.deliveryType || 'UPLOAD_FILE',
       fileUrl: initialProduct?.fileUrl || '',
-      fileName: initialProduct?.fileName || 'Cam-nang-0d-Creator.pdf',
-      fileSize: initialProduct?.fileSize || '5.2 MB',
+      fileName: initialProduct?.fileName || '',
+      fileSize: initialProduct?.fileSize || '',
       redirectUrl: initialProduct?.fileUrl || '',
 
-      featureImage:
-        initialProduct?.bannerImage ||
-        'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&h=675&q=80',
+      featureImage: initialProduct?.bannerImage || '',
 
       price: 0,
       isPublished: initialProduct?.isPublished ?? true
@@ -154,44 +146,71 @@ export function LeadMagnetForm({ initialProduct, onSuccess, onCancel }: LeadMagn
   }, []);
 
   // Upload thumbnail
-  const handleUploadThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadThumbnail = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingThumb(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('thumbnail', reader.result as string);
+      try {
+        const res = await uploadClientFile(file, { folder: 'lead-magnets/thumbnails' });
+        setValue('thumbnail', res.url);
+        toast.success(
+          `Đã tải ảnh đại diện thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
+        );
+      } catch (err: any) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('thumbnail', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
+      } finally {
         setIsUploadingThumb(false);
-        toast.success('Đã tải ảnh đại diện quà tặng thành công!');
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
   // Upload ảnh bìa nổi bật
-  const handleUploadBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingBanner(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('featureImage', reader.result as string);
+      try {
+        const res = await uploadClientFile(file, { folder: 'lead-magnets/banners' });
+        setValue('featureImage', res.url);
+        toast.success(
+          `Đã tải ảnh bìa nổi bật thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
+        );
+      } catch (err: any) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('featureImage', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
+      } finally {
         setIsUploadingBanner(false);
-        toast.success('Đã tải ảnh bìa nổi bật thành công!');
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
   // Upload file quà tặng miễn phí
-  const handleUploadDigitalFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadDigitalFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setValue('fileName', file.name);
-      setValue('fileSize', `${sizeMb} MB`);
-      setValue('fileUrl', `https://storage.tiemnho.vn/r2/files/${file.name}`);
-      toast.success(`Đã đính kèm tài liệu: ${file.name} (${sizeMb} MB)`);
+      const toastId = toast.loading(`Đang tải tài liệu quà tặng ${file.name} (${sizeMb} MB)...`);
+      try {
+        const res = await uploadClientFile(file, { folder: 'lead-magnets/files' });
+        setValue('fileName', file.name);
+        setValue('fileSize', `${sizeMb} MB`);
+        setValue('fileUrl', res.url);
+        toast.success(
+          `Đã đính kèm tài liệu thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`,
+          { id: toastId }
+        );
+      } catch (err: any) {
+        toast.error(err.message || 'Không thể tải file lên server.', { id: toastId });
+      }
     }
   };
 
@@ -206,7 +225,7 @@ export function LeadMagnetForm({ initialProduct, onSuccess, onCancel }: LeadMagn
         title: values.title.trim(),
         description: values.descriptionBody.trim(),
         price: 0,
-        coverImage: values.thumbnail,
+        coverImage: values.thumbnail || '',
         fileUrl: finalFile,
         fileName: values.deliveryType === 'UPLOAD_FILE' ? values.fileName : undefined,
         fileSize: values.deliveryType === 'UPLOAD_FILE' ? values.fileSize : undefined,

@@ -70,7 +70,7 @@ export function StorefrontView({
       return product.buttonText.trim();
     }
     if (product.type === 'EXTERNAL_LINK') return 'Mở link';
-    if (product.type === 'LEAD_MAGNET') return 'Nhận ngay';
+    if (product.type === 'LEAD_MAGNET') return 'Nhận 0đ';
     if (product.type === 'PHYSICAL') return 'Đặt trước';
     return 'Mua ngay';
   };
@@ -130,12 +130,18 @@ export function StorefrontView({
                 : 'bg-gradient-to-tr from-primary via-emerald-500 to-indigo-500 shadow-primary/20'
             )}
           >
-            <div className='h-full w-full rounded-full overflow-hidden bg-card'>
-              <img
-                src={profile.avatarUrl}
-                alt={profile.displayName}
-                className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-              />
+            <div className='h-full w-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 flex items-center justify-center'>
+              {profile.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile.displayName}
+                  className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                />
+              ) : (
+                <div className='h-full w-full bg-white dark:bg-zinc-900 flex items-center justify-center text-zinc-300 dark:text-zinc-600'>
+                  <Icons.user className='h-12 w-12' />
+                </div>
+              )}
             </div>
           </div>
           {profile.verified && (

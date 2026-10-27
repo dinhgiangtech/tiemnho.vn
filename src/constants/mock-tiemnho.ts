@@ -230,23 +230,14 @@ export const VIETNAMESE_BANKS: BankInfo[] = [
 
 export const defaultCreatorProfile: CreatorProfile = {
   id: 'creator-giangdinh',
-  username: 'giangdinh',
-  displayName: 'Giang Định',
-  bio: 'Xây dựng sản phẩm số & tự do tài chính. Chia sẻ template Notion, ebook & kiến thức thực chiến.',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&h=400&q=80',
-  coverUrl:
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
+  username: 'dinhgiang',
+  displayName: 'Đinh Trường Giang',
+  bio: '',
+  avatarUrl: '',
+  coverUrl: '',
   verified: true,
   theme: 'obsidian',
-  socials: {
-    tiktok: 'https://tiktok.com/@giangdinh',
-    instagram: 'https://instagram.com/giangdinh',
-    youtube: 'https://youtube.com/@giangdinh',
-    threads: 'https://threads.net/@giangdinh',
-    facebook: 'https://facebook.com/giangdinh',
-    zalo: 'https://zalo.me/0988667788'
-  }
+  socials: {}
 };
 
 export const defaultPaymentConfig: PaymentConfig = {

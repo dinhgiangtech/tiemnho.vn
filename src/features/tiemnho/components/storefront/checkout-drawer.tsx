@@ -225,7 +225,7 @@ export function CheckoutDrawer({
                 >
                   {product.type === 'DIGITAL' && 'Tài liệu số'}
                   {product.type === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
-                  {product.type === 'PHYSICAL' && 'Hàng vật lý'}
+                  {product.type === 'PHYSICAL' && 'Hàng đặt trước / Thủ công'}
                   {product.type === 'EXTERNAL_LINK' && 'Liên kết'}
                 </Badge>
                 {product.originalPrice && product.originalPrice > product.price && (
@@ -249,10 +249,21 @@ export function CheckoutDrawer({
           {/* STEP 1: FORM */}
           {step === 'FORM' && (
             <form id='checkout-form' onSubmit={handleSubmitForm} className='space-y-3.5'>
+              {/* Thông báo thời gian làm hàng nếu có */}
+              {isPhysical && product.estimatedFulfillment && (
+                <div className='rounded-xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2'>
+                  <Icons.clock className='h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400' />
+                  <span>
+                    Thời gian làm hàng: <strong>{product.estimatedFulfillment}</strong>
+                  </span>
+                </div>
+              )}
+
+              {/* fullName (Bắt buộc) */}
               <div className='space-y-1.5'>
                 <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                  <span>Họ và tên</span>
-                  <span className='text-[10px] text-muted-foreground'>Bắt buộc</span>
+                  <span>Họ và tên người nhận</span>
+                  <span className='text-[10px] text-destructive font-semibold'>Bắt buộc</span>
                 </label>
                 <Input
                   placeholder='VD: Nguyễn Văn A'
@@ -263,52 +274,55 @@ export function CheckoutDrawer({
                 />
               </div>
 
-              {!isPhysical && (
-                <div className='space-y-1.5'>
-                  <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                    <span>Địa chỉ Email nhận tài nguyên</span>
-                    <span className='text-[10px] text-primary font-semibold'>Bắt buộc</span>
-                  </label>
-                  <Input
-                    type='email'
-                    placeholder='VD: email@gmail.com'
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className='h-10 text-sm rounded-xl'
-                    required
-                  />
-                  <p className='text-[11px] text-muted-foreground'>
-                    Đường dẫn tải tài nguyên sẽ được gửi tự động về email này sau khi hoàn tất.
-                  </p>
-                </div>
-              )}
-
+              {/* phone (Bắt buộc) */}
               <div className='space-y-1.5'>
                 <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                  <span>Số điện thoại (Zalo)</span>
-                  <span className='text-[10px] text-muted-foreground'>
-                    {isPhysical ? 'Bắt buộc giao hàng' : 'Nhận thông báo'}
-                  </span>
+                  <span>Số điện thoại nhận hàng</span>
+                  <span className='text-[10px] text-destructive font-semibold'>Bắt buộc</span>
                 </label>
                 <Input
                   type='tel'
-                  placeholder='VD: 0912345678'
+                  placeholder='Số điện thoại để bưu tá liên hệ giao hàng (VD: 0912345678)'
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className='h-10 text-sm rounded-xl'
-                  required={isPhysical}
+                  required
                 />
               </div>
 
+              {/* email (Tùy chọn/Khuyến khích đối với Physical, Bắt buộc đối với Digital/LeadMagnet) */}
+              <div className='space-y-1.5'>
+                <label className='text-xs font-medium text-foreground flex items-center justify-between'>
+                  <span>Địa chỉ Email</span>
+                  <span className='text-[10px] text-muted-foreground'>
+                    {isPhysical ? 'Khuyến khích (để nhận biên nhận)' : 'Bắt buộc'}
+                  </span>
+                </label>
+                <Input
+                  type='email'
+                  placeholder='VD: email@gmail.com'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className='h-10 text-sm rounded-xl'
+                  required={!isPhysical}
+                />
+                <p className='text-[11px] text-muted-foreground'>
+                  {isPhysical
+                    ? 'Để nhận email xác nhận đơn hàng và biên nhận chuyển khoản VietQR.'
+                    : 'Đường dẫn tải tài nguyên sẽ được gửi tự động về email này sau khi hoàn tất.'}
+                </p>
+              </div>
+
+              {/* shippingAddress (Bắt buộc - 1 ô Text) & customNote (Tùy chọn) */}
               {isPhysical && (
                 <>
                   <div className='space-y-1.5'>
                     <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                      <span>Địa chỉ giao hàng chi tiết</span>
-                      <span className='text-[10px] text-primary font-semibold'>Bắt buộc</span>
+                      <span>Địa chỉ giao hàng</span>
+                      <span className='text-[10px] text-destructive font-semibold'>Bắt buộc</span>
                     </label>
                     <Textarea
-                      placeholder='Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố...'
+                      placeholder='Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố'
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       className='min-h-[72px] text-sm rounded-xl resize-none'
@@ -317,11 +331,12 @@ export function CheckoutDrawer({
                   </div>
 
                   <div className='space-y-1.5'>
-                    <label className='text-xs font-medium text-foreground'>
-                      Ghi chú đơn hàng (Size / Màu / Yêu cầu)
+                    <label className='text-xs font-medium text-foreground flex items-center justify-between'>
+                      <span>Ghi chú đơn hàng</span>
+                      <span className='text-[10px] text-muted-foreground'>Tùy chọn</span>
                     </label>
                     <Input
-                      placeholder='VD: Size L màu đen, kèm lời chúc...'
+                      placeholder='Ghi chú size/màu hoặc yêu cầu khắc tên/lời chúc...'
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       className='h-10 text-sm rounded-xl'
@@ -349,7 +364,7 @@ export function CheckoutDrawer({
                     <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75'></span>
                     <span className='relative inline-flex rounded-full h-2 w-2 bg-emerald-500'></span>
                   </span>
-                  Chờ chuyển khoản VietQR ({timeFormatted})
+                  Quét mã để thanh toán ({timeFormatted})
                 </div>
                 <p className='text-xs text-muted-foreground'>
                   Mở ứng dụng ngân hàng bất kỳ để quét mã QR bên dưới
@@ -379,7 +394,7 @@ export function CheckoutDrawer({
                   </span>
                 </div>
 
-                {/* 3 Nút bấm tiện ích cho khách thao tác trên 1 điện thoại */}
+                {/* 2 Nút bấm tiện ích sao chép STK và nội dung CK */}
                 <div className='grid grid-cols-2 gap-2 pt-2 border-t border-border/60'>
                   <Button
                     type='button'
@@ -387,8 +402,7 @@ export function CheckoutDrawer({
                     size='sm'
                     className='h-8 text-[11px] gap-1.5 rounded-xl border-border hover:bg-muted font-medium'
                     onClick={() => {
-                      const text = `${paymentConfig.bankName} - ${paymentConfig.accountNumber} (${paymentConfig.accountName})`;
-                      handleCopy(text, 'STK');
+                      handleCopy(paymentConfig.accountNumber, 'STK');
                       toast.success(
                         `Đã sao chép: ${paymentConfig.bankName} - ${paymentConfig.accountNumber}`
                       );
@@ -397,12 +411,12 @@ export function CheckoutDrawer({
                     {copiedField === 'STK' ? (
                       <>
                         <Icons.check className='h-3.5 w-3.5 text-emerald-500' />
-                        Đã chép STK
+                        Đã sao chép
                       </>
                     ) : (
                       <>
                         <Icons.copy className='h-3.5 w-3.5' />
-                        Chép STK & NH
+                        Sao chép số tài khoản
                       </>
                     )}
                   </Button>
@@ -420,12 +434,12 @@ export function CheckoutDrawer({
                     {copiedField === 'CODE' ? (
                       <>
                         <Icons.check className='h-3.5 w-3.5 text-emerald-500' />
-                        Đã chép mã
+                        Đã sao chép
                       </>
                     ) : (
                       <>
                         <Icons.copy className='h-3.5 w-3.5' />
-                        Chép nội dung CK
+                        Sao chép nội dung
                       </>
                     )}
                   </Button>
@@ -454,7 +468,7 @@ export function CheckoutDrawer({
                   className='w-full text-xs font-semibold h-8.5 rounded-lg gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary cursor-pointer'
                 >
                   <RefreshCw className='h-3.5 w-3.5 text-emerald-500' />
-                  Tôi đã chuyển khoản (Đối soát ngay)
+                  Tôi đã chuyển khoản
                 </Button>
               </div>
             </div>

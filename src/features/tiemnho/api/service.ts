@@ -224,12 +224,12 @@ export async function updateProfile(updates: Partial<CreatorProfile>): Promise<C
   if (updates.coverUrl !== undefined) dataToUpdate.coverUrl = updates.coverUrl;
   if (updates.theme !== undefined) dataToUpdate.theme = updates.theme;
   if (updates.socials) {
-    if (updates.socials.tiktok !== undefined) dataToUpdate.tiktok = updates.socials.tiktok;
-    if (updates.socials.instagram !== undefined) dataToUpdate.instagram = updates.socials.instagram;
-    if (updates.socials.youtube !== undefined) dataToUpdate.youtube = updates.socials.youtube;
-    if (updates.socials.threads !== undefined) dataToUpdate.threads = updates.socials.threads;
-    if (updates.socials.facebook !== undefined) dataToUpdate.facebook = updates.socials.facebook;
-    if (updates.socials.zalo !== undefined) dataToUpdate.zalo = updates.socials.zalo;
+    if ('tiktok' in updates.socials) dataToUpdate.tiktok = updates.socials.tiktok || null;
+    if ('instagram' in updates.socials) dataToUpdate.instagram = updates.socials.instagram || null;
+    if ('youtube' in updates.socials) dataToUpdate.youtube = updates.socials.youtube || null;
+    if ('threads' in updates.socials) dataToUpdate.threads = updates.socials.threads || null;
+    if ('facebook' in updates.socials) dataToUpdate.facebook = updates.socials.facebook || null;
+    if ('zalo' in updates.socials) dataToUpdate.zalo = updates.socials.zalo || null;
   }
 
   const updated = await prisma.creatorProfile.update({

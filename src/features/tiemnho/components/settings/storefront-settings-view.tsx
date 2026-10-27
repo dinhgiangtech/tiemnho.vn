@@ -1,24 +1,58 @@
 'use client';
 
-import * as React from 'react';
-import { CreatorProfile, Product, PaymentConfig } from '@/constants/mock-tiemnho';
-import { getProfile, updateProfile, getProducts, getPaymentConfig } from '../../api/service';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter
-} from '@/components/ui/card';
+import { SocialIconBadge } from '@/components/common/social-icons';
+import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PhoneMockup } from '../mobile-preview/phone-mockup';
-import { Icons } from '@/components/icons';
-import { Check } from 'lucide-react';
+import { CreatorProfile, PaymentConfig, Product } from '@/constants/mock-tiemnho';
+import { uploadClientFile } from '@/lib/upload-client';
+import Link from 'next/link';
+import * as React from 'react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { getPaymentConfig, getProducts, getProfile, updateProfile } from '../../api/service';
+import { PhoneMockup } from '../mobile-preview/phone-mockup';
+import { ImageCropModal } from './image-crop-modal';
+
+interface SocialField {
+  key: 'tiktok' | 'instagram' | 'youtube' | 'facebook' | 'zalo' | 'threads';
+  label: string;
+  placeholder: string;
+}
+
+const AVAILABLE_SOCIALS: SocialField[] = [
+  {
+    key: 'tiktok',
+    label: 'TikTok',
+    placeholder: 'https://tiktok.com/@username hoặc @username'
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    placeholder: 'https://instagram.com/username hoặc @username'
+  },
+  {
+    key: 'youtube',
+    label: 'YouTube',
+    placeholder: 'https://youtube.com/@channel'
+  },
+  {
+    key: 'facebook',
+    label: 'Facebook',
+    placeholder: 'https://facebook.com/username'
+  },
+  {
+    key: 'zalo',
+    label: 'Zalo',
+    placeholder: 'Số điện thoại Zalo hoặc link https://zalo.me/...'
+  },
+  {
+    key: 'threads',
+    label: 'Threads',
+    placeholder: 'https://threads.net/@username'
+  }
+];
 
 export function StorefrontSettingsView() {
   const [profile, setProfile] = React.useState<CreatorProfile | null>(null);
@@ -26,6 +60,13 @@ export function StorefrontSettingsView() {
   const [paymentConfig, setPaymentConfig] = React.useState<PaymentConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+
+  // State cho Popup Crop ảnh đại diện
+  const [cropModalOpen, setCropModalOpen] = React.useState(false);
+  const [cropImageUrl, setCropImageUrl] = React.useState<string | null>(null);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Form states
   const [displayName, setDisplayName] = React.useState('');
@@ -33,10 +74,19 @@ export function StorefrontSettingsView() {
   const [bio, setBio] = React.useState('');
   const [avatarUrl, setAvatarUrl] = React.useState('');
   const [selectedTheme, setSelectedTheme] = React.useState<CreatorProfile['theme']>('obsidian');
-  const [tiktok, setTiktok] = React.useState('');
-  const [instagram, setInstagram] = React.useState('');
-  const [youtube, setYoutube] = React.useState('');
-  const [facebook, setFacebook] = React.useState('');
+
+  // Social Links State (dynamic list)
+  const [socialsState, setSocialsState] = React.useState<Record<string, string>>({
+    tiktok: '',
+    instagram: '',
+    youtube: '',
+    facebook: '',
+    zalo: '',
+    threads: ''
+  });
+
+  // Track which socials are active/visible in form (mặc định trống, chỉ thêm khi bấm nút)
+  const [activeSocialKeys, setActiveSocialKeys] = React.useState<string[]>([]);
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -55,10 +105,22 @@ export function StorefrontSettingsView() {
       setBio(prof.bio);
       setAvatarUrl(prof.avatarUrl);
       setSelectedTheme(prof.theme || 'obsidian');
-      setTiktok(prof.socials.tiktok || '');
-      setInstagram(prof.socials.instagram || '');
-      setYoutube(prof.socials.youtube || '');
-      setFacebook(prof.socials.facebook || '');
+
+      const s = {
+        tiktok: prof.socials.tiktok || '',
+        instagram: prof.socials.instagram || '',
+        youtube: prof.socials.youtube || '',
+        facebook: prof.socials.facebook || '',
+        zalo: prof.socials.zalo || '',
+        threads: prof.socials.threads || ''
+      };
+      setSocialsState(s);
+
+      // Chỉ kích hoạt các MXH thực sự có dữ liệu từ DB (không ép mặc định)
+      const existing = (Object.keys(s) as Array<keyof typeof s>).filter((k) =>
+        Boolean(s[k]?.trim())
+      );
+      setActiveSocialKeys(existing);
     } catch {
       toast.error('Lỗi khi tải thông tin hồ sơ');
     } finally {
@@ -69,6 +131,53 @@ export function StorefrontSettingsView() {
   React.useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Khi người dùng chọn file ảnh từ máy: đọc DataURL và mở popup Crop
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file hình ảnh (JPG, PNG, WebP)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageUrl(reader.result as string);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset value input để có thể chọn lại cùng 1 file nếu muốn
+    e.target.value = '';
+  };
+
+  // Nhận file ảnh sau khi crop xong từ ImageCropModal và upload lên server
+  const handleConfirmCrop = async (croppedFile: File) => {
+    setUploadingAvatar(true);
+    const toastId = toast.loading('Đang tối ưu và tải ảnh đại diện lên...');
+    try {
+      const res = await uploadClientFile(croppedFile, { folder: 'avatars' });
+      setAvatarUrl(res.url);
+      toast.success('Đã tải ảnh đại diện đã cắt lên thành công!', { id: toastId });
+    } catch {
+      toast.error('Lỗi khi tải ảnh lên máy chủ', { id: toastId });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAddSocial = (key: string) => {
+    if (!activeSocialKeys.includes(key)) {
+      setActiveSocialKeys((prev) => [...prev, key]);
+    }
+  };
+
+  const handleRemoveSocial = (key: string) => {
+    setActiveSocialKeys((prev) => prev.filter((k) => k !== key));
+    setSocialsState((prev) => ({ ...prev, [key]: '' }));
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,17 +192,19 @@ export function StorefrontSettingsView() {
         displayName: displayName.trim(),
         username: username.trim().toLowerCase(),
         bio: bio.trim(),
-        avatarUrl: avatarUrl.trim() || profile?.avatarUrl,
+        avatarUrl: avatarUrl.trim(),
         theme: selectedTheme,
         socials: {
-          tiktok: tiktok.trim() || undefined,
-          instagram: instagram.trim() || undefined,
-          youtube: youtube.trim() || undefined,
-          facebook: facebook.trim() || undefined
+          tiktok: activeSocialKeys.includes('tiktok') ? socialsState.tiktok?.trim() : '',
+          instagram: activeSocialKeys.includes('instagram') ? socialsState.instagram?.trim() : '',
+          youtube: activeSocialKeys.includes('youtube') ? socialsState.youtube?.trim() : '',
+          facebook: activeSocialKeys.includes('facebook') ? socialsState.facebook?.trim() : '',
+          zalo: activeSocialKeys.includes('zalo') ? socialsState.zalo?.trim() : '',
+          threads: activeSocialKeys.includes('threads') ? socialsState.threads?.trim() : ''
         }
       });
       setProfile(updated);
-      toast.success('Đã lưu thông tin hồ sơ Storefront thành công!');
+      toast.success('Đã lưu thông tin tài khoản & Tiệm thành công!');
     } catch {
       toast.error('Lỗi khi lưu thông tin hồ sơ');
     } finally {
@@ -108,16 +219,28 @@ export function StorefrontSettingsView() {
       displayName: displayName || 'Tên Creator',
       username: username || 'username',
       bio: bio || 'Mô tả ngắn gọn về bạn...',
-      avatarUrl:
-        avatarUrl ||
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&h=400&q=80',
+      avatarUrl: avatarUrl || '',
       verified: true,
       theme: selectedTheme || 'obsidian',
       socials: {
-        tiktok: tiktok || undefined,
-        instagram: instagram || undefined,
-        youtube: youtube || undefined,
-        facebook: facebook || undefined
+        tiktok: activeSocialKeys.includes('tiktok')
+          ? socialsState.tiktok?.trim() || undefined
+          : undefined,
+        instagram: activeSocialKeys.includes('instagram')
+          ? socialsState.instagram?.trim() || undefined
+          : undefined,
+        youtube: activeSocialKeys.includes('youtube')
+          ? socialsState.youtube?.trim() || undefined
+          : undefined,
+        facebook: activeSocialKeys.includes('facebook')
+          ? socialsState.facebook?.trim() || undefined
+          : undefined,
+        zalo: activeSocialKeys.includes('zalo')
+          ? socialsState.zalo?.trim() || undefined
+          : undefined,
+        threads: activeSocialKeys.includes('threads')
+          ? socialsState.threads?.trim() || undefined
+          : undefined
       }
     };
   }, [
@@ -127,256 +250,372 @@ export function StorefrontSettingsView() {
     bio,
     avatarUrl,
     selectedTheme,
-    tiktok,
-    instagram,
-    youtube,
-    facebook
+    socialsState,
+    activeSocialKeys
   ]);
 
   if (loading || !profile || !paymentConfig) {
     return (
-      <div className='p-8 text-center text-xs text-muted-foreground'>
-        Đang tải giao diện Storefront...
+      <div className='p-16 text-center text-xs text-muted-foreground'>
+        <Icons.spinner className='h-5 w-5 animate-spin mx-auto mb-2 text-primary' />
+        Đang tải giao diện chỉnh sửa hồ sơ...
       </div>
     );
   }
 
-  return (
-    <div className='grid grid-cols-1 lg:grid-cols-12 gap-6 items-start'>
-      {/* Cột trái: Form chỉnh sửa */}
-      <div className='lg:col-span-7 space-y-6'>
-        <form onSubmit={handleSave} className='space-y-6'>
-          <Card className='border border-border shadow-xs'>
-            <CardHeader>
-              <CardTitle className='text-base font-bold'>Thông tin định danh Creator</CardTitle>
-              <CardDescription className='text-xs'>
-                Hiển thị trên phần đầu trang Bio Storefront của bạn.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4 text-xs'>
-              <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                <div className='space-y-1.5'>
-                  <label className='font-semibold text-foreground text-xs'>
-                    Tên hiển thị <span className='text-primary font-bold'>*</span>
-                  </label>
-                  <Input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder='VD: Giang Định'
-                    className='h-10 text-sm rounded-xl'
-                    required
-                  />
-                </div>
+  const unaddedSocials = AVAILABLE_SOCIALS.filter((s) => !activeSocialKeys.includes(s.key));
 
-                <div className='space-y-1.5'>
-                  <label className='font-semibold text-foreground text-xs'>
-                    Username / Đường dẫn Bio <span className='text-primary font-bold'>*</span>
-                  </label>
-                  <div className='relative'>
-                    <span className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono'>
-                      @
-                    </span>
+  return (
+    <div className='space-y-6'>
+      {/* Top Header bar chuẩn dự án */}
+      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/80'>
+        <div className='flex items-center gap-3'>
+          <Link href='/dashboard/products'>
+            <Button variant='outline' size='sm' className='h-8 text-xs gap-1.5 rounded-lg'>
+              <Icons.arrowLeft className='h-3.5 w-3.5' />
+              <span>Quay lại</span>
+            </Button>
+          </Link>
+          <div>
+            <h1 className='text-lg font-bold text-foreground tracking-tight'>
+              Cài đặt tài khoản & Tiệm
+            </h1>
+            <p className='text-xs text-muted-foreground'>
+              Tùy chỉnh ảnh đại diện, thông tin định danh và kênh liên hệ trên Tiệm của bạn.
+            </p>
+          </div>
+        </div>
+
+        <div className='flex items-center gap-2'>
+          <Button
+            type='button'
+            onClick={handleSave}
+            disabled={saving}
+            size='sm'
+            className='h-8.5 px-4 text-xs font-semibold rounded-lg'
+          >
+            {saving ? (
+              <>
+                <Icons.spinner className='h-3.5 w-3.5 animate-spin mr-1.5' />
+                Đang lưu...
+              </>
+            ) : (
+              <>
+                <Icons.check className='h-3.5 w-3.5 mr-1.5' />
+                Lưu hồ sơ
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Grid: Cột trái Form (Card shadcn) & Cột phải Phone Preview */}
+      <div className='grid grid-cols-1 lg:grid-cols-12 gap-6 items-start'>
+        {/* Form thiết lập (7 Cột) */}
+        <div className='lg:col-span-7 space-y-6'>
+          <form onSubmit={handleSave} className='space-y-6'>
+            {/* 1. Ảnh đại diện Avatar */}
+            <Card className='rounded-xl border shadow-xs'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='text-sm font-semibold'>1. Ảnh đại diện (Avatar)</CardTitle>
+                <CardDescription className='text-xs'>
+                  Ảnh hiển thị chính trên trang Bio và thẻ chia sẻ của bạn.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4 pt-1'>
+                <div className='flex items-center gap-4'>
+                  <div className='relative group shrink-0'>
+                    <input
+                      ref={fileInputRef}
+                      type='file'
+                      accept='image/*'
+                      onChange={handleAvatarFileChange}
+                      className='hidden'
+                    />
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className='relative h-20 w-20 rounded-full overflow-hidden border border-border bg-muted/30 flex items-center justify-center cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 shadow-2xs'
+                    >
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={displayName || 'Avatar'}
+                          className='h-full w-full object-cover'
+                        />
+                      ) : (
+                        <div className='h-full w-full bg-muted/40 flex items-center justify-center text-muted-foreground/60'>
+                          <Icons.user className='h-9 w-9' />
+                        </div>
+                      )}
+
+                      {uploadingAvatar && (
+                        <div className='absolute inset-0 bg-background/80 flex items-center justify-center backdrop-blur-2xs'>
+                          <Icons.spinner className='h-5 w-5 animate-spin text-primary' />
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type='button'
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      title='Tải ảnh đại diện'
+                      className='absolute bottom-0 right-0 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs border-2 border-background hover:bg-primary/90 transition-all cursor-pointer'
+                    >
+                      <Icons.edit className='h-3 w-3' />
+                    </button>
+                  </div>
+
+                  <div className='space-y-1.5 flex-1 min-w-0'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        size='sm'
+                        disabled={uploadingAvatar}
+                        onClick={() => fileInputRef.current?.click()}
+                        className='h-8 text-xs rounded-lg'
+                      >
+                        <Icons.upload className='h-3.5 w-3.5 mr-1.5' />
+                        {uploadingAvatar ? 'Đang tải lên...' : 'Tải ảnh mới'}
+                      </Button>
+                      {avatarUrl && (
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => setAvatarUrl('')}
+                          className='h-8 text-xs text-muted-foreground hover:text-destructive rounded-lg'
+                        >
+                          Xóa ảnh
+                        </Button>
+                      )}
+                    </div>
+                    <p className='text-[11px] text-muted-foreground'>
+                      Khuyên dùng ảnh vuông 1:1, dung lượng dưới 5MB. Để trống sẽ dùng avatar mặc
+                      định.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 2. Thông tin cá nhân */}
+            <Card className='rounded-xl border shadow-xs'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='text-sm font-semibold'>2. Thông tin cá nhân</CardTitle>
+                <CardDescription className='text-xs'>
+                  Tên hiển thị, đường dẫn Bio và phần giới thiệu ngắn.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4 pt-1'>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                  <div className='space-y-1.5'>
+                    <label className='text-xs font-medium text-foreground'>
+                      Tên hiển thị <span className='text-destructive'>*</span>
+                    </label>
                     <Input
-                      value={username}
-                      onChange={(e) =>
-                        setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
-                      }
-                      placeholder='giangdinh'
-                      className='pl-8 h-10 text-sm font-mono rounded-xl'
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder='Đinh Trường Giang'
+                      className='h-9 text-xs rounded-lg'
                       required
                     />
                   </div>
-                  <p className='text-[10px] text-muted-foreground'>
-                    Đường dẫn bio của bạn:{' '}
-                    <strong className='text-primary'>tiemnho.vn/@{username}</strong>
-                  </p>
+
+                  <div className='space-y-1.5'>
+                    <label className='text-xs font-medium text-foreground'>
+                      Username Bio <span className='text-destructive'>*</span>
+                    </label>
+                    <div className='relative'>
+                      <span className='absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-mono text-xs'>
+                        @
+                      </span>
+                      <Input
+                        value={username}
+                        onChange={(e) =>
+                          setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
+                        }
+                        placeholder='dinhgiang'
+                        className='pl-7 h-9 text-xs font-mono rounded-lg'
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs'>Tiểu sử ngắn (Bio)</label>
-                <Textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder='Giới thiệu ngắn gọn bạn là ai và bạn chia sẻ điều gì...'
-                  className='min-h-[80px] text-sm rounded-xl resize-none'
-                />
-              </div>
+                <div className='space-y-1.5'>
+                  <div className='flex items-center justify-between'>
+                    <label className='text-xs font-medium text-foreground'>Tiểu sử (Bio)</label>
+                    <span className='text-[11px] text-muted-foreground'>{bio.length}/160</span>
+                  </div>
+                  <Textarea
+                    value={bio}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 160) {
+                        setBio(e.target.value);
+                      }
+                    }}
+                    placeholder='Mô tả ngắn gọn về bạn hoặc cửa hàng của bạn...'
+                    rows={3}
+                    className='text-xs rounded-lg resize-none leading-relaxed'
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs'>
-                  URL Ảnh đại diện (Avatar)
-                </label>
-                <Input
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder='https://images.unsplash.com/...'
-                  className='h-10 text-xs rounded-xl'
-                />
-              </div>
+            {/* 3. Mạng xã hội */}
+            <Card className='rounded-xl border shadow-xs'>
+              <CardHeader className='pb-3'>
+                <CardTitle className='text-sm font-semibold'>
+                  3. Mạng xã hội & Kênh liên hệ
+                </CardTitle>
+                <CardDescription className='text-xs'>
+                  Thêm các kênh mạng xã hội mà bạn muốn hiển thị trên trang Bio.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4 pt-1'>
+                {activeSocialKeys.length === 0 ? (
+                  <div className='p-6 rounded-lg border border-dashed border-border text-center text-xs text-muted-foreground bg-muted/20'>
+                    Chưa có mạng xã hội nào. Chọn các kênh bên dưới để thêm vào trang Bio của bạn.
+                  </div>
+                ) : (
+                  <div className='space-y-2.5'>
+                    {activeSocialKeys.map((key) => {
+                      const socialItem = AVAILABLE_SOCIALS.find((s) => s.key === key);
+                      if (!socialItem) return null;
 
-              {/* Theme / Phong cách Giao diện */}
-              <div className='space-y-2 pt-2 border-t border-border/60'>
-                <label className='font-semibold text-foreground text-xs flex items-center gap-1.5'>
-                  <Icons.palette className='h-3.5 w-3.5 text-primary' />
-                  Phong cách Giao diện Storefront
-                </label>
-                <div className='grid grid-cols-2 sm:grid-cols-3 gap-2.5'>
-                  {[
-                    {
-                      id: 'tiktok' as const,
-                      name: 'TikTok Dark',
-                      desc: 'Dark theme, badge & chỉ số chuẩn TikTok',
-                      color: 'bg-zinc-950 border-rose-500/60 text-white ring-1 ring-rose-500/30'
-                    },
-                    {
-                      id: 'obsidian' as const,
-                      name: 'Obsidian Minimal',
-                      desc: 'Phong cách tối giản hiện đại',
-                      color: 'bg-zinc-900 border-zinc-700 text-white'
-                    },
-                    {
-                      id: 'minimal' as const,
-                      name: 'Clean Light',
-                      desc: 'Nền sáng thanh lịch, tinh tế',
-                      color: 'bg-white border-zinc-200 text-zinc-900'
-                    },
-                    {
-                      id: 'emerald' as const,
-                      name: 'Emerald Clean',
-                      desc: 'Xanh lá tài chính & thiên nhiên',
-                      color: 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400'
-                    },
-                    {
-                      id: 'latte' as const,
-                      name: 'Warm Latte',
-                      desc: 'Tone nâu ấm cúng, vintage',
-                      color: 'bg-amber-950/30 border-amber-600/40 text-amber-300'
-                    },
-                    {
-                      id: 'rose' as const,
-                      name: 'Rose Glow',
-                      desc: 'Tone hồng pastel sáng tạo',
-                      color: 'bg-pink-950/30 border-pink-500/40 text-pink-300'
-                    }
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      type='button'
-                      onClick={() => setSelectedTheme(t.id)}
-                      className={cn(
-                        'p-2.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden',
-                        selectedTheme === t.id
-                          ? 'border-primary ring-2 ring-primary/20 shadow-xs'
-                          : 'border-border hover:border-border/80'
-                      )}
-                    >
-                      <div className='flex items-center justify-between mb-1'>
-                        <span className='font-bold text-xs'>{t.name}</span>
-                        {selectedTheme === t.id && (
-                          <div className='h-4 w-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center'>
-                            <Check className='w-2.5 h-2.5 stroke-[3]' />
+                      return (
+                        <div
+                          key={key}
+                          className='flex items-center gap-2.5 p-2 rounded-lg border bg-card hover:border-border transition-colors'
+                        >
+                          <div className='shrink-0'>
+                            <SocialIconBadge platform={key} size='sm' />
                           </div>
-                        )}
-                      </div>
-                      <p className='text-[10px] text-muted-foreground line-clamp-1 leading-snug'>
-                        {t.desc}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className='border border-border shadow-xs'>
-            <CardHeader>
-              <CardTitle className='text-base font-bold'>Liên kết Mạng xã hội</CardTitle>
-              <CardDescription className='text-xs'>
-                Các icon mạng xã hội hiển thị ngay dưới bio để người theo dõi bấm vào.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-3.5 text-xs'>
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs flex items-center gap-1.5'>
-                  <Icons.tiktok className='h-4 w-4' />
-                  TikTok URL
-                </label>
-                <Input
-                  value={tiktok}
-                  onChange={(e) => setTiktok(e.target.value)}
-                  placeholder='https://tiktok.com/@giangdinh'
-                  className='h-9 text-xs rounded-xl'
-                />
-              </div>
+                          <span className='text-xs font-semibold w-20 shrink-0 text-foreground'>
+                            {socialItem.label}
+                          </span>
 
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs flex items-center gap-1.5'>
-                  <Icons.instagram className='h-4 w-4' />
-                  Instagram URL
-                </label>
-                <Input
-                  value={instagram}
-                  onChange={(e) => setInstagram(e.target.value)}
-                  placeholder='https://instagram.com/giangdinh'
-                  className='h-9 text-xs rounded-xl'
-                />
-              </div>
+                          <div className='relative flex-1'>
+                            <Input
+                              value={socialsState[key] || ''}
+                              onChange={(e) =>
+                                setSocialsState((prev) => ({ ...prev, [key]: e.target.value }))
+                              }
+                              placeholder={socialItem.placeholder}
+                              className='h-8 text-xs rounded-lg'
+                            />
+                          </div>
 
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs flex items-center gap-1.5'>
-                  <Icons.youtube className='h-4 w-4' />
-                  YouTube URL
-                </label>
-                <Input
-                  value={youtube}
-                  onChange={(e) => setYoutube(e.target.value)}
-                  placeholder='https://youtube.com/@giangdinh'
-                  className='h-9 text-xs rounded-xl'
-                />
-              </div>
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => handleRemoveSocial(key)}
+                            className='h-8 w-8 p-0 text-muted-foreground hover:text-destructive rounded-lg'
+                            title='Gỡ bỏ'
+                          >
+                            <Icons.close className='h-3.5 w-3.5' />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
-              <div className='space-y-1.5'>
-                <label className='font-semibold text-foreground text-xs flex items-center gap-1.5'>
-                  <Icons.facebook className='h-4 w-4' />
-                  Facebook URL
-                </label>
-                <Input
-                  value={facebook}
-                  onChange={(e) => setFacebook(e.target.value)}
-                  placeholder='https://facebook.com/giangdinh'
-                  className='h-9 text-xs rounded-xl'
-                />
-              </div>
-            </CardContent>
-            <CardFooter className='border-t border-border pt-4 flex justify-end'>
+                {/* Danh sách nút thêm mạng xã hội */}
+                {unaddedSocials.length > 0 && (
+                  <div className='pt-2 border-t border-border/60'>
+                    <label className='font-medium text-xs text-muted-foreground block mb-2'>
+                      + Thêm mạng xã hội khác:
+                    </label>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      {unaddedSocials.map((social) => {
+                        return (
+                          <Button
+                            key={social.key}
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            onClick={() => handleAddSocial(social.key)}
+                            className='h-8 px-2.5 text-xs rounded-lg gap-2 cursor-pointer hover:bg-muted'
+                          >
+                            <SocialIconBadge platform={social.key} size='sm' />
+                            <span>+ {social.label}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Bottom Actions */}
+            <div className='flex items-center justify-end gap-2 pt-2'>
+              <Link href='/dashboard/products'>
+                <Button variant='outline' size='sm' className='h-9 text-xs rounded-lg'>
+                  Hủy bỏ
+                </Button>
+              </Link>
               <Button
                 type='submit'
                 disabled={saving}
-                className='h-10 text-xs font-semibold rounded-xl px-6 shadow-xs'
+                size='sm'
+                className='h-9 px-5 text-xs font-semibold rounded-lg'
               >
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                {saving ? (
+                  <>
+                    <Icons.spinner className='h-3.5 w-3.5 animate-spin mr-1.5' />
+                    Đang lưu...
+                  </>
+                ) : (
+                  'Lưu thay đổi'
+                )}
               </Button>
-            </CardFooter>
-          </Card>
-        </form>
-      </div>
-
-      {/* Cột phải: Live Mobile Phone Preview (chuẩn Stan Store / Linktree) */}
-      <div className='lg:col-span-5 sticky top-20 flex flex-col items-center'>
-        <div className='flex items-center gap-2 mb-3 text-xs text-muted-foreground'>
-          <Icons.deviceMobile className='h-4 w-4 text-primary' />
-          <span className='font-semibold text-foreground'>Live Mobile Preview</span>
-          <span>(Cập nhật thời gian thực)</span>
+            </div>
+          </form>
         </div>
 
-        <PhoneMockup
-          profile={livePreviewProfile}
-          products={products}
-          paymentConfig={paymentConfig}
-          className='scale-[0.88] sm:scale-100 origin-top'
-        />
+        {/* Khung xem trước thời gian thực (5 Cột) */}
+        <div className='lg:col-span-5 sticky top-6 space-y-3'>
+          <div className='rounded-xl border bg-card p-3 shadow-xs flex items-center justify-between text-xs'>
+            <div className='flex items-center gap-2'>
+              <span className='relative flex h-2 w-2'>
+                <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75'></span>
+                <span className='relative inline-flex rounded-full h-2 w-2 bg-emerald-500'></span>
+              </span>
+              <span className='font-medium text-foreground'>Xem trước thời gian thực</span>
+            </div>
+            <a
+              href={`/@${username}`}
+              target='_blank'
+              rel='noreferrer'
+              className='text-primary hover:underline font-medium inline-flex items-center gap-1 text-[11px]'
+            >
+              Mở link Bio
+              <Icons.externalLink className='h-3 w-3' />
+            </a>
+          </div>
+
+          <PhoneMockup
+            profile={livePreviewProfile}
+            products={products}
+            paymentConfig={paymentConfig}
+            className='scale-[0.92] sm:scale-100 origin-top'
+          />
+        </div>
       </div>
+
+      {/* Popup Cắt & Căn chỉnh Avatar */}
+      <ImageCropModal
+        open={cropModalOpen}
+        onOpenChange={setCropModalOpen}
+        imageUrl={cropImageUrl}
+        onConfirmCrop={handleConfirmCrop}
+      />
     </div>
   );
 }

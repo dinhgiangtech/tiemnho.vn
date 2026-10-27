@@ -57,7 +57,7 @@ export function ProductsTable() {
       const updated = await updateProduct(product.id, { isPublished: !product.isPublished });
       setProducts((prev) => prev.map((p) => (p.id === product.id ? updated : p)));
       toast.success(
-        updated.isPublished ? 'Đã bật hiển thị trên Storefront' : 'Đã ẩn sản phẩm khỏi Storefront'
+        updated.isPublished ? 'Đã bật hiển thị trên Tiệm của bạn' : 'Đã ẩn sản phẩm khỏi Tiệm'
       );
     } catch {
       toast.error('Không thể cập nhật trạng thái hiển thị');
@@ -78,7 +78,7 @@ export function ProductsTable() {
   const handleCopyLink = (p: Product) => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/@giangdinh` : '';
     navigator.clipboard.writeText(url);
-    toast.success('Đã sao chép link Bio Storefront!');
+    toast.success('Đã sao chép link tiệm của bạn!');
   };
 
   const formatPrice = (price: number) => {
@@ -121,11 +121,16 @@ export function ProductsTable() {
         {[
           { key: 'ALL', label: 'Tất cả sản phẩm', icon: null },
           { key: 'DIGITAL', label: 'Sản phẩm số', icon: FileText, color: 'text-blue-500' },
-          { key: 'LEAD_MAGNET', label: 'Quà 0đ', icon: Gift, color: 'text-emerald-500' },
-          { key: 'PHYSICAL', label: 'Hàng vật lý', icon: Package, color: 'text-amber-500' },
+          { key: 'LEAD_MAGNET', label: 'Quà tặng 0đ', icon: Gift, color: 'text-emerald-500' },
+          {
+            key: 'PHYSICAL',
+            label: 'Hàng đặt trước / Thủ công',
+            icon: Package,
+            color: 'text-amber-500'
+          },
           {
             key: 'EXTERNAL_LINK',
-            label: 'Nút link liên kết',
+            label: 'Nút liên kết',
             icon: Link2,
             color: 'text-purple-500'
           }
@@ -203,9 +208,9 @@ export function ProductsTable() {
                       <div className='space-y-0.5'>
                         <Badge variant='outline' className='text-[10px] font-medium'>
                           {p.type === 'DIGITAL' && 'Sản phẩm số'}
-                          {p.type === 'LEAD_MAGNET' && 'Quà 0đ (Lead Magnet)'}
-                          {p.type === 'PHYSICAL' && 'Hàng vật lý'}
-                          {p.type === 'EXTERNAL_LINK' && 'Nút link'}
+                          {p.type === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
+                          {p.type === 'PHYSICAL' && 'Hàng đặt trước / Thủ công'}
+                          {p.type === 'EXTERNAL_LINK' && 'Nút liên kết'}
                         </Badge>
                         <div className='font-bold text-foreground text-xs'>
                           {formatPrice(p.price)}

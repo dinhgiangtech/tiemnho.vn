@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
+import { uploadClientFile } from '@/lib/upload-client';
 
 const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=600&q=80',
@@ -144,11 +145,11 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
     defaultValues: {
       type: initialProduct?.type || 'DIGITAL',
       title: initialProduct?.title || '',
-      coverImage: initialProduct?.coverImage || PRESET_COVERS[0],
+      coverImage: initialProduct?.coverImage || '',
       description: initialProduct?.description || '',
-      price: initialProduct ? initialProduct.price : 149000,
+      price: initialProduct ? initialProduct.price : 0,
       isPublished: initialProduct ? initialProduct.isPublished : true,
-      buttonText: initialProduct?.buttonText || '',
+      buttonText: initialProduct?.buttonText || 'Mua ngay',
 
       deliveryType:
         initialProduct?.deliveryType ||
@@ -156,18 +157,18 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
           ? 'REDIRECT_LINK'
           : 'UPLOAD_FILE'),
       fileUrl: initialProduct?.fileUrl || '',
-      fileName: initialProduct?.fileName || 'Template-Notion-2025.pdf',
-      fileSize: initialProduct?.fileSize || '12.4 MB',
-      redirectUrl: initialProduct?.fileUrl || 'https://notion.so/giangdinh/template-notion-creator',
-      successMessage: initialProduct?.successMessage || 'Tài liệu đã được gửi vào Email của bạn!',
+      fileName: initialProduct?.fileName || '',
+      fileSize: initialProduct?.fileSize || '',
+      redirectUrl: initialProduct?.fileUrl || '',
+      successMessage: initialProduct?.successMessage || 'Cảm ơn bạn đã mua sản phẩm!',
 
-      stock: initialProduct?.stock !== undefined ? initialProduct.stock : 50,
-      estimatedFulfillment: initialProduct?.estimatedFulfillment || 'Giao sau 3-5 ngày làm việc',
-      variants: initialProduct?.variants || ['Size M', 'Size L', 'Màu Đen'],
-      enableZaloConfirm: initialProduct?.enableZaloConfirm ?? true,
+      stock: initialProduct?.stock !== undefined ? initialProduct.stock : 999,
+      estimatedFulfillment: initialProduct?.estimatedFulfillment || '',
+      variants: initialProduct?.variants || [],
+      enableZaloConfirm: initialProduct?.enableZaloConfirm ?? false,
 
-      destinationUrl: initialProduct?.externalUrl || 'https://shopee.vn/gian-hang-chinh-hang',
-      iconType: initialProduct?.iconType || 'shopee',
+      destinationUrl: initialProduct?.externalUrl || '',
+      iconType: initialProduct?.iconType || 'external',
       openInNewTab: initialProduct?.openInNewTab ?? true
     }
   });
@@ -214,29 +215,47 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
   }, [watchedValues.type, setValue, watchedValues.price]);
 
   // Handle Cover Image Upload
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploading(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('coverImage', reader.result as string);
+      try {
+        const res = await uploadClientFile(file, { folder: 'products/covers' });
+        setValue('coverImage', res.url);
+        toast.success(
+          `Đã tải ảnh thumbnail thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
+        );
+      } catch (err: any) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('coverImage', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
+      } finally {
         setIsUploading(false);
-        toast.success('Đã tải ảnh thumbnail thành công!');
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
-  // Handle Digital File Upload Simulation
-  const handleDigitalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle Digital File Upload
+  const handleDigitalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setValue('fileName', file.name);
-      setValue('fileSize', `${sizeMb} MB`);
-      setValue('fileUrl', `https://storage.tiemnho.vn/r2/files/${file.name}`);
-      toast.success(`Đã chuẩn bị file đính kèm: ${file.name} (${sizeMb} MB)`);
+      const toastId = toast.loading(`Đang tải file ${file.name} (${sizeMb} MB)...`);
+      try {
+        const res = await uploadClientFile(file, { folder: 'products/files' });
+        setValue('fileName', file.name);
+        setValue('fileSize', `${sizeMb} MB`);
+        setValue('fileUrl', res.url);
+        toast.success(
+          `Đã tải file đính kèm thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`,
+          { id: toastId }
+        );
+      } catch (err: any) {
+        toast.error(err.message || 'Không thể tải file lên server.', { id: toastId });
+      }
     }
   };
 
@@ -461,28 +480,28 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
                         {
                           type: 'DIGITAL' as ProductType,
                           title: 'Sản phẩm số',
-                          desc: 'Ebook, Template Notion, Preset, file PDF/Zip, link Canva...',
+                          desc: 'Ebook, template Notion, preset, tài liệu nén',
                           icon: Icons.post,
                           badge: 'File / Link bảo mật'
                         },
                         {
                           type: 'LEAD_MAGNET' as ProductType,
                           title: 'Quà tặng 0đ',
-                          desc: 'Checklist, cẩm nang miễn phí nhằm thu thập Email & SĐT',
+                          desc: 'Checklist, cẩm nang miễn phí thu thập Email/SĐT',
                           icon: Icons.gift,
                           badge: 'Giá cố định 0đ'
                         },
                         {
                           type: 'PHYSICAL' as ProductType,
-                          title: 'Hàng vật lý',
-                          desc: 'Sách in, quà tặng, đồ thủ công, sản phẩm đóng gói...',
+                          title: 'Hàng đặt trước / Thủ công',
+                          desc: 'Sách in kèm chữ ký, áo merch, đồ handmade làm theo yêu cầu',
                           icon: Icons.product,
-                          badge: 'Tồn kho & Size/Màu'
+                          badge: 'Pre-order / Handmade'
                         },
                         {
                           type: 'EXTERNAL_LINK' as ProductType,
-                          title: 'Nút link liên kết',
-                          desc: 'Trỏ sang Shopee, TikTok Shop, nhóm Zalo kín, kênh YouTube...',
+                          title: 'Nút liên kết',
+                          desc: 'Trỏ sang Shopee, TikTok Shop, Zalo kín, link Affiliate',
                           icon: Icons.link,
                           badge: 'Mở tab mới'
                         }

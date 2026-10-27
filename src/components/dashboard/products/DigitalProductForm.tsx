@@ -27,11 +27,12 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
+import { uploadClientFile } from '@/lib/upload-client';
 
 // Schema xác thực dữ liệu Tiếng Việt
 export const digitalProductSchema = z.object({
   // 1. Thiết lập ảnh Thumbnail
-  thumbnail: z.string().min(1, 'Vui lòng chọn hoặc tải ảnh đại diện'),
+  thumbnail: z.string().optional(),
 
   // 2. Tùy chỉnh hiển thị (Preview)
   title: z.string().min(1, 'Tiêu đề không được để trống').max(50, 'Tiêu đề tối đa 50 ký tự'),
@@ -96,36 +97,27 @@ export function DigitalProductForm({
   const form = useForm<DigitalProductFormValues>({
     resolver: zodResolver(digitalProductSchema),
     defaultValues: {
-      thumbnail:
-        initialProduct?.coverImage ||
-        'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&h=400&q=80',
-      title: initialProduct?.title || 'Sở hữu ngay [Bộ Template / Ebook / Khóa học]!',
-      subtitle: initialProduct?.subtitle || 'Chúng tôi sẽ gửi tài liệu này thẳng vào Email của bạn',
-      buttonText: initialProduct?.buttonText || 'Nhận tài liệu ngay',
+      thumbnail: initialProduct?.coverImage || '',
+      title: initialProduct?.title || '',
+      subtitle: initialProduct?.subtitle || '',
+      buttonText: initialProduct?.buttonText || 'Mua ngay',
 
-      detailTitle:
-        initialProduct?.detailTitle ||
-        initialProduct?.title ||
-        'Sở hữu ngay [Bộ Template / Ebook / Khóa học]!',
-      descriptionBody:
-        initialProduct?.description ||
-        `Tài liệu [Template/Ebook/Khóa học] này sẽ giúp bạn đạt được mọi mục tiêu mong muốn.\n\nTài liệu này đặc biệt dành cho bạn nếu bạn muốn:\n• Hiện thực hóa ước mơ phát triển bản thân\n• Tối ưu năng suất công việc mỗi ngày\n• Tự do tài chính & Tận hưởng cuộc sống`,
-      bottomTitle: initialProduct?.bottomTitle || 'Bắt đầu nâng cấp kỹ năng của bạn ngay hôm nay',
+      detailTitle: initialProduct?.detailTitle || initialProduct?.title || '',
+      descriptionBody: initialProduct?.description || '',
+      bottomTitle: initialProduct?.bottomTitle || '',
       ctaButton: initialProduct?.ctaButton || 'MUA NGAY',
 
       deliveryType: initialProduct?.deliveryType || 'UPLOAD_FILE',
       fileUrl: initialProduct?.fileUrl || '',
-      fileName: initialProduct?.fileName || 'Template-Notion-2025.pdf',
-      fileSize: initialProduct?.fileSize || '14.8 MB',
+      fileName: initialProduct?.fileName || '',
+      fileSize: initialProduct?.fileSize || '',
       redirectUrl: initialProduct?.fileUrl || '',
 
-      featureImage:
-        initialProduct?.bannerImage ||
-        'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&h=675&q=80',
+      featureImage: initialProduct?.bannerImage || '',
 
-      price: initialProduct?.price ?? 149000,
+      price: initialProduct?.price ?? 0,
       hasDiscount: !!initialProduct?.originalPrice,
-      discountPrice: initialProduct?.originalPrice ?? 299000,
+      discountPrice: initialProduct?.originalPrice ?? 0,
 
       isPublished: initialProduct?.isPublished ?? true
     }
@@ -161,44 +153,72 @@ export function DigitalProductForm({
   }, []);
 
   // Xử lý upload thumbnail
-  const handleUploadThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadThumbnail = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingThumb(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('thumbnail', reader.result as string);
+      try {
+        const res = await uploadClientFile(file, { folder: 'products/thumbnails' });
+        setValue('thumbnail', res.url);
+        toast.success(
+          `Đã tải ảnh đại diện thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
+        );
+      } catch (err: any) {
+        // Fallback đọc DataURL nếu lỗi
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('thumbnail', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
+      } finally {
         setIsUploadingThumb(false);
-        toast.success('Đã tải ảnh đại diện thành công!');
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
   // Xử lý upload ảnh bìa
-  const handleUploadBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingBanner(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('featureImage', reader.result as string);
+      try {
+        const res = await uploadClientFile(file, { folder: 'products/banners' });
+        setValue('featureImage', res.url);
+        toast.success(
+          `Đã tải ảnh bìa nổi bật thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
+        );
+      } catch (err: any) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('featureImage', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
+      } finally {
         setIsUploadingBanner(false);
-        toast.success('Đã tải ảnh bìa nổi bật thành công!');
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
   // Xử lý upload file đính kèm
-  const handleUploadDigitalFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadDigitalFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setValue('fileName', file.name);
-      setValue('fileSize', `${sizeMb} MB`);
-      setValue('fileUrl', `https://storage.tiemnho.vn/r2/files/${file.name}`);
-      toast.success(`Đã đính kèm file: ${file.name} (${sizeMb} MB)`);
+      const toastId = toast.loading(`Đang tải file ${file.name} (${sizeMb} MB)...`);
+      try {
+        const res = await uploadClientFile(file, { folder: 'products/files' });
+        setValue('fileName', file.name);
+        setValue('fileSize', `${sizeMb} MB`);
+        setValue('fileUrl', res.url);
+        toast.success(
+          `Đã đính kèm file thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`,
+          { id: toastId }
+        );
+      } catch (err: any) {
+        toast.error(err.message || 'Không thể tải file lên server.', { id: toastId });
+      }
     }
   };
 
@@ -215,7 +235,7 @@ export function DigitalProductForm({
         description: values.descriptionBody.trim(),
         price: values.price,
         originalPrice: originalPrice,
-        coverImage: values.thumbnail,
+        coverImage: values.thumbnail || '',
         fileUrl: finalFile,
         fileName: values.deliveryType === 'UPLOAD_FILE' ? values.fileName : undefined,
         fileSize: values.deliveryType === 'UPLOAD_FILE' ? values.fileSize : undefined,

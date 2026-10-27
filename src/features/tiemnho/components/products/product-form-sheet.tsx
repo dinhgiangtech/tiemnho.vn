@@ -23,25 +23,25 @@ const PRODUCT_TYPE_OPTIONS: { type: ProductType; label: string; desc: string; ic
   {
     type: 'DIGITAL',
     label: 'Sản phẩm số',
-    desc: 'Ebook, Template Notion, Preset, file PDF/Zip...',
+    desc: 'Ebook, template Notion, preset, tài liệu nén',
     icon: 'file'
   },
   {
     type: 'LEAD_MAGNET',
-    label: 'Quà tặng 0đ (Lead Magnet)',
-    desc: 'Checklist, cẩm nang miễn phí để thu thập Email & SĐT',
+    label: 'Quà tặng 0đ',
+    desc: 'Checklist, cẩm nang miễn phí thu thập Email/SĐT',
     icon: 'gift'
   },
   {
     type: 'PHYSICAL',
-    label: 'Hàng vật lý / Theo yêu cầu',
-    desc: 'Sách in, áo thun merch, sổ tay có chữ ký...',
+    label: 'Hàng đặt trước / Thủ công',
+    desc: 'Sách in kèm chữ ký, áo merch, đồ handmade làm theo yêu cầu',
     icon: 'product'
   },
   {
     type: 'EXTERNAL_LINK',
-    label: 'Nút chuyển hướng',
-    desc: 'Trỏ sang Shopee, TikTok Shop, nhóm Zalo, YouTube...',
+    label: 'Nút liên kết',
+    desc: 'Trỏ sang Shopee, TikTok Shop, Zalo kín, link Affiliate',
     icon: 'externalLink'
   }
 ];
@@ -166,29 +166,29 @@ export function ProductFormSheet({ product, isOpen, onClose, onSuccess }: Produc
               {[
                 {
                   type: 'DIGITAL' as ProductType,
-                  label: 'Sản phẩm số (Digital)',
-                  desc: 'Bán file Ebook, template Notion, preset, PDF/Zip...',
+                  label: 'Sản phẩm số',
+                  desc: 'Ebook, template Notion, preset, tài liệu nén',
                   icon: FileText,
                   color: 'text-blue-500 bg-blue-500/10'
                 },
                 {
                   type: 'LEAD_MAGNET' as ProductType,
-                  label: 'Quà tặng 0đ (Lead Magnet)',
-                  desc: 'Thu thập Email/SĐT người mua bằng checklist miễn phí',
+                  label: 'Quà tặng 0đ',
+                  desc: 'Checklist, cẩm nang miễn phí thu thập Email & SĐT',
                   icon: Gift,
                   color: 'text-emerald-500 bg-emerald-500/10'
                 },
                 {
                   type: 'PHYSICAL' as ProductType,
-                  label: 'Hàng vật lý / Thủ công',
-                  desc: 'Áo merch, sách in, đồ handmade (thu địa chỉ chi tiết)',
+                  label: 'Hàng đặt trước / Thủ công',
+                  desc: 'Sách in kèm chữ ký, áo merch, đồ handmade làm theo yêu cầu',
                   icon: Package,
                   color: 'text-amber-500 bg-amber-500/10'
                 },
                 {
                   type: 'EXTERNAL_LINK' as ProductType,
-                  label: 'Nút link liên kết',
-                  desc: 'Dẫn sang Shopee, TikTok Shop, nhóm Zalo, YouTube...',
+                  label: 'Nút liên kết',
+                  desc: 'Trỏ sang Shopee, TikTok Shop, Zalo kín, link Affiliate',
                   icon: Link2,
                   color: 'text-purple-500 bg-purple-500/10'
                 }

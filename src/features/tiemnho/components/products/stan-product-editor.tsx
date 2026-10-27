@@ -146,7 +146,7 @@ export function StanProductEditor({
   const handleCopyStoreLink = () => {
     const url = `${window.location.origin}/@${profile.username}`;
     navigator.clipboard.writeText(url);
-    toast.success('Đã sao chép link Storefront của bạn: stan.store/' + profile.username);
+    toast.success('Đã sao chép link tiệm của bạn: ' + url);
   };
 
   // Submit Handler
@@ -310,9 +310,9 @@ export function StanProductEditor({
               type='button'
               onClick={handleCopyStoreLink}
               className='inline-flex items-center gap-1.5 text-xs font-semibold text-[#5851DF] hover:underline cursor-pointer'
-              title='Sao chép liên kết cửa hàng'
+              title='Sao chép liên kết tiệm của bạn'
             >
-              <span>stan.store/{profile.username}</span>
+              <span>tiemnho.vn/@{profile.username}</span>
               <Icons.copy className='h-3.5 w-3.5' />
             </button>
 
@@ -794,7 +794,7 @@ export function StanProductEditor({
                   <div className='flex items-center justify-between'>
                     <div className='space-y-0.5'>
                       <div className='font-bold text-xs text-foreground'>
-                        Hiển thị công khai trên Storefront
+                        Hiển thị công khai trên Tiệm của bạn
                       </div>
                       <div className='text-[11px] text-muted-foreground'>
                         Bật để người xem trang bio có thể bấm mua hoặc nhận quà
@@ -823,8 +823,8 @@ export function StanProductEditor({
                       Xóa sản phẩm
                     </div>
                     <p className='text-[11px] text-muted-foreground'>
-                      Xóa sản phẩm này khỏi Storefront. Doanh thu và đơn hàng cũ vẫn được lưu trữ an
-                      toàn.
+                      Xóa sản phẩm này khỏi Tiệm của bạn. Doanh thu và đơn hàng cũ vẫn được lưu trữ
+                      an toàn.
                     </p>
                     <Button
                       type='button'

@@ -58,7 +58,7 @@ export function TikTokStorefrontView({
       return product.buttonText.trim();
     }
     if (product.type === 'EXTERNAL_LINK') return 'Mở link';
-    if (product.type === 'LEAD_MAGNET') return 'Nhận ngay';
+    if (product.type === 'LEAD_MAGNET') return 'Nhận 0đ';
     if (product.type === 'PHYSICAL') return 'Đặt trước';
     return 'Mua ngay';
   };

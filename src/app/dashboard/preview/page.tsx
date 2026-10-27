@@ -7,7 +7,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Live Mobile Preview | Tiệm Nhỏ'
+  title: 'Xem trước tiệm | Tiệm Nhỏ'
 };
 
 export default async function PreviewPage() {
@@ -19,14 +19,14 @@ export default async function PreviewPage() {
 
   return (
     <PageContainer
-      pageTitle='Live Mobile Preview Studio'
-      pageDescription='Trải nghiệm Storefront của bạn chính xác như người mua nhìn thấy trên điện thoại hoặc trình duyệt in-app (TikTok, Reels, Threads).'
+      pageTitle='Xem trước tiệm của bạn'
+      pageDescription='Trải nghiệm tiệm của bạn chính xác như người mua nhìn thấy trên điện thoại hoặc trình duyệt in-app (TikTok, Reels, Threads).'
       pageHeaderAction={
         <div className='flex items-center gap-2'>
           <a href={`/@${profile.username}`} target='_blank' rel='noreferrer'>
             <Button size='sm' className='h-9 text-xs gap-1.5 rounded-xl font-semibold'>
               <Icons.externalLink className='h-3.5 w-3.5' />
-              Mở trên tab mới
+              Ghé tiệm thực tế
             </Button>
           </a>
         </div>

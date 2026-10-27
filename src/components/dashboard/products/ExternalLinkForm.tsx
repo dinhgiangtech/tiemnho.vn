@@ -27,6 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
+import { uploadClientFile } from '@/lib/upload-client';
 import { SOCIAL_PLATFORMS, SocialIconBadge } from '@/components/common/social-icons';
 
 // Schema xác thực cho Nút link liên kết (External Link)
@@ -41,7 +42,7 @@ export const externalLinkSchema = z.object({
     .url('Vui lòng nhập đúng định dạng URL (vd: https://...)'),
 
   // 3. Set Thumbnail (Ảnh đại diện)
-  thumbnail: z.string().min(1, 'Vui lòng chọn hoặc tải ảnh đại diện'),
+  thumbnail: z.string().optional(),
 
   // 4. Customize Button (Tùy chỉnh nút bấm)
   title: z
@@ -94,13 +95,11 @@ export function ExternalLinkForm({ initialProduct, onSuccess, onCancel }: Extern
     resolver: zodResolver(externalLinkSchema),
     defaultValues: {
       displayStyle: initialProduct?.displayStyle || 'BUTTON',
-      destinationUrl: initialProduct?.externalUrl || 'https://shopee.vn/gian-hang-chinh-hang',
-      thumbnail:
-        initialProduct?.coverImage ||
-        'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=400&h=400&q=80',
-      title: initialProduct?.title || 'Ghé thăm gian hàng Shopee / TikTok của mình',
-      subtitle: initialProduct?.subtitle || 'Nhận mã giảm giá độc quyền 20% khi mua tại đây',
-      iconType: initialProduct?.iconType || 'shopee',
+      destinationUrl: initialProduct?.externalUrl || '',
+      thumbnail: initialProduct?.coverImage || '',
+      title: initialProduct?.title || '',
+      subtitle: initialProduct?.subtitle || '',
+      iconType: initialProduct?.iconType || 'external',
       openInNewTab: initialProduct?.openInNewTab ?? true,
       isPublished: initialProduct?.isPublished ?? true
     }
@@ -136,17 +135,26 @@ export function ExternalLinkForm({ initialProduct, onSuccess, onCancel }: Extern
   }, []);
 
   // Upload thumbnail
-  const handleUploadThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadThumbnail = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingThumb(true);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue('thumbnail', reader.result as string);
+      try {
+        const res = await uploadClientFile(file, { folder: 'external-links/thumbnails' });
+        setValue('thumbnail', res.url);
+        toast.success(
+          `Đã tải ảnh đại diện thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
+        );
+      } catch (err: any) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setValue('thumbnail', reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
+      } finally {
         setIsUploadingThumb(false);
-        toast.success('Đã tải ảnh đại diện thành công!');
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -158,7 +166,7 @@ export function ExternalLinkForm({ initialProduct, onSuccess, onCancel }: Extern
         title: values.title.trim(),
         description: values.subtitle?.trim() || '',
         price: 0,
-        coverImage: values.thumbnail,
+        coverImage: values.thumbnail || '',
         externalUrl: values.destinationUrl.trim(),
         iconType: values.iconType,
         openInNewTab: values.openInNewTab,

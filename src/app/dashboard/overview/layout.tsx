@@ -57,7 +57,7 @@ export default function OverViewLayout({
               </Badge>
             </div>
             <p className='text-xs text-muted-foreground flex items-center gap-1.5'>
-              <span>Link Storefront:</span>
+              <span>Link tiệm:</span>
               <a
                 href='/@giangdinh'
                 target='_blank'
@@ -85,7 +85,7 @@ export default function OverViewLayout({
             <Link href='/dashboard/preview'>
               <Button variant='outline' size='sm' className='h-9 text-xs gap-1.5 rounded-xl'>
                 <Icons.deviceMobile className='h-3.5 w-3.5' />
-                Live Preview
+                Xem trước tiệm
               </Button>
             </Link>
 

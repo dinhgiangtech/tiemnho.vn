@@ -5,42 +5,43 @@ export const navGroups: NavGroup[] = [
     label: 'Cửa hàng & Vận hành',
     items: [
       {
-        title: 'Home',
+        title: 'Tổng quan',
         url: '/dashboard/overview',
         icon: 'dashboard',
         isActive: false,
-        shortcut: ['h', 'h'],
+        shortcut: ['t', 'q'],
         items: []
       },
       {
-        title: 'My Store',
+        title: 'Tiệm của bạn',
         url: '/dashboard/products',
         icon: 'store',
-        shortcut: ['m', 's'],
+        shortcut: ['t', 'b'],
         isActive: false,
         items: []
       },
       {
-        title: 'Income',
+        title: 'Doanh thu',
         url: '/dashboard/orders',
         icon: 'receipt',
-        shortcut: ['i', 'n'],
+        shortcut: ['d', 't'],
         isActive: false,
         items: []
       },
       {
-        title: 'Customers',
+        title: 'Danh bạ khách',
         url: '/dashboard/leads',
         icon: 'users',
-        shortcut: ['c', 'u'],
+        shortcut: ['d', 'b'],
         isActive: false,
         items: []
       },
       {
-        title: 'Live Preview',
+        title: 'Xem trước tiệm',
         url: '/dashboard/preview',
         icon: 'smartphone',
-        shortcut: ['p', 'v'],
+        shortcut: ['x', 't'],
+        isActive: false,
         items: []
       }
     ]
@@ -49,18 +50,18 @@ export const navGroups: NavGroup[] = [
     label: 'Cài đặt Nền tảng',
     items: [
       {
-        title: 'Nhận tiền VietQR',
+        title: 'Cài đặt nhận tiền',
         url: '/dashboard/settings/payment',
         icon: 'qrcode',
-        shortcut: ['q', 'q'],
+        shortcut: ['n', 't'],
         isActive: false,
         items: []
       },
       {
-        title: 'Hồ sơ Storefront',
+        title: 'Cài đặt tài khoản',
         url: '/dashboard/settings/storefront',
         icon: 'palette',
-        shortcut: ['s', 's'],
+        shortcut: ['t', 'k'],
         isActive: false,
         items: []
       }
@@ -77,7 +78,7 @@ export const navGroups: NavGroup[] = [
         items: []
       },
       {
-        title: 'Xem Bio (@giangdinh)',
+        title: 'Ghé tiệm (@giangdinh)',
         url: '/@giangdinh',
         icon: 'externalLink',
         isActive: false,

@@ -135,7 +135,7 @@ export default async function LandingPage() {
                 className='w-full sm:w-auto h-12 px-6 rounded-2xl text-sm font-semibold gap-2 border-border text-foreground hover:bg-muted'
               >
                 <Icons.deviceMobile className='h-4 w-4 text-foreground' />
-                Xem Storefront mẫu (@giangdinh)
+                Ghé tiệm mẫu (@giangdinh)
               </Button>
             </Link>
           </div>
