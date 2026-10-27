@@ -31,8 +31,33 @@ export type CreateProductInput = {
   coverImage: string;
   fileUrl?: string;
   fileName?: string;
+  fileSize?: string;
+  deliveryType?: 'UPLOAD_FILE' | 'REDIRECT_LINK';
+  successMessage?: string;
+  estimatedFulfillment?: string;
+  variants?: string[];
+  enableZaloConfirm?: boolean;
   externalUrl?: string;
+  iconType?:
+    | 'shopee'
+    | 'tiktok'
+    | 'zalo'
+    | 'youtube'
+    | 'facebook'
+    | 'instagram'
+    | 'telegram'
+    | 'threads'
+    | 'messenger'
+    | 'twitter'
+    | 'external';
+  openInNewTab?: boolean;
   buttonText?: string;
+  subtitle?: string;
+  detailTitle?: string;
+  bottomTitle?: string;
+  ctaButton?: string;
+  bannerImage?: string;
+  displayStyle?: 'BUTTON' | 'CALLOUT';
   isPublished: boolean;
   isFeatured: boolean;
   stock?: number;

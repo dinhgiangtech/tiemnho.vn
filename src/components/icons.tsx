@@ -104,12 +104,22 @@ import {
   IconBrandInstagram,
   IconBrandYoutube,
   IconBrandFacebook,
+  IconBrandTelegram,
+  IconBrandMessenger,
+  IconBrandThreads,
+  IconBrandX,
+  IconBrandDiscord,
+  IconBrandShopee,
+  IconBrandWhatsapp,
+  IconBrandPinterest,
+  IconBrandLinkedin,
   IconFileSpreadsheet,
   IconRefresh,
   IconWorld,
   IconBuildingStore,
   IconHome
 } from '@tabler/icons-react';
+import { ZaloIcon } from '@/components/common/brand-icons';
 
 export type Icon = React.ComponentType<IconProps>;
 
@@ -264,6 +274,15 @@ export const Icons = {
   instagram: IconBrandInstagram,
   youtube: IconBrandYoutube,
   facebook: IconBrandFacebook,
+  telegram: IconBrandTelegram,
+  messenger: IconBrandMessenger,
+  threads: IconBrandThreads,
+  discord: IconBrandDiscord,
+  shopee: IconBrandShopee,
+  whatsapp: IconBrandWhatsapp,
+  pinterest: IconBrandPinterest,
+  linkedin: IconBrandLinkedin,
+  zalo: ZaloIcon,
   fileSpreadsheet: IconFileSpreadsheet,
   refresh: IconRefresh,
   world: IconWorld

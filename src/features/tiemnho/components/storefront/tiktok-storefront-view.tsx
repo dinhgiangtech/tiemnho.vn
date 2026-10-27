@@ -51,6 +51,12 @@ export function TikTokStorefrontView({
   };
 
   const getCtaLabel = (product: Product) => {
+    if (product.type === 'PHYSICAL' && product.stock !== undefined && product.stock <= 0) {
+      return 'Hết hàng';
+    }
+    if (product.buttonText && product.buttonText.trim()) {
+      return product.buttonText.trim();
+    }
     if (product.type === 'EXTERNAL_LINK') return 'Mở link';
     if (product.type === 'LEAD_MAGNET') return 'Nhận ngay';
     if (product.type === 'PHYSICAL') return 'Đặt trước';

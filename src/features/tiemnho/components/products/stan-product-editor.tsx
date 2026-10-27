@@ -1109,9 +1109,9 @@ export function StanProductEditor({
               </span>
               Cách thức hoạt động (How it works)
             </DialogTitle>
-            <DialogDescription className='text-xs text-muted-foreground pt-1'>
+            {/* <DialogDescription className='text-xs text-muted-foreground pt-1'>
               Quy trình xuất bản sản phẩm số & quà tặng chuẩn Stan Store
-            </DialogDescription>
+            </DialogDescription> */}
           </DialogHeader>
 
           <div className='space-y-4 pt-2 text-xs'>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { SocialIconBadge } from '@/components/common/social-icons';
 
 interface StorefrontViewProps {
   profile: CreatorProfile;
@@ -62,6 +63,12 @@ export function StorefrontView({
   };
 
   const getCtaLabel = (product: Product) => {
+    if (product.type === 'PHYSICAL' && product.stock !== undefined && product.stock <= 0) {
+      return 'Hết hàng';
+    }
+    if (product.buttonText && product.buttonText.trim()) {
+      return product.buttonText.trim();
+    }
     if (product.type === 'EXTERNAL_LINK') return 'Mở link';
     if (product.type === 'LEAD_MAGNET') return 'Nhận ngay';
     if (product.type === 'PHYSICAL') return 'Đặt trước';
@@ -200,21 +207,16 @@ export function StorefrontView({
         </p>
 
         {/* Social Icons Bar */}
-        <div className='flex items-center gap-2 pt-1'>
+        <div className='flex items-center gap-2 pt-1 flex-wrap justify-center'>
           {profile.socials.tiktok && (
             <a
               href={profile.socials.tiktok}
               target='_blank'
               rel='noreferrer'
-              className={cn(
-                'h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200',
-                isTikTokTheme
-                  ? 'bg-zinc-800 text-white hover:bg-[#fe2c55] hover:text-white shadow-xs'
-                  : 'bg-muted/80 hover:bg-primary/10 hover:text-primary text-muted-foreground'
-              )}
+              className='transition-transform hover:scale-110 active:scale-95'
               title='TikTok'
             >
-              <Icons.tiktok className='h-4 w-4' />
+              <SocialIconBadge platform='tiktok' size='sm' />
             </a>
           )}
           {profile.socials.instagram && (
@@ -222,15 +224,10 @@ export function StorefrontView({
               href={profile.socials.instagram}
               target='_blank'
               rel='noreferrer'
-              className={cn(
-                'h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200',
-                isTikTokTheme
-                  ? 'bg-zinc-800 text-white hover:bg-pink-600 hover:text-white shadow-xs'
-                  : 'bg-muted/80 hover:bg-primary/10 hover:text-primary text-muted-foreground'
-              )}
+              className='transition-transform hover:scale-110 active:scale-95'
               title='Instagram'
             >
-              <Icons.instagram className='h-4 w-4' />
+              <SocialIconBadge platform='instagram' size='sm' />
             </a>
           )}
           {profile.socials.youtube && (
@@ -238,15 +235,10 @@ export function StorefrontView({
               href={profile.socials.youtube}
               target='_blank'
               rel='noreferrer'
-              className={cn(
-                'h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200',
-                isTikTokTheme
-                  ? 'bg-zinc-800 text-white hover:bg-red-600 hover:text-white shadow-xs'
-                  : 'bg-muted/80 hover:bg-primary/10 hover:text-primary text-muted-foreground'
-              )}
+              className='transition-transform hover:scale-110 active:scale-95'
               title='YouTube'
             >
-              <Icons.youtube className='h-4 w-4' />
+              <SocialIconBadge platform='youtube' size='sm' />
             </a>
           )}
           {profile.socials.facebook && (
@@ -254,15 +246,32 @@ export function StorefrontView({
               href={profile.socials.facebook}
               target='_blank'
               rel='noreferrer'
-              className={cn(
-                'h-8 w-8 rounded-full flex items-center justify-center transition-all duration-200',
-                isTikTokTheme
-                  ? 'bg-zinc-800 text-white hover:bg-blue-600 hover:text-white shadow-xs'
-                  : 'bg-muted/80 hover:bg-primary/10 hover:text-primary text-muted-foreground'
-              )}
+              className='transition-transform hover:scale-110 active:scale-95'
               title='Facebook'
             >
-              <Icons.facebook className='h-4 w-4' />
+              <SocialIconBadge platform='facebook' size='sm' />
+            </a>
+          )}
+          {profile.socials.zalo && (
+            <a
+              href={`https://zalo.me/${profile.socials.zalo}`}
+              target='_blank'
+              rel='noreferrer'
+              className='transition-transform hover:scale-110 active:scale-95'
+              title='Zalo'
+            >
+              <SocialIconBadge platform='zalo' size='sm' />
+            </a>
+          )}
+          {profile.socials.threads && (
+            <a
+              href={profile.socials.threads}
+              target='_blank'
+              rel='noreferrer'
+              className='transition-transform hover:scale-110 active:scale-95'
+              title='Threads'
+            >
+              <SocialIconBadge platform='threads' size='sm' />
             </a>
           )}
         </div>
@@ -509,24 +518,35 @@ export function StorefrontView({
 
                   {/* Cột giữa: Tiêu đề in đậm 1-2 dòng + Nhãn giá VNĐ / nhãn Miễn phí xanh lá */}
                   <div className='flex-1 min-w-0 pr-1'>
-                    <h3 className='text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors'>
-                      {product.title}
-                    </h3>
-                    <div className='flex items-baseline gap-1.5 mt-1'>
-                      <span
-                        className={cn(
-                          'font-bold text-xs sm:text-sm',
-                          isLead ? 'text-emerald-500' : 'text-foreground'
-                        )}
-                      >
-                        {formatPrice(product.price)}
-                      </span>
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className='text-[10px] text-muted-foreground line-through'>
-                          {formatPrice(product.originalPrice)}
-                        </span>
+                    <div className='flex items-center gap-1.5 mb-0.5'>
+                      {isLink && product.iconType && (
+                        <SocialIconBadge platform={product.iconType} size='sm' />
                       )}
+                      <h3 className='text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors'>
+                        {product.title}
+                      </h3>
                     </div>
+                    {isLink ? (
+                      <p className='text-[11px] text-muted-foreground line-clamp-1'>
+                        {product.subtitle || product.description || 'Liên kết ngoài'}
+                      </p>
+                    ) : (
+                      <div className='flex items-baseline gap-1.5 mt-1'>
+                        <span
+                          className={cn(
+                            'font-bold text-xs sm:text-sm',
+                            isLead ? 'text-emerald-500' : 'text-foreground'
+                          )}
+                        >
+                          {formatPrice(product.price)}
+                        </span>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <span className='text-[10px] text-muted-foreground line-through'>
+                            {formatPrice(product.originalPrice)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Cột phải: Nút CTA nhỏ gọn (Nhận ngay, Mua ngay, Đặt trước) */}
