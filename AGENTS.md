@@ -761,3 +761,15 @@ See "Theming System" section above or `docs/themes.md`.
 10. **Forms** - Use `useAppForm` from `@/lib/form` with `form.AppField` rendering the shared field components (`field.TextField`, `field.SelectField`, …) from `@/components/forms/fields`. Each component follows the official shadcn TanStack Form anatomy; drop down to raw `form.Field` render props for one-off custom fields. Never use `useState` inside a render prop — extract stateful controls into components.
 11. **Button loading** - Use `<Button isLoading={isPending}>` for loading states. Uses CSS Grid overlap trick for zero layout shift. When `isLoading` is not passed, button behaves as default shadcn. `SubmitButton` in forms handles this automatically via form `isSubmitting` state.
 12. **Data layer** - Always go through the service layer: `types.ts` → `service.ts` → `queries.ts`. Components import types from `types.ts`, functions from `service.ts`, query options from `queries.ts`. Never import from `@/constants/mock-api*` directly in components.
+13. **UI/UX & Design Guidelines (Tiệm Nhỏ Standard)** - Bắt buộc đọc và tuân theo [docs/ui-guidelines.md](./docs/ui-guidelines.md) khi thiết kế, tạo mới hoặc sửa bất kỳ màn hình nào:
+    - **Typography**: To, đậm (`font-bold`, `text-[15px]`, `tracking-[0.015em]`), không dùng font mảnh/mờ.
+    - **Header & Breadcrumbs**: Bỏ các thẻ `h1` tiêu đề lớn lặp lại vì Header Breadcrumbs đã hiển thị tên trang.
+    - **Đồng bộ Theme Tokens**: Luôn dùng semantic tokens (`bg-primary`, `text-primary`, `bg-sidebar-primary`, `border-border`) cho nút bấm và thanh điều hướng thay vì hardcode `#FE2C55` hay `#161823`. Trong theme TikTok mặc định, `--primary` chính là đỏ TikTok `#FE2C55`. Khi đổi sang các theme khác (Supabase, Discord, Claude, Vercel...), toàn bộ tabbar và button tự động đổi màu theo theme đó.
+    - **Sticky Bottom Action Bar**: Các nút thao tác form (Lưu, Tạo, Cập nhật) luôn dính cố định ở đáy màn hình (`fixed bottom-0` trên Mobile kèm `safe-area-inset-bottom` và form `pb-28`; `sticky bottom-4` trên Desktop). Thanh `BottomNavBar` tự động ẩn trên các trang tạo/sửa form.
+    - **Responsive Mobile Layouts**:
+      - Thẻ Profile Creator: Nằm ngang trên Desktop; bố cục 2 tầng trên Mobile với nút "Chỉnh sửa hồ sơ" dãn 100% full-width bên dưới cụm thông tin, tên không bị cắt cụt.
+      - Thẻ Sản phẩm: Bố cục 2 tầng (Tầng 1: ảnh vuông 1:1 + tên 2 dòng; Tầng 2: giá tiền + cụm nút touch target >= 36px).
+      - Bộ lọc: Dùng Dropdown `<select>` trên mobile để tránh cuộn ngang; riêng màn Quản lý Tiệm (`/dashboard/products`) ẩn hoàn toàn bộ lọc để đảm bảo tính năng kéo thả (Drag & Drop) chuẩn mảng 1:1.
+      - Bảng dữ liệu: Desktop dùng Table, Mobile chuyển thành Bento Cards.
+    - **Hình ảnh & Icons**: Mọi avatar và thumbnail sản phẩm phải có box cố định (`shrink-0 overflow-hidden`) và ảnh bên trong bắt buộc `object-cover shrink-0`. Không để icon mạng xã hội bung kích thước ngoài khung `w-6 h-6`.
+    - **Bố cục**: Dùng Bento UI trải rộng `w-full` từ trái qua phải. Khung xem trước trực tiếp (Live Mobile Preview) chỉ hiển thị trên màn hình Desktop (`hidden lg:block`), tuyệt đối ẩn trên mobile.

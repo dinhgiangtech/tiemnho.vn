@@ -62,7 +62,7 @@ export const SOCIAL_PLATFORMS: Record<string, SocialIconItem> = {
 
 interface SocialIconBadgeProps {
   platform: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   variant?: 'colored' | 'badge' | 'minimal';
   className?: string;
 }
@@ -83,15 +83,17 @@ export function SocialIconBadge({
     };
 
   const sizeClasses = {
+    xs: 'h-4 w-4 text-[8px]',
     sm: 'h-6 w-6 text-[10px]',
     md: 'h-8 w-8 text-xs',
     lg: 'h-10 w-10 text-sm'
   };
 
   const iconSizeClasses = {
-    sm: 'h-5 w-5',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
+    xs: 'h-3.5 w-3.5 max-w-full max-h-full object-contain shrink-0',
+    sm: 'h-4 w-4 max-w-full max-h-full object-contain shrink-0',
+    md: 'h-5 w-5 max-w-full max-h-full object-contain shrink-0',
+    lg: 'h-7 w-7 max-w-full max-h-full object-contain shrink-0'
   };
 
   if (variant === 'colored') {

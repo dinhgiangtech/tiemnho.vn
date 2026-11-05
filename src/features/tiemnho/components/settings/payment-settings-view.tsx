@@ -335,12 +335,12 @@ export function PaymentSettingsView() {
         </Card>
 
         {/* ==================================================== */}
-        {/* BƯỚC 3: NÚT LƯU & BẮN THỬ GIAO DỊCH (Chuẩn Section 3.4) */}
+        {/* BƯỚC 3: NÚT LƯU & BẮN THỬ GIAO DỊCH (Sticky Bottom)  */}
         {/* ==================================================== */}
-        <div className='flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-border bg-card shadow-xs'>
+        <div className='sticky bottom-20 md:bottom-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white/95 dark:bg-card/95 backdrop-blur-md shadow-md'>
           <div className='space-y-0.5 text-xs text-left'>
             <div className='font-bold text-foreground text-sm flex items-center gap-1.5'>
-              <Icons.sparkles className='h-4 w-4 text-[#FE2C55]' />
+              <Icons.sparkles className='h-4 w-4 text-primary' />
               Bước 3: Xác thực kết nối và lưu cấu hình
             </div>
             <div className='text-muted-foreground text-[11px]'>

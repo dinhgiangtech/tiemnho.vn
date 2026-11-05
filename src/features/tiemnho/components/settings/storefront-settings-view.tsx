@@ -267,46 +267,27 @@ export function StorefrontSettingsView() {
 
   return (
     <div className='space-y-6'>
-      {/* Top Header bar chuẩn dự án */}
-      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/80'>
-        <div className='flex items-center gap-3'>
-          <Link href='/dashboard/products'>
-            <Button variant='outline' size='sm' className='h-8 text-xs gap-1.5 rounded-lg'>
-              <Icons.arrowLeft className='h-3.5 w-3.5' />
-              <span>Quay lại</span>
-            </Button>
-          </Link>
-          <div>
-            <h1 className='text-lg font-bold text-foreground tracking-tight'>
-              Cài đặt tài khoản & Tiệm
-            </h1>
-            <p className='text-xs text-muted-foreground'>
-              Tùy chỉnh ảnh đại diện, thông tin định danh và kênh liên hệ trên Tiệm của bạn.
-            </p>
-          </div>
-        </div>
-
-        <div className='flex items-center gap-2'>
-          <Button
-            type='button'
-            onClick={handleSave}
-            disabled={saving}
-            size='sm'
-            className='h-8.5 px-4 text-xs font-semibold rounded-lg'
-          >
-            {saving ? (
-              <>
-                <Icons.spinner className='h-3.5 w-3.5 animate-spin mr-1.5' />
-                Đang lưu...
-              </>
-            ) : (
-              <>
-                <Icons.check className='h-3.5 w-3.5 mr-1.5' />
-                Lưu hồ sơ
-              </>
-            )}
-          </Button>
-        </div>
+      {/* Top Action bar */}
+      <div className='flex items-center justify-end gap-2 pb-3 border-b border-border/80'>
+        <Button
+          type='button'
+          onClick={handleSave}
+          disabled={saving}
+          size='sm'
+          className='h-8.5 px-4 text-xs font-semibold rounded-lg'
+        >
+          {saving ? (
+            <>
+              <Icons.spinner className='h-3.5 w-3.5 animate-spin mr-1.5' />
+              Đang lưu...
+            </>
+          ) : (
+            <>
+              <Icons.check className='h-3.5 w-3.5 mr-1.5' />
+              Lưu hồ sơ
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Main Grid: Cột trái Form (Card shadcn) & Cột phải Phone Preview */}
@@ -336,17 +317,11 @@ export function StorefrontSettingsView() {
                       onClick={() => fileInputRef.current?.click()}
                       className='relative h-20 w-20 rounded-full overflow-hidden border border-border bg-muted/30 flex items-center justify-center cursor-pointer transition-all hover:ring-2 hover:ring-primary/20 shadow-2xs'
                     >
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={displayName || 'Avatar'}
-                          className='h-full w-full object-cover'
-                        />
-                      ) : (
-                        <div className='h-full w-full bg-muted/40 flex items-center justify-center text-muted-foreground/60'>
-                          <Icons.user className='h-9 w-9' />
-                        </div>
-                      )}
+                      <img
+                        src={avatarUrl || '/default-avatar.svg'}
+                        alt={displayName || 'Avatar'}
+                        className='h-full w-full object-cover'
+                      />
 
                       {uploadingAvatar && (
                         <div className='absolute inset-0 bg-background/80 flex items-center justify-center backdrop-blur-2xs'>
@@ -553,10 +528,10 @@ export function StorefrontSettingsView() {
               </CardContent>
             </Card>
 
-            {/* Bottom Actions */}
-            <div className='flex items-center justify-end gap-2 pt-2'>
+            {/* Bottom Actions: Dính đáy (Sticky Action Bar) */}
+            <div className='sticky bottom-20 md:bottom-4 z-20 bg-white/95 dark:bg-card/95 backdrop-blur-md p-3 sm:p-3.5 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-md flex items-center justify-end gap-2.5 mt-4'>
               <Link href='/dashboard/products'>
-                <Button variant='outline' size='sm' className='h-9 text-xs rounded-lg'>
+                <Button variant='outline' size='sm' className='h-9 text-xs rounded-xl'>
                   Hủy bỏ
                 </Button>
               </Link>
@@ -564,7 +539,7 @@ export function StorefrontSettingsView() {
                 type='submit'
                 disabled={saving}
                 size='sm'
-                className='h-9 px-5 text-xs font-semibold rounded-lg'
+                className='h-9 px-5 text-xs font-bold rounded-xl shadow-xs'
               >
                 {saving ? (
                   <>
@@ -572,15 +547,18 @@ export function StorefrontSettingsView() {
                     Đang lưu...
                   </>
                 ) : (
-                  'Lưu thay đổi'
+                  <>
+                    <Icons.check className='h-3.5 w-3.5 mr-1.5 stroke-[2.5]' />
+                    Lưu thay đổi
+                  </>
                 )}
               </Button>
             </div>
           </form>
         </div>
 
-        {/* Khung xem trước thời gian thực (5 Cột) */}
-        <div className='lg:col-span-5 sticky top-6 space-y-3'>
+        {/* Khung xem trước thời gian thực (Chỉ hiển thị trên Desktop >= md) */}
+        <div className='hidden md:block lg:col-span-5 sticky top-6 space-y-3'>
           <div className='rounded-xl border bg-card p-3 shadow-xs flex items-center justify-between text-xs'>
             <div className='flex items-center gap-2'>
               <span className='relative flex h-2 w-2'>

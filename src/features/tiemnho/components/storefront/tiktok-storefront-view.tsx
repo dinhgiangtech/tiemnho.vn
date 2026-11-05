@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { CreatorProfile, Product, PaymentConfig } from '@/constants/mock-tiemnho';
-import { TikTokCheckoutDrawer } from './tiktok-checkout-drawer';
+import { AdaptiveCheckout } from './adaptive-checkout';
 import { toast } from 'sonner';
 import {
   CheckCircle2,
@@ -17,6 +17,7 @@ import {
   Copy
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
+import { SocialIconBadge } from '@/components/common/social-icons';
 
 interface TikTokStorefrontViewProps {
   profile: CreatorProfile;
@@ -90,20 +91,22 @@ export function TikTokStorefrontView({
 
   return (
     <div
-      className={`w-full mx-auto min-h-screen bg-white text-[#161823] font-sans antialiased selection:bg-[#FE2C55] selection:text-white ${
-        isPreview ? 'max-w-full px-3 py-3 text-xs' : 'max-w-md px-4 py-6 shadow-xs'
+      className={`w-full mx-auto bg-white text-[#161823] font-sans antialiased selection:bg-[#FE2C55] selection:text-white ${
+        isPreview
+          ? 'max-w-full px-3 py-3 text-xs min-h-full'
+          : 'max-w-[440px] min-h-screen md:min-h-[92vh] md:my-6 md:rounded-3xl md:shadow-xl md:border md:border-neutral-200/80 overflow-hidden px-4 py-6'
       }`}
     >
       {/* ========================================================= */}
       {/* 1. HEADER PROFILE (TIKTOK PROFILE LIGHT STYLE)            */}
       {/* ========================================================= */}
-      <section className='flex flex-col items-center text-center space-y-3.5 pb-5 border-b border-[#E3E3E4]'>
+      <section className='flex flex-col items-center text-center space-y-3 pb-5 border-b border-[#E3E3E4]'>
         {/* Avatar tròn viền nhẹ */}
         <div className='relative'>
           <div className='h-24 w-24 sm:h-26 sm:w-26 rounded-full p-[2.5px] border-2 border-[#E3E3E4] bg-white shadow-xs'>
             <div className='relative h-full w-full rounded-full overflow-hidden bg-[#F8F8F8]'>
               <Image
-                src={profile.avatarUrl}
+                src={profile.avatarUrl || '/default-avatar.svg'}
                 alt={profile.displayName}
                 fill
                 className='object-cover'
@@ -162,6 +165,78 @@ export function TikTokStorefrontView({
         <p className='text-xs leading-relaxed text-[#73747B] max-w-xs px-2 font-normal'>
           {profile.bio}
         </p>
+
+        {/* Hàng icon mạng xã hội luôn căn giữa cân đối */}
+        {profile.socials && Object.values(profile.socials).some(Boolean) && (
+          <div className='flex items-center justify-center gap-2.5 pt-1 flex-wrap'>
+            {profile.socials.tiktok && (
+              <a
+                href={profile.socials.tiktok}
+                target='_blank'
+                rel='noreferrer'
+                className='transition-transform hover:scale-110 active:scale-95'
+                title='TikTok'
+              >
+                <SocialIconBadge platform='tiktok' size='sm' />
+              </a>
+            )}
+            {profile.socials.instagram && (
+              <a
+                href={profile.socials.instagram}
+                target='_blank'
+                rel='noreferrer'
+                className='transition-transform hover:scale-110 active:scale-95'
+                title='Instagram'
+              >
+                <SocialIconBadge platform='instagram' size='sm' />
+              </a>
+            )}
+            {profile.socials.youtube && (
+              <a
+                href={profile.socials.youtube}
+                target='_blank'
+                rel='noreferrer'
+                className='transition-transform hover:scale-110 active:scale-95'
+                title='YouTube'
+              >
+                <SocialIconBadge platform='youtube' size='sm' />
+              </a>
+            )}
+            {profile.socials.facebook && (
+              <a
+                href={profile.socials.facebook}
+                target='_blank'
+                rel='noreferrer'
+                className='transition-transform hover:scale-110 active:scale-95'
+                title='Facebook'
+              >
+                <SocialIconBadge platform='facebook' size='sm' />
+              </a>
+            )}
+            {profile.socials.zalo && (
+              <a
+                href={`https://zalo.me/${profile.socials.zalo}`}
+                target='_blank'
+                rel='noreferrer'
+                className='transition-transform hover:scale-110 active:scale-95'
+                title='Zalo'
+              >
+                <SocialIconBadge platform='zalo' size='sm' />
+              </a>
+            )}
+            {profile.socials.threads && (
+              <a
+                href={profile.socials.threads}
+                target='_blank'
+                rel='noreferrer'
+                className='transition-transform hover:scale-110 active:scale-95'
+                title='Threads'
+              >
+                <SocialIconBadge platform='threads' size='sm' />
+              </a>
+            )}
+          </div>
+        )}
       </section>
 
       {/* ========================================================= */}
@@ -203,11 +278,11 @@ export function TikTokStorefrontView({
             <div
               key={product.id}
               onClick={() => handleProductClick(product)}
-              className='group relative flex items-center justify-between p-3 rounded-md border border-[#E3E3E4] bg-white shadow-2xs hover:border-[#161823]/40 hover:shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]'
+              className='group relative flex items-center justify-between p-3 rounded-xl border border-[#E3E3E4] bg-white shadow-2xs hover:scale-[1.01] hover:border-neutral-400 hover:shadow-xs transition-all duration-200 cursor-pointer active:scale-[0.99]'
             >
               {/* Bên trái: Cover vuông nhỏ (56x56) + Thông tin sản phẩm */}
               <div className='flex items-center gap-3 min-w-0 pr-2'>
-                <div className='relative h-14 w-14 rounded-md overflow-hidden shrink-0 border border-[#E3E3E4] bg-[#F8F8F8]'>
+                <div className='relative h-14 w-14 rounded-lg overflow-hidden shrink-0 border border-[#E3E3E4] bg-[#F8F8F8]'>
                   <Image
                     src={product.coverImage}
                     alt={product.title}
@@ -242,7 +317,7 @@ export function TikTokStorefrontView({
                 </div>
               </div>
 
-              {/* Bên phải: Nút CTA nhỏ gọn bo góc nhẹ 4-6px kèm icon ChevronRight */}
+              {/* Bên phải: Nút CTA nhỏ gọn bo góc nhẹ 6-8px kèm icon ChevronRight */}
               <div className='shrink-0 pl-1'>
                 <button
                   type='button'
@@ -250,7 +325,7 @@ export function TikTokStorefrontView({
                     e.stopPropagation();
                     handleProductClick(product);
                   }}
-                  className={`h-7.5 px-3 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all duration-200 shadow-2xs cursor-pointer ${
+                  className={`h-7.5 px-3 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all duration-200 shadow-2xs cursor-pointer ${
                     isLead
                       ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200'
                       : isLink
@@ -288,9 +363,9 @@ export function TikTokStorefrontView({
       </footer>
 
       {/* ========================================================= */}
-      {/* 5. CHECKOUT DRAWER (QUÉT VIETQR TẠI CHỖ KHÔNG RỜI TRANG)   */}
+      {/* 5. CHECKOUT DRAWER / DIALOG (TỰ ĐỘNG CHUYỂN ĐỔI THEO MÀN) */}
       {/* ========================================================= */}
-      <TikTokCheckoutDrawer
+      <AdaptiveCheckout
         product={selectedProduct}
         paymentConfig={paymentConfig}
         isOpen={!!selectedProduct}

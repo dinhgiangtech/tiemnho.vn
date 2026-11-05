@@ -114,7 +114,8 @@ export function LeadsTable() {
         </div>
       </div>
 
-      <Card className='border border-border shadow-xs overflow-hidden'>
+      {/* Desktop Table View (>= md) */}
+      <Card className='hidden md:block border border-border shadow-xs overflow-hidden'>
         <div className='overflow-x-auto'>
           <table className='w-full text-left border-collapse text-xs'>
             <thead>
@@ -180,6 +181,81 @@ export function LeadsTable() {
           </table>
         </div>
       </Card>
+
+      {/* Mobile Card View (< md) */}
+      <div className='block md:hidden space-y-3.5'>
+        {filteredLeads.map((lead) => {
+          const isBuyer = lead.sourceType === 'PURCHASE';
+          return (
+            <div
+              key={lead.id}
+              className='bg-white dark:bg-card border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-4 shadow-2xs space-y-3'
+            >
+              {/* Top row: Tên khách hàng & Phân loại Badge */}
+              <div className='flex items-start justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800/80 pb-2.5'>
+                <div>
+                  <div className='font-bold text-sm text-[#161823] dark:text-white'>
+                    {lead.name}
+                  </div>
+                  <div className='text-[11px] text-neutral-400 mt-0.5'>
+                    Tham gia: {new Date(lead.createdAt).toLocaleDateString('vi-VN')}
+                  </div>
+                </div>
+
+                <Badge
+                  variant='outline'
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg shrink-0 ${
+                    isBuyer
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
+                      : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400'
+                  }`}
+                >
+                  {isBuyer ? 'Khách mua hàng' : 'Lead Magnet 0đ'}
+                </Badge>
+              </div>
+
+              {/* Middle row: Thông tin liên hệ Email & SĐT */}
+              <div className='space-y-1 text-xs'>
+                <div className='flex items-center justify-between text-neutral-600 dark:text-neutral-300'>
+                  <span className='text-neutral-400'>Email:</span>
+                  <span className='font-medium truncate max-w-[200px]'>{lead.email}</span>
+                </div>
+                <div className='flex items-center justify-between text-neutral-600 dark:text-neutral-300'>
+                  <span className='text-neutral-400'>Số điện thoại:</span>
+                  <span className='font-mono font-semibold'>{lead.phone || 'Chưa cập nhật'}</span>
+                </div>
+                <div className='flex items-center justify-between text-neutral-600 dark:text-neutral-300'>
+                  <span className='text-neutral-400'>Nguồn:</span>
+                  <span className='font-medium truncate max-w-[200px]'>{lead.sourceProduct}</span>
+                </div>
+              </div>
+
+              {/* Bottom row: Tổng chi tiêu & Số đơn */}
+              <div className='flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-xs'>
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-neutral-400'>Đã mua:</span>
+                  <span className='font-bold text-neutral-900 dark:text-white'>
+                    {lead.ordersCount} đơn
+                  </span>
+                </div>
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-neutral-400'>Tổng chi:</span>
+                  <span className='font-extrabold text-[14px] text-primary font-mono'>
+                    {formatPrice(lead.totalSpent)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredLeads.length === 0 && !loading && (
+          <div className='bg-white dark:bg-card border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-400'>
+            Chưa có liên hệ nào được ghi nhận. Khi có khách tải quà 0đ hoặc mua hàng, dữ liệu sẽ tự
+            động xuất hiện tại đây.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -26,8 +26,6 @@ export default function BillingPage() {
         </div>
       }
       infoContent={billingInfoContent}
-      pageTitle='Billing & Plans'
-      pageDescription={`Manage your subscription and usage limits for ${organization?.name}`}
     >
       <div className='space-y-6'>
         {/* Info Alert */}

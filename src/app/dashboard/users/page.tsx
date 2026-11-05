@@ -18,12 +18,7 @@ export default async function UsersPage(props: PageProps) {
   searchParamsCache.parse(searchParams);
 
   return (
-    <PageContainer
-      pageTitle='Users'
-      pageDescription='Manage users (React Query + nuqs table pattern.)'
-      infoContent={usersInfoContent}
-      pageHeaderAction={<UserFormSheetTrigger />}
-    >
+    <PageContainer pageHeaderAction={<UserFormSheetTrigger />}>
       <UserListingPage />
     </PageContainer>
   );

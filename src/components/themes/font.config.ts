@@ -13,15 +13,18 @@ import {
   Playfair_Display,
   Noto_Sans_Mono,
   Outfit,
+  Plus_Jakarta_Sans,
   Source_Code_Pro,
   Space_Mono
 } from 'next/font/google';
 
 import { cn } from '@/lib/utils';
 
-const fontSans = Geist({
-  subsets: ['latin'],
-  variable: '--font-sans'
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ['vietnamese', 'latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-sans',
+  display: 'swap'
 });
 
 const fontMono = Geist_Mono({

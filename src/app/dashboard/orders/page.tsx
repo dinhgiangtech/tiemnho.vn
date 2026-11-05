@@ -8,10 +8,7 @@ export const metadata: Metadata = {
 
 export default function OrdersPage() {
   return (
-    <PageContainer
-      pageTitle='Doanh thu & Đơn hàng'
-      pageDescription='Theo dõi các giao dịch quét mã VietQR tự động, quản lý trạng thái đơn hàng và xuất file Excel / CSV gửi bưu cục.'
-    >
+    <PageContainer>
       <OrdersTable />
     </PageContainer>
   );

@@ -27,7 +27,7 @@ const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || '';
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || ''; // Ví dụ: https://pub-xxx.r2.dev hoặc https://cdn.tiemnho.vn
 
-// Provider mặc định: 'local' (lưu tại /public/uploads) hoặc 'r2' (Cloudflare R2)
+// Provider mặc định: 'local' (lưu tại /uploads) hoặc 'r2' (Cloudflare R2)
 // Hiện tại dự án ưu tiên dùng tạm phương án 1 ('local')
 const UPLOAD_PROVIDER: UploadStorageType =
   (process.env.UPLOAD_PROVIDER as UploadStorageType) || 'local';
@@ -59,7 +59,7 @@ function generateSafeFileName(originalName: string): string {
 }
 
 // ----------------------------------------------------------------------
-// 2. Upload file cục bộ vào thư mục /public/uploads
+// 2. Upload file cục bộ vào thư mục riêng /uploads (KHÔNG lưu trong /public)
 // ----------------------------------------------------------------------
 export async function uploadToLocal(
   fileBuffer: Buffer,
@@ -68,7 +68,13 @@ export async function uploadToLocal(
   folder: string = 'uploads'
 ): Promise<UploadResult> {
   const safeName = generateSafeFileName(originalName);
-  const targetDir = path.join(process.cwd(), 'public', folder);
+
+  // Chuẩn hóa tên thư mục con (ví dụ: 'avatars', 'products', ...)
+  // Nếu truyền 'uploads' hoặc rỗng thì lưu trực tiếp vào root /uploads
+  const cleanFolder = folder.replace(/^\/+|\/+$/g, '').replace(/^uploads\/?/, '');
+  const targetDir = cleanFolder
+    ? path.join(process.cwd(), 'uploads', cleanFolder)
+    : path.join(process.cwd(), 'uploads');
 
   // Đảm bảo thư mục tồn tại
   await mkdir(targetDir, { recursive: true });
@@ -76,8 +82,9 @@ export async function uploadToLocal(
   const filePath = path.join(targetDir, safeName);
   await writeFile(filePath, fileBuffer);
 
-  // Đường dẫn tương đối phục vụ web browser (vd: /uploads/abc-123.jpg)
-  const webPath = `/${folder}/${safeName}`.replace(/\\/g, '/');
+  // Đường dẫn tương đối phục vụ web browser qua Route Handler /uploads/*
+  // (ví dụ: /uploads/avatars/abc-123.jpg hoặc /uploads/abc-123.jpg)
+  const webPath = cleanFolder ? `/uploads/${cleanFolder}/${safeName}` : `/uploads/${safeName}`;
 
   return {
     url: webPath,
@@ -149,15 +156,15 @@ export async function uploadFile(
       try {
         return await uploadToR2(fileBuffer, originalName, mimeType, folder);
       } catch (err) {
-        console.warn('Upload R2 thất bại, tự động chuyển về lưu public local:', err);
+        console.warn('Upload R2 thất bại, tự động chuyển về lưu cục bộ tại /uploads:', err);
         return await uploadToLocal(fileBuffer, originalName, mimeType, folder);
       }
     } else {
-      console.warn('R2 chưa được cấu hình, tự động lưu trữ tại /public/uploads');
+      console.warn('R2 chưa được cấu hình, tự động lưu trữ cục bộ tại /uploads');
       return await uploadToLocal(fileBuffer, originalName, mimeType, folder);
     }
   }
 
-  // Mặc định hiện tại: Phương án 1 (Lưu cục bộ vào public/uploads)
+  // Mặc định hiện tại: Lưu cục bộ vào thư mục riêng /uploads
   return await uploadToLocal(fileBuffer, originalName, mimeType, folder);
 }

@@ -1,38 +1,51 @@
 [data-theme='tiktok'] {
-  --background: oklch(1 0 0); /* Trắng tinh khiết chuẩn TikTok #FFFFFF */
-  --foreground: oklch(0.18 0.01 260); /* Chữ chính đen tuyền #161823 */
+  --background: oklch(1 0 0);
+  /* Trắng tinh khiết chuẩn TikTok #FFFFFF */
+  --foreground: oklch(0.18 0.01 260);
+  /* Chữ chính đen tuyền #161823 */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.01 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.01 260);
-  --primary: oklch(0.18 0.01 260); /* Nút chính đen tuyền TikTok #161823 (không bị dính màu hồng) */
+  --primary: oklch(0.63 0.25 15.5);
+  /* Vibrant TikTok Red #FE2C55 */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.96 0 0); /* Nền phụ xám nhạt trung tính #F1F1F2 */
+  --secondary: oklch(0.96 0 0);
+  /* Nền phụ xám nhạt trung tính #F1F1F2 */
   --secondary-foreground: oklch(0.18 0.01 260);
-  --muted: oklch(0.965 0 0); /* Muted trung tính không ám hồng */
-  --muted-foreground: oklch(0.53 0.005 260); /* Chữ phụ xám #73747B */
-  --accent: oklch(0.95 0 0); /* Hover trung tính */
+  --muted: oklch(0.965 0 0);
+  /* Muted trung tính không ám hồng */
+  --muted-foreground: oklch(0.53 0.005 260);
+  /* Chữ phụ xám #73747B */
+  --accent: oklch(0.95 0 0);
+  /* Hover trung tính */
   --accent-foreground: oklch(0.18 0.01 260);
   --destructive: oklch(0.6 0.24 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.92 0 0); /* Đường viền mảnh xám nhạt #E3E3E4 */
+  --border: oklch(0.92 0 0);
+  /* Đường viền mảnh xám nhạt #E3E3E4 */
   --input: oklch(0.92 0 0);
-  --ring: oklch(0.18 0.01 260);
-  --chart-1: oklch(0.61 0.23 15.5); /* TikTok Red */
-  --chart-2: oklch(0.85 0.16 195); /* TikTok Cyan */
-  --chart-3: oklch(0.65 0.22 300); /* Purple Accent */
+  --ring: oklch(0.63 0.25 15.5);
+  --chart-1: oklch(0.61 0.23 15.5);
+  /* TikTok Red */
+  --chart-2: oklch(0.85 0.16 195);
+  /* TikTok Cyan */
+  --chart-3: oklch(0.65 0.22 300);
+  /* Purple Accent */
   --chart-4: oklch(0.75 0.18 55);
   --chart-5: oklch(0.5 0.15 15.5);
-  --sidebar: oklch(1 0 0); /* Sidebar nền trắng tinh khiết */
+  --sidebar: oklch(1 0 0);
+  /* Sidebar nền trắng tinh khiết */
   --sidebar-foreground: oklch(0.18 0.01 260);
-  --sidebar-primary: oklch(0.18 0.01 260);
+  --sidebar-primary: oklch(0.63 0.25 15.5);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0 0); /* Hover sidebar màu xám nhẹ trung tính */
+  --sidebar-accent: oklch(0.96 0 0);
+  /* Hover sidebar màu xám nhẹ trung tính */
   --sidebar-accent-foreground: oklch(0.18 0.01 260);
   --sidebar-border: oklch(0.92 0 0);
-  --sidebar-ring: oklch(0.18 0.01 260);
-  --font-sans: var(--font-inter), ui-sans-serif, sans-serif;
-  --font-serif: var(--font-inter), ui-sans-serif, serif;
+  --sidebar-ring: oklch(0.63 0.25 15.5);
+  /* --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, sans-serif; */
+  /* --font-serif: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, serif; */
   --font-mono: var(--font-source-code-pro), ui-monospace, monospace;
   --radius: 0.75rem;
   --shadow-x: 0px;
@@ -54,31 +67,41 @@
 }
 
 [data-theme='tiktok'].dark {
-  --background: oklch(0.12 0.005 260); /* Ultra dark TikTok #0F0F12 */
+  --background: oklch(0.12 0.005 260);
+  /* Ultra dark TikTok #0F0F12 */
   --foreground: oklch(0.98 0 0);
-  --card: oklch(0.16 0.006 260); /* Dark elevated card #161823 */
+  --card: oklch(0.16 0.006 260);
+  /* Dark elevated card #161823 */
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.17 0.006 260);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.63 0.25 15.5); /* Vibrant TikTok Red #FE2C55 */
+  --primary: oklch(0.63 0.25 15.5);
+  /* Vibrant TikTok Red #FE2C55 */
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.22 0.006 260);
   --secondary-foreground: oklch(0.98 0 0);
   --muted: oklch(0.19 0.006 260);
   --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.86 0.16 195); /* TikTok Cyan #25F4EE */
+  --accent: oklch(0.86 0.16 195);
+  /* TikTok Cyan #25F4EE */
   --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.24 0.006 260);
   --input: oklch(0.22 0.006 260);
   --ring: oklch(0.63 0.25 15.5);
-  --chart-1: oklch(0.63 0.25 15.5); /* TikTok Red */
-  --chart-2: oklch(0.86 0.16 195); /* TikTok Cyan */
-  --chart-3: oklch(0.7 0.2 300); /* Neon Purple */
-  --chart-4: oklch(0.85 0.15 85); /* Yellow */
-  --chart-5: oklch(0.75 0.18 145); /* Emerald */
-  --sidebar: oklch(0.13 0.005 260); /* Sleek TikTok sidebar */
+  --chart-1: oklch(0.63 0.25 15.5);
+  /* TikTok Red */
+  --chart-2: oklch(0.86 0.16 195);
+  /* TikTok Cyan */
+  --chart-3: oklch(0.7 0.2 300);
+  /* Neon Purple */
+  --chart-4: oklch(0.85 0.15 85);
+  /* Yellow */
+  --chart-5: oklch(0.75 0.18 145);
+  /* Emerald */
+  --sidebar: oklch(0.13 0.005 260);
+  /* Sleek TikTok sidebar */
   --sidebar-foreground: oklch(0.95 0 0);
   --sidebar-primary: oklch(0.63 0.25 15.5);
   --sidebar-primary-foreground: oklch(1 0 0);
@@ -86,5 +109,8 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.22 0.006 260);
   --sidebar-ring: oklch(0.63 0.25 15.5);
+  --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+  --font-serif: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, serif;
+  --font-mono: var(--font-source-code-pro), ui-monospace, monospace;
   --shadow-color: oklch(0 0 0);
 }

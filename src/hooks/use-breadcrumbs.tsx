@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 
 type BreadcrumbItem = {
@@ -8,39 +8,114 @@ type BreadcrumbItem = {
   link: string;
 };
 
-// This allows to add custom title as well
+// Từ điển chuyển đổi các phân đoạn đường dẫn sang Tiếng Việt
+const SEGMENT_TRANSLATIONS: Record<string, string> = {
+  dashboard: 'Tổng quan',
+  overview: 'Báo cáo',
+  products: 'Tiệm của bạn',
+  product: 'Sản phẩm',
+  create: 'Tạo sản phẩm mới',
+  edit: 'Chỉnh sửa sản phẩm',
+  orders: 'Đơn hàng',
+  leads: 'Khách hàng',
+  customers: 'Khách hàng',
+  workspaces: 'Không gian làm việc',
+  settings: 'Nhận tiền QR',
+  storefront: 'Thiết kế tiệm',
+  payment: 'Nhận tiền QR',
+  payout: 'Nhận tiền QR',
+  kanban: 'Bảng công việc',
+  chat: 'Tin nhắn',
+  'ai-chat': 'Trợ lý AI',
+  profile: 'Hồ sơ cá nhân',
+  billing: 'Gói dịch vụ',
+  forms: 'Biểu mẫu',
+  users: 'Người dùng',
+  preview: 'Xem trước tiệm',
+  exclusive: 'Đặc quyền',
+  notifications: 'Thông báo',
+  elements: 'Thành phần',
+  icons: 'Biểu tượng',
+  'react-query': 'React Query'
+};
+
 const routeMapping: Record<string, BreadcrumbItem[]> = {
-  '/dashboard': [{ title: 'Dashboard', link: '/dashboard' }],
-  '/dashboard/employee': [
-    { title: 'Dashboard', link: '/dashboard' },
-    { title: 'Employee', link: '/dashboard/employee' }
+  '/dashboard': [{ title: 'Tổng quan', link: '/dashboard/overview' }],
+  '/dashboard/overview': [{ title: 'Tổng quan', link: '/dashboard/overview' }],
+  '/dashboard/products': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Tiệm của bạn', link: '/dashboard/products' }
   ],
-  '/dashboard/product': [
-    { title: 'Dashboard', link: '/dashboard' },
-    { title: 'Product', link: '/dashboard/product' }
+  '/dashboard/orders': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Đơn hàng', link: '/dashboard/orders' }
+  ],
+  '/dashboard/leads': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Khách hàng', link: '/dashboard/customers' }
+  ],
+  '/dashboard/customers': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Khách hàng', link: '/dashboard/customers' }
+  ],
+  '/dashboard/settings/storefront': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Cài đặt', link: '/dashboard/settings/storefront' },
+    { title: 'Thiết kế tiệm', link: '/dashboard/settings/storefront' }
+  ],
+  '/dashboard/settings': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Nhận tiền QR', link: '/dashboard/settings' }
+  ],
+  '/dashboard/settings/payment': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Nhận tiền QR', link: '/dashboard/settings' }
+  ],
+  '/dashboard/settings/payout': [
+    { title: 'Tổng quan', link: '/dashboard/overview' },
+    { title: 'Cài đặt', link: '/dashboard/settings/payment' },
+    { title: 'Cài đặt nhận tiền', link: '/dashboard/settings/payment' }
   ]
-  // Add more custom mappings as needed
 };
 
 export function useBreadcrumbs() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const breadcrumbs = useMemo(() => {
-    // Check if we have a custom mapping for this exact path
+    // Custom check cho trang tạo / chỉnh sửa sản phẩm
+    if (pathname === '/dashboard/products/create') {
+      const isEditing =
+        searchParams.get('id') || searchParams.get('edit') || searchParams.get('productId');
+      return [
+        { title: 'Tổng quan', link: '/dashboard/overview' },
+        { title: 'Tiệm của bạn', link: '/dashboard/products' },
+        {
+          title: isEditing ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới',
+          link: pathname
+        }
+      ];
+    }
+
+    // Kiểm tra custom route mapping nếu có
     if (routeMapping[pathname]) {
       return routeMapping[pathname];
     }
 
-    // If no exact match, fall back to generating breadcrumbs from the path
+    // Tự động phân tách và dịch sang Tiếng Việt
     const segments = pathname.split('/').filter(Boolean);
     return segments.map((segment, index) => {
       const path = `/${segments.slice(0, index + 1).join('/')}`;
+      const lower = segment.toLowerCase();
+      const translated =
+        SEGMENT_TRANSLATIONS[lower] || segment.charAt(0).toUpperCase() + segment.slice(1);
+
       return {
-        title: segment.charAt(0).toUpperCase() + segment.slice(1),
-        link: path
+        title: translated,
+        link: path === '/dashboard' ? '/dashboard/overview' : path
       };
     });
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   return breadcrumbs;
 }

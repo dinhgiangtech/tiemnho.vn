@@ -9,14 +9,33 @@
 @custom-variant data-horizontal (&[data-orientation='horizontal']);
 @custom-variant data-vertical (&[data-orientation='vertical']);
 
+@theme inline {
+  --font-sans: var(--font-sans), 'Plus Jakarta Sans', sans-serif;
+}
+
 @import './theme.css';
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring/50 font-medium;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-[15px] font-medium tracking-[0.015em] antialiased;
+  }
+
+  /* Headings & Labels rõ nét, đậm đà chuẩn Modern Bento */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold tracking-[0.005em] text-neutral-900 dark:text-white;
+  }
+
+  label {
+    @apply font-bold tracking-[0.005em] text-neutral-900 dark:text-white;
   }
 
   /* Global scrollbar styling to match ScrollArea */
@@ -69,6 +88,7 @@
     clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
     opacity: 0.7;
   }
+
   to {
     /* Use CSS variables for the origin, defaulting to center if not set */
     clip-path: circle(150% at var(--x, 50%) var(--y, 50%));
@@ -89,6 +109,7 @@
   from {
     height: 0;
   }
+
   to {
     height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
   }
@@ -98,6 +119,7 @@
   from {
     height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
   }
+
   to {
     height: 0;
   }
@@ -114,21 +136,25 @@
   inherits: false;
   initial-value: 0px;
 }
+
 @property --scroll-fade-b {
   syntax: '<length-percentage>';
   inherits: false;
   initial-value: 0px;
 }
+
 @property --scroll-fade-s {
   syntax: '<length-percentage>';
   inherits: false;
   initial-value: 0px;
 }
+
 @property --scroll-fade-e {
   syntax: '<length-percentage>';
   inherits: false;
   initial-value: 0px;
 }
+
 @property --scroll-fade-mask {
   syntax: '*';
   inherits: false;
@@ -139,6 +165,7 @@
     from {
       --scroll-fade-t: 0px;
     }
+
     to {
       --scroll-fade-t: var(
         --_scroll-fade-size-t,
@@ -146,6 +173,7 @@
       );
     }
   }
+
   @keyframes scroll-fade-reveal-b {
     from {
       --scroll-fade-b: var(
@@ -153,14 +181,17 @@
         var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
       );
     }
+
     to {
       --scroll-fade-b: 0px;
     }
   }
+
   @keyframes scroll-fade-reveal-s {
     from {
       --scroll-fade-s: 0px;
     }
+
     to {
       --scroll-fade-s: var(
         --_scroll-fade-size-s,
@@ -168,6 +199,7 @@
       );
     }
   }
+
   @keyframes scroll-fade-reveal-e {
     from {
       --scroll-fade-e: var(
@@ -175,6 +207,7 @@
         var(--scroll-fade-size, min(12%, calc(var(--spacing) * 10)))
       );
     }
+
     to {
       --scroll-fade-e: 0px;
     }
@@ -277,6 +310,7 @@
     #000 calc(100% - var(--scroll-fade-e, 0px)),
     transparent 100%
   );
+
   &:where([dir='rtl'], [dir='rtl'] *) {
     --scroll-fade-inline: linear-gradient(
       to left,
@@ -286,6 +320,7 @@
       transparent 100%
     );
   }
+
   -webkit-mask-image: var(--scroll-fade-mask, var(--scroll-fade-inline));
   mask-image: var(--scroll-fade-mask, var(--scroll-fade-inline));
   -webkit-mask-composite: source-in;
@@ -441,6 +476,7 @@
     #000 var(--scroll-fade-s, 0px),
     #000 100%
   );
+
   &:where([dir='rtl'], [dir='rtl'] *) {
     --scroll-fade-mask: linear-gradient(
       to left,
@@ -449,6 +485,7 @@
       #000 100%
     );
   }
+
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -479,6 +516,7 @@
     #000 calc(100% - var(--scroll-fade-e, 0px)),
     transparent 100%
   );
+
   &:where([dir='rtl'], [dir='rtl'] *) {
     --scroll-fade-mask: linear-gradient(
       to left,
@@ -487,6 +525,7 @@
       transparent 100%
     );
   }
+
   -webkit-mask-image: var(--scroll-fade-mask);
   mask-image: var(--scroll-fade-mask);
   -webkit-mask-composite: source-in;
@@ -541,10 +580,12 @@
   inherits: true;
   initial-value: 20deg;
 }
+
 @property --shimmer-image {
   syntax: '*';
   inherits: false;
 }
+
 @property --shimmer-text-fill {
   syntax: '*';
   inherits: false;
@@ -555,6 +596,7 @@
     from {
       background-position: 100% 0;
     }
+
     to {
       background-position: 0 0;
     }

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { FileText, Gift, Package, Link2, ExternalLink } from 'lucide-react';
 import { Product, ProductType } from '@/constants/mock-tiemnho';
 import { createProduct, updateProduct } from '../../api/service';
+import { ProductDescriptionEditor } from '@/components/dashboard/products/ProductDescriptionEditor';
 
 interface ProductFormSheetProps {
   product?: Product | null;
@@ -242,15 +243,15 @@ export function ProductFormSheet({ product, isOpen, onClose, onSuccess }: Produc
             />
           </div>
 
-          <div className='space-y-1.5'>
-            <label className='font-medium text-foreground text-xs'>Mô tả chi tiết</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder='Nêu bật giá trị và nội dung tài nguyên khách sẽ nhận được...'
-              className='min-h-[80px] text-sm rounded-xl resize-none'
-            />
-          </div>
+          <ProductDescriptionEditor
+            value={description}
+            onChange={setDescription}
+            productTitle={title}
+            minRows={4}
+            required={false}
+            label='Mô tả chi tiết'
+            placeholder='Nêu bật giá trị và nội dung tài nguyên khách sẽ nhận được...'
+          />
 
           {/* 3. Giá bán (nếu không phải 0đ) */}
           {type !== 'LEAD_MAGNET' && type !== 'EXTERNAL_LINK' && (
@@ -306,7 +307,7 @@ export function ProductFormSheet({ product, isOpen, onClose, onSuccess }: Produc
           {(type === 'DIGITAL' || type === 'LEAD_MAGNET') && (
             <div className='rounded-xl border border-border bg-muted/40 p-3.5 space-y-3'>
               <div className='font-semibold text-xs text-foreground flex items-center gap-1.5'>
-                <Icons.download className='h-4 w-4 text-[#FE2C55]' />
+                <Icons.download className='h-4 w-4 text-primary' />
                 Cấu hình Tài nguyên Tự Động Giao (Fulfillment)
               </div>
               <div className='space-y-1.5'>

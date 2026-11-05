@@ -31,7 +31,7 @@ model CreatorProfile {
   username    String   @unique @default("tiemnho")
   displayName String   @default("Tiệm Nhỏ Creator")
   bio         String   @default("Chào mừng bạn ghé Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số chất lượng cao.")
-  avatarUrl   String   @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80")
+  avatarUrl   String   @default("/default-avatar.svg")
   coverUrl    String?  @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80")
   verified    Boolean  @default(true)
   theme       String   @default("obsidian")
@@ -50,10 +50,11 @@ model Product {
   creatorId     String      @default("creator-1")
   type          ProductType @default(DIGITAL)
   title         String
-  description   String      @db.Text
-  price         Float       @default(0)
-  originalPrice Float?
-  coverImage    String      @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80")
+  subtitle      String?
+  description   String?     @db.Text
+  price         Int         @default(0)
+  originalPrice Int?
+  coverImage    String?     @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80")
   fileUrl       String?
   fileName      String?
   externalUrl   String?

@@ -6,9 +6,8 @@ export function InstagramIcon(props: SVGProps<SVGSVGElement>) {
       xmlns='http://www.w3.org/2000/svg'
       aria-hidden='true'
       role='img'
-      width='64'
-      height='64'
       viewBox='0 0 256 256'
+      className='w-full h-full object-contain shrink-0'
       style={{ color: 'rgb(74, 85, 101)', opacity: 1, transform: 'rotate(0deg)' }}
       {...props}
     >
@@ -57,9 +56,8 @@ export function TiktokIcon(props: SVGProps<SVGSVGElement>) {
       xmlns='http://www.w3.org/2000/svg'
       aria-hidden='true'
       role='img'
-      width='64'
-      height='64'
       viewBox='0 0 512 512'
+      className='w-full h-full object-contain shrink-0'
       style={{ color: 'rgb(74, 85, 101)', opacity: 1, transform: 'rotate(0deg)' }}
       {...props}
     >
@@ -86,9 +84,8 @@ export function FacebookIcon(props: SVGProps<SVGSVGElement>) {
       xmlns='http://www.w3.org/2000/svg'
       aria-hidden='true'
       role='img'
-      width='64'
-      height='64'
       viewBox='0 0 256 256'
+      className='w-full h-full object-contain shrink-0'
       style={{ color: 'rgb(74, 85, 101)', opacity: 1, transform: 'rotate(0deg)' }}
       {...props}
     >
@@ -110,9 +107,8 @@ export function YoutubeIcon(props: SVGProps<SVGSVGElement>) {
       xmlns='http://www.w3.org/2000/svg'
       aria-hidden='true'
       role='img'
-      width='64'
-      height='64'
       viewBox='0 0 512 512'
+      className='w-full h-full object-contain shrink-0'
       style={{ color: 'rgb(74, 85, 101)', opacity: 1, transform: 'rotate(0deg)' }}
       {...props}
     >
@@ -131,9 +127,8 @@ export function ThreadsIcon(props: SVGProps<SVGSVGElement>) {
       xmlns='http://www.w3.org/2000/svg'
       aria-hidden='true'
       role='img'
-      width='64'
-      height='64'
       viewBox='0 0 512 512'
+      className='w-full h-full object-contain shrink-0'
       style={{ color: 'rgb(74, 85, 101)', opacity: 1, transform: 'rotate(0deg)' }}
       {...props}
     >
@@ -144,7 +139,12 @@ export function ThreadsIcon(props: SVGProps<SVGSVGElement>) {
 
 export function ZaloIcon(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' width='64' height='64' {...props}>
+    <svg
+      xmlns='http://www.w3.org/2000/svg'
+      viewBox='0 0 48 48'
+      className='w-full h-full object-contain shrink-0'
+      {...props}
+    >
       <path
         fill='#2962ff'
         d='M15,36V6.827l-1.211-0.811C8.64,8.083,5,13.112,5,19v10c0,7.732,6.268,14,14,14h10	c4.722,0,8.883-2.348,11.417-5.931V36H15z'

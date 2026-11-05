@@ -39,12 +39,20 @@ function formatProfile(p: {
   facebook: string | null;
   zalo: string | null;
 }): CreatorProfile {
+  // Tự động chuyển đổi các avatar mẫu Unsplash cũ sang avatar mặc định chuẩn Facebook
+  const isOldDefaultAvatar =
+    !p.avatarUrl ||
+    p.avatarUrl.includes('photo-1534528741775-53994a69daeb') ||
+    p.avatarUrl.trim() === '';
+
+  const cleanAvatarUrl = isOldDefaultAvatar ? '/default-avatar.svg' : p.avatarUrl;
+
   return {
     id: p.id,
     username: p.username,
     displayName: p.displayName,
     bio: p.bio,
-    avatarUrl: p.avatarUrl,
+    avatarUrl: cleanAvatarUrl,
     coverUrl: p.coverUrl ?? undefined,
     verified: p.verified,
     theme: (p.theme as CreatorProfile['theme']) || 'obsidian',
@@ -64,10 +72,11 @@ function formatProduct(p: {
   creatorId: string;
   type: ProductType;
   title: string;
-  description: string;
+  subtitle: string | null;
+  description: string | null;
   price: number;
   originalPrice: number | null;
-  coverImage: string;
+  coverImage: string | null;
   fileUrl: string | null;
   fileName: string | null;
   externalUrl: string | null;
@@ -85,10 +94,13 @@ function formatProduct(p: {
     creatorId: p.creatorId,
     type: p.type,
     title: p.title,
-    description: p.description,
+    subtitle: p.subtitle ?? undefined,
+    description: p.description ?? '',
     price: Number(p.price),
     originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-    coverImage: p.coverImage,
+    coverImage:
+      p.coverImage ||
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
     fileUrl: p.fileUrl ?? undefined,
     fileName: p.fileName ?? undefined,
     externalUrl: p.externalUrl ?? undefined,
@@ -211,6 +223,16 @@ export async function getProfile(): Promise<CreatorProfile> {
   if (!profile) {
     throw new Error('Creator profile could not be found or seeded.');
   }
+
+  // Tự động làm sạch dữ liệu cũ trong DB: chuyển ảnh Unsplash sang avatar mặc định Facebook
+  if (profile.avatarUrl && profile.avatarUrl.includes('photo-1534528741775-53994a69daeb')) {
+    await prisma.creatorProfile.update({
+      where: { id: profile.id },
+      data: { avatarUrl: '/default-avatar.svg' }
+    });
+    profile.avatarUrl = '/default-avatar.svg';
+  }
+
   return formatProfile(profile);
 }
 
@@ -351,6 +373,7 @@ export async function createProduct(data: CreateProductInput): Promise<Product> 
       creatorId: 'creator-giangdinh',
       type: data.type,
       title: data.title,
+      subtitle: data.subtitle,
       description: data.description,
       price: data.price,
       originalPrice: data.originalPrice,
@@ -376,6 +399,7 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
     data: {
       ...(updates.type !== undefined && { type: updates.type }),
       ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.subtitle !== undefined && { subtitle: updates.subtitle }),
       ...(updates.description !== undefined && { description: updates.description }),
       ...(updates.price !== undefined && { price: updates.price }),
       ...(updates.originalPrice !== undefined && { originalPrice: updates.originalPrice }),
@@ -568,6 +592,124 @@ export async function updateOrderStatus(
   }
 
   return formatOrder(updated);
+}
+
+export async function manualActivateOrder(
+  id: string,
+  requesterCreatorId?: string
+): Promise<{
+  order: Order;
+  grant?: { token: string; expiresAt: Date; maxDownloads: number };
+}> {
+  await ensureDatabaseSeeded();
+
+  const current = await prisma.order.findFirst({
+    where: {
+      OR: [{ id }, { orderCode: id }]
+    },
+    include: {
+      product: true
+    }
+  });
+
+  if (!current) {
+    throw new Error(`Đơn hàng ${id} không tồn tại`);
+  }
+
+  // 1. Kiểm tra quyền sở hữu (nếu có requesterCreatorId)
+  if (requesterCreatorId && current.creatorId && requesterCreatorId !== current.creatorId) {
+    throw new Error('Bạn không có quyền kích hoạt đơn hàng của Creator khác');
+  }
+
+  const now = new Date();
+
+  // 2. Chuẩn bị token và grant nếu là sản phẩm số (DownloadGrant: token bảo mật, hạn dùng 72h, max 5 downloads)
+  let downloadGrant: { token: string; expiresAt: Date; maxDownloads: number } | undefined;
+  let resolvedDownloadUrl = current.downloadUrl;
+
+  if (current.productType === 'DIGITAL') {
+    const grantToken = `gr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const expiresAt = new Date(now.getTime() + 72 * 60 * 60 * 1000); // 72 hours
+    downloadGrant = {
+      token: grantToken,
+      expiresAt,
+      maxDownloads: 5
+    };
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tiemnho.vn';
+    const productFile =
+      current.product?.fileUrl || current.downloadUrl || 'https://tiemnho.vn/files/sample';
+    resolvedDownloadUrl = `${baseUrl}/download/${grantToken}?file=${encodeURIComponent(productFile)}`;
+  }
+
+  // 3. Thực thi cập nhật giao dịch
+  const updatedOrder = await prisma.$transaction(async (tx) => {
+    // a. Cập nhật Order -> PAID
+    const orderUpdated = await tx.order.update({
+      where: { id: current.id },
+      data: {
+        status: 'PAID',
+        paidAt: now,
+        downloadUrl: resolvedDownloadUrl,
+        shippingStatus: current.productType === 'PHYSICAL' ? 'UNFULFILLED' : current.shippingStatus
+      }
+    });
+
+    // b. Tăng số lượng đã bán của sản phẩm
+    if (current.productId) {
+      await tx.product
+        .update({
+          where: { id: current.productId },
+          data: { soldCount: { increment: 1 } }
+        })
+        .catch(() => null);
+    }
+
+    // c. Cập nhật thống kê khách hàng (Lead)
+    if (current.customerEmail) {
+      const existingLead = await tx.lead.findFirst({
+        where: { email: current.customerEmail }
+      });
+
+      if (existingLead) {
+        await tx.lead.update({
+          where: { id: existingLead.id },
+          data: {
+            ordersCount: { increment: 1 },
+            totalSpent: { increment: current.amount },
+            sourceProduct: current.productTitle
+          }
+        });
+      }
+    }
+
+    return orderUpdated;
+  });
+
+  // 4. Kích hoạt gửi email giả lập hoặc qua Resend/SES
+  try {
+    if (current.productType === 'DIGITAL') {
+      console.log(
+        `[Email Service / Resend] Gửi link tải tài nguyên tới ${current.customerEmail}: ${resolvedDownloadUrl} (Token: ${downloadGrant?.token}, Hạn dùng: 72h)`
+      );
+    } else if (current.productType === 'PHYSICAL') {
+      console.log(
+        `[Email Service / Resend] Gửi email xác nhận đặt hàng thành công tới ${current.customerEmail} cho đơn hàng vật lý #${current.orderCode}`
+      );
+    }
+  } catch (err) {
+    console.warn('Lỗi gửi email kích hoạt:', err);
+  }
+
+  // 5. Ghi log kiểm toán thanh toán (PaymentLog)
+  console.log(
+    `[PaymentLog] gateway="MANUAL_CREATOR" status="SUCCESS" orderCode="${current.orderCode}" amount=${current.amount} creatorId="${current.creatorId}" at=${now.toISOString()}`
+  );
+
+  return {
+    order: formatOrder(updatedOrder),
+    grant: downloadGrant
+  };
 }
 
 // ==========================================

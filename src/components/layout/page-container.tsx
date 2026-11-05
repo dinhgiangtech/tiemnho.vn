@@ -1,6 +1,7 @@
 import React from 'react';
 import { Heading } from '../ui/heading';
 import type { InfobarContent } from '@/components/ui/infobar';
+import { cn } from '@/lib/utils';
 
 function PageSkeleton() {
   return (
@@ -54,17 +55,24 @@ export default function PageContainer({
 
   const content = isLoading ? <PageSkeleton /> : children;
 
-  const hasHeader = pageTitle || pageHeaderAction;
+  const hasHeader = Boolean(pageTitle && pageTitle.trim().length > 0) || Boolean(pageHeaderAction);
 
   return (
-    <div className='flex flex-1 flex-col px-4 pt-2 pb-4 md:px-6 md:pt-4'>
+    <div className='flex flex-1 flex-col px-4 pt-2 pb-20 md:pb-8 md:px-6 md:pt-4'>
       {hasHeader && (
-        <div className='mb-4 flex items-start justify-between gap-4'>
-          <Heading
-            title={pageTitle ?? ''}
-            description={pageDescription ?? ''}
-            infoContent={infoContent}
-          />
+        <div
+          className={cn(
+            'mb-4 flex gap-4',
+            pageTitle ? 'items-start justify-between' : 'items-center justify-end'
+          )}
+        >
+          {pageTitle && (
+            <Heading
+              title={pageTitle}
+              description={pageDescription ?? ''}
+              infoContent={infoContent}
+            />
+          )}
           {pageHeaderAction && <div className='shrink-0'>{pageHeaderAction}</div>}
         </div>
       )}

@@ -8,10 +8,7 @@ export const metadata: Metadata = {
 
 export default function CreateProductPage() {
   return (
-    <PageContainer
-      pageTitle='Tạo sản phẩm & Quà tặng'
-      pageDescription='Thiết lập thông tin bán hàng, phương thức trả hàng tự động và kiểm tra hiển thị trực tiếp trên iPhone.'
-    >
+    <PageContainer>
       <CreateProductView />
     </PageContainer>
   );

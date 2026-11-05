@@ -3,6 +3,18 @@ import { prisma } from './prisma';
 export async function ensureDatabaseSeeded() {
   try {
     const profileCount = await prisma.creatorProfile.count();
+    // Tự động làm sạch các avatar Unsplash cũ trong CSDL
+    await prisma.creatorProfile.updateMany({
+      where: {
+        avatarUrl: {
+          contains: 'photo-1534528741775-53994a69daeb'
+        }
+      },
+      data: {
+        avatarUrl: '/default-avatar.svg'
+      }
+    });
+
     if (profileCount > 0) {
       return;
     }
@@ -16,8 +28,7 @@ export async function ensureDatabaseSeeded() {
         username: 'giangdinh',
         displayName: 'Giang Định',
         bio: 'Chào mừng bạn đến với Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số và sản phẩm chọn lọc.',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&h=400&q=80',
+        avatarUrl: '/default-avatar.svg',
         coverUrl:
           'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
         verified: true,

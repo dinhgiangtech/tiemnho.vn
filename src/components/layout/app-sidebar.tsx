@@ -1,5 +1,5 @@
 'use client';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,127 +14,145 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail
 } from '@/components/ui/sidebar';
 import { navGroups } from '@/config/nav-config';
-import { useMediaQuery } from '@/hooks/use-media-query';
-import { useFilteredNavGroups } from '@/hooks/use-nav';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { Icons } from '@/components/icons';
 import { Logo } from '@/components/common/logo';
 import { useClerk } from '@clerk/nextjs';
+import {
+  Store,
+  ShoppingBag,
+  Users,
+  QrCode,
+  Palette,
+  ArrowUpRight,
+  LayoutDashboard
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// Ánh xạ icon tiêu chuẩn tương ứng
+const NAV_ICON_MAP: Record<
+  string,
+  React.ComponentType<{ className?: string; strokeWidth?: number }>
+> = {
+  dashboard: LayoutDashboard,
+  store: Store,
+  palette: Palette,
+  shoppingBag: ShoppingBag,
+  users: Users,
+  qrcode: QrCode
+};
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { isOpen } = useMediaQuery();
   const router = useRouter();
   const { signOut } = useClerk();
-  const filteredGroups = useFilteredNavGroups(navGroups);
 
-  React.useEffect(() => {
-    // Side effects based on sidebar state changes
-  }, [isOpen]);
+  // Kiểm tra trạng thái active chính xác theo route
+  const checkIsActive = (url: string) => {
+    if (url === '/dashboard/overview') {
+      return pathname === '/dashboard/overview' || pathname === '/dashboard';
+    }
+    if (url === '/dashboard/products') {
+      return pathname === '/dashboard/products' || pathname.startsWith('/dashboard/products/');
+    }
+    if (url === '/dashboard/settings/storefront') {
+      return pathname === '/dashboard/settings/storefront';
+    }
+    if (url === '/dashboard/orders') {
+      return pathname === '/dashboard/orders' || pathname.startsWith('/dashboard/orders/');
+    }
+    if (url === '/dashboard/customers') {
+      return (
+        pathname === '/dashboard/customers' ||
+        pathname === '/dashboard/leads' ||
+        pathname.startsWith('/dashboard/leads/')
+      );
+    }
+    if (url === '/dashboard/settings') {
+      return (
+        (pathname === '/dashboard/settings' || pathname.startsWith('/dashboard/settings')) &&
+        pathname !== '/dashboard/settings/storefront'
+      );
+    }
+    return pathname === url;
+  };
+
+  const mainNavItems = navGroups[0]?.items || [];
 
   return (
-    <Sidebar collapsible='icon'>
-      <SidebarHeader className='border-b border-sidebar-border px-3 py-3'>
-        <div className='flex items-center justify-between px-1'>
-          <Logo size='md' href='/dashboard/overview' showIconBadge={true} />
-          <span className='rounded-full bg-zinc-100 dark:bg-zinc-800 border border-border/60 px-1.5 py-0.2 text-[10px] font-bold text-foreground'>
-            PRO
-          </span>
+    <Sidebar collapsible='icon' className='border-r border-sidebar-border'>
+      {/* 1. Header: Logo Tiệm Nhỏ */}
+      <SidebarHeader className='border-b border-sidebar-border/70 px-4 py-3.5'>
+        <div className='flex items-center justify-between'>
+          <Logo size='md' href='/dashboard/products' showIconBadge={true} />
         </div>
       </SidebarHeader>
-      <SidebarContent className='overflow-x-hidden'>
-        {filteredGroups.map((group) => (
-          <SidebarGroup key={group.label || 'ungrouped'} className='py-0'>
-            {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
-            <SidebarMenu>
-              {group.items.map((item) => {
-                const Icon = item.icon ? Icons[item.icon] : Icons.logo;
-                return item?.items && item?.items?.length > 0 ? (
-                  <Collapsible
-                    key={item.title}
-                    defaultOpen={item.isActive}
-                    render={<SidebarMenuItem />}
+
+      {/* 2. Content: Danh sách menu điều hướng */}
+      <SidebarContent className='overflow-x-hidden px-3 py-4'>
+        <SidebarGroup className='p-0'>
+          <SidebarMenu className='gap-1.5'>
+            {mainNavItems.map((item) => {
+              const IconComponent =
+                item.icon && NAV_ICON_MAP[item.icon] ? NAV_ICON_MAP[item.icon] : Store;
+              const isActive = checkIsActive(item.url);
+
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    render={<Link href={item.url} aria-label={item.title} />}
+                    tooltip={item.title}
+                    isActive={isActive}
+                    className={cn(
+                      'h-11 px-3.5 rounded-xl transition-all font-semibold text-sm flex items-center gap-3 cursor-pointer',
+                      isActive
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs'
+                        : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+                    )}
                   >
-                    <CollapsibleTrigger
-                      render={
-                        <SidebarMenuButton
-                          tooltip={item.title}
-                          isActive={pathname === item.url}
-                          className='group/collapsible'
-                        />
-                      }
-                    >
-                      {item.icon && (
-                        <Icon
-                          className={
-                            pathname === item.url
-                              ? 'w-4 h-4 text-[#FE2C55] shrink-0'
-                              : 'w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0'
-                          }
-                          strokeWidth={1.75}
-                        />
+                    <IconComponent
+                      className={cn(
+                        'w-5 h-5 shrink-0 transition-transform',
+                        isActive ? 'text-primary-foreground' : 'text-sidebar-foreground/60'
                       )}
-                      <span>{item.title}</span>
-                      <Icons.chevronRight className='ml-auto h-4 w-4 transition-transform duration-200 group-data-panel-open/collapsible:rotate-90' />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items?.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton
-                              render={<Link href={subItem.url} aria-label={subItem.title} />}
-                              isActive={pathname === subItem.url}
-                            >
-                              <span>{subItem.title}</span>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ) : (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      render={<Link href={item.url} aria-label={item.title} />}
-                      tooltip={item.title}
-                      isActive={pathname === item.url}
-                      className={
-                        pathname === item.url
-                          ? 'font-bold text-[#161823] dark:text-white bg-sidebar-accent'
-                          : 'text-neutral-600 dark:text-neutral-400 hover:text-foreground'
-                      }
-                    >
-                      <Icon
-                        className={
-                          pathname === item.url
-                            ? 'w-4 h-4 text-[#FE2C55] shrink-0'
-                            : 'w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0'
-                        }
-                        strokeWidth={1.75}
-                      />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+                      strokeWidth={isActive ? 2.2 : 1.75}
+                    />
+                    <span className='truncate font-medium tracking-[0.01em]'>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className='border-t border-sidebar-border p-2'>
+
+      {/* 3. Footer: Nút Ghé tiệm (@username) & Hồ sơ Creator */}
+      <SidebarFooter className='border-t border-sidebar-border/70 p-3 space-y-2'>
+        {/* Nút Ghé tiệm công khai */}
+        <a
+          href='/@giangdinh'
+          target='_blank'
+          rel='noreferrer'
+          className='group/public flex items-center justify-between w-full px-3 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 transition-colors text-xs font-semibold'
+          title='Mở trang Tiệm công khai của bạn'
+        >
+          <div className='flex items-center gap-2 truncate'>
+            <Icons.world className='w-4 h-4 text-neutral-500 shrink-0' />
+            <span className='truncate'>Ghé tiệm (@giangdinh)</span>
+          </div>
+          <ArrowUpRight className='w-3.5 h-3.5 text-neutral-400 group-hover/public:translate-x-0.5 group-hover/public:-translate-y-0.5 transition-transform shrink-0' />
+        </a>
+
+        {/* Dropdown tài khoản */}
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -142,22 +160,22 @@ export default function AppSidebar() {
                 render={
                   <SidebarMenuButton
                     size='lg'
-                    className='data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground'
+                    className='h-12 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors'
                   />
                 }
               >
-                <div className='h-8 w-8 rounded-full overflow-hidden shrink-0 border border-border'>
+                <div className='h-8 w-8 rounded-full overflow-hidden shrink-0 border border-border bg-neutral-100'>
                   <img
-                    src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80'
+                    src='/default-avatar.svg'
                     alt='Giang Định'
                     className='h-full w-full object-cover'
                   />
                 </div>
                 <div className='flex flex-col min-w-0 text-left flex-1'>
-                  <span className='truncate text-xs font-semibold text-sidebar-foreground'>
+                  <span className='truncate text-xs font-bold text-sidebar-foreground'>
                     Giang Định
                   </span>
-                  <span className='truncate text-[10px] text-emerald-500 font-medium'>
+                  <span className='truncate text-[10px] text-emerald-500 font-semibold'>
                     ● VietQR Hoạt động
                   </span>
                 </div>
@@ -174,13 +192,13 @@ export default function AppSidebar() {
                     <div className='flex items-center gap-2.5'>
                       <div className='h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border'>
                         <img
-                          src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100&q=80'
+                          src='/default-avatar.svg'
                           alt='Giang Định'
                           className='h-full w-full object-cover'
                         />
                       </div>
                       <div className='flex flex-col min-w-0'>
-                        <span className='font-semibold text-xs text-foreground'>Giang Định</span>
+                        <span className='font-bold text-xs text-foreground'>Giang Định</span>
                         <span className='text-[11px] text-muted-foreground'>@giangdinh</span>
                       </div>
                     </div>
@@ -192,13 +210,13 @@ export default function AppSidebar() {
                     <Icons.externalLink className='mr-2 h-4 w-4 text-primary' />
                     Ghé tiệm (@giangdinh)
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/preview')}>
-                    <Icons.deviceMobile className='mr-2 h-4 w-4' />
-                    Xem trước tiệm
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/settings/storefront')}>
+                    <Icons.palette className='mr-2 h-4 w-4' />
+                    Thiết kế tiệm
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/dashboard/settings/payment')}>
                     <Icons.qrcode className='mr-2 h-4 w-4' />
-                    Cài đặt nhận tiền
+                    Nhận tiền QR
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
@@ -209,7 +227,7 @@ export default function AppSidebar() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => signOut({ redirectUrl: '/' })}
-                    className='text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer font-medium'
+                    className='text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer font-semibold'
                   >
                     <Icons.logout className='mr-2 h-4 w-4' />
                     Đăng xuất

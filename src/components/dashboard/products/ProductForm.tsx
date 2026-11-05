@@ -23,13 +23,26 @@ import {
 import { PhoneMockup } from '@/features/tiemnho/components/mobile-preview/phone-mockup';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Icons } from '@/components/icons';
 import { uploadClientFile } from '@/lib/upload-client';
+import { ProductDescriptionEditor } from './ProductDescriptionEditor';
+import { cn } from '@/lib/utils';
+import {
+  Camera,
+  Upload,
+  Image as ImageIcon,
+  FileCheck,
+  Smartphone,
+  Monitor,
+  ArrowLeft,
+  FileText,
+  Gift,
+  Package,
+  ExternalLink
+} from 'lucide-react';
 
 const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=600&q=80',
@@ -39,51 +52,47 @@ const PRESET_COVERS = [
   'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80'
 ];
 
+const PRODUCT_TYPES: { type: ProductType; title: string; desc: string; icon: any }[] = [
+  { type: 'DIGITAL', title: 'Sản phẩm số', desc: 'Ebook, preset, template', icon: FileText },
+  { type: 'LEAD_MAGNET', title: 'Quà tặng 0đ', desc: 'Thu thập Email & SĐT', icon: Gift },
+  { type: 'PHYSICAL', title: 'Hàng thủ công', desc: 'Đặt trước / Handmade', icon: Package },
+  {
+    type: 'EXTERNAL_LINK',
+    title: 'Nút liên kết',
+    desc: 'Shopee, TikTok Shop, Zalo',
+    icon: ExternalLink
+  }
+];
+
 export const productFormSchema = z
   .object({
     type: z.enum(['DIGITAL', 'LEAD_MAGNET', 'PHYSICAL', 'EXTERNAL_LINK']),
-    title: z.string().min(1, 'Tiêu đề sản phẩm là bắt buộc').max(100, 'Tiêu đề tối đa 100 ký tự'),
+    title: z.string().min(1, 'Tiêu đề sản phẩm là bắt buộc').max(60, 'Tiêu đề tối đa 60 ký tự'),
+    subtitle: z.string().max(100, 'Dòng tóm tắt tối đa 100 ký tự').optional(),
     coverImage: z.string().optional(),
-    description: z.string().max(200, 'Mô tả tối đa 200 ký tự').optional(),
+    featureImage: z.string().optional(),
+    description: z.string().optional(),
     price: z.number().min(0, 'Giá bán không được âm'),
+    hasDiscount: z.boolean(),
+    originalPrice: z.number().min(0).optional().nullable(),
     isPublished: z.boolean(),
-    buttonText: z.string().optional(),
+    buttonText: z.string().max(30).optional(),
 
-    // DIGITAL & LEAD_MAGNET fulfillment
+    // DIGITAL & LEAD_MAGNET
     deliveryType: z.enum(['UPLOAD_FILE', 'REDIRECT_LINK']),
     fileUrl: z.string().optional(),
     fileName: z.string().optional(),
     fileSize: z.string().optional(),
     redirectUrl: z.string().optional(),
-    successMessage: z.string().optional(),
 
-    // PHYSICAL fulfillment
-    stock: z.number().min(0, 'Số lượng không được âm').optional().nullable(),
+    // PHYSICAL
+    stock: z.number().min(0).optional().nullable(),
     estimatedFulfillment: z.string().optional(),
-    variants: z.array(z.string()),
-    enableZaloConfirm: z.boolean(),
 
-    // EXTERNAL_LINK fulfillment
-    destinationUrl: z.string().optional(),
-    iconType: z
-      .enum([
-        'shopee',
-        'tiktok',
-        'zalo',
-        'youtube',
-        'facebook',
-        'instagram',
-        'telegram',
-        'threads',
-        'messenger',
-        'twitter',
-        'external'
-      ])
-      .optional(),
-    openInNewTab: z.boolean()
+    // EXTERNAL_LINK
+    destinationUrl: z.string().optional()
   })
   .superRefine((data, ctx) => {
-    // Lead magnet must have price = 0
     if (data.type === 'LEAD_MAGNET' && data.price !== 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -92,7 +101,6 @@ export const productFormSchema = z
       });
     }
 
-    // Digital or Lead Magnet with REDIRECT_LINK must have a redirectUrl
     if (
       (data.type === 'DIGITAL' || data.type === 'LEAD_MAGNET') &&
       data.deliveryType === 'REDIRECT_LINK' &&
@@ -101,11 +109,10 @@ export const productFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['redirectUrl'],
-        message: 'Vui lòng dán đường link tài nguyên bảo mật (Google Drive, Notion, Canva)'
+        message: 'Vui lòng dán đường link tài nguyên bảo mật'
       });
     }
 
-    // External link requires destinationUrl
     if (
       data.type === 'EXTERNAL_LINK' &&
       (!data.destinationUrl || data.destinationUrl.trim() === '')
@@ -113,7 +120,7 @@ export const productFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['destinationUrl'],
-        message: 'Vui lòng nhập đường link chuyển hướng đích (Shopee, TikTok Shop, Zalo)'
+        message: 'Vui lòng nhập đường link chuyển hướng đích'
       });
     }
   });
@@ -122,20 +129,39 @@ export type ProductFormValues = z.infer<typeof productFormSchema>;
 
 export interface ProductFormProps {
   initialProduct?: Product | null;
+  initialType?: ProductType;
   onSuccess?: (product: Product) => void;
   onCancel?: () => void;
 }
 
-export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductFormProps) {
+// Helper định dạng tiền VNĐ có dấu chấm hàng nghìn
+const formatCurrencyDisplay = (num?: number | null) => {
+  if (num === undefined || num === null || isNaN(num) || num === 0) return '';
+  return new Intl.NumberFormat('vi-VN').format(num);
+};
+
+const parseCurrencyInput = (str: string) => {
+  const clean = str.replace(/\D/g, '');
+  return clean ? parseInt(clean, 10) : 0;
+};
+
+export function ProductForm({
+  initialProduct,
+  initialType,
+  onSuccess,
+  onCancel
+}: ProductFormProps) {
   const router = useRouter();
   const [profile, setProfile] = React.useState<CreatorProfile>(defaultCreatorProfile);
   const [paymentConfig, setPaymentConfig] = React.useState<PaymentConfig>(defaultPaymentConfig);
   const [existingProducts, setExistingProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [isUploading, setIsUploading] = React.useState(false);
-  const [newVariantInput, setNewVariantInput] = React.useState('');
+  const [isUploadingThumb, setIsUploadingThumb] = React.useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = React.useState(false);
+  const [previewDevice, setPreviewDevice] = React.useState<'mobile' | 'desktop'>('mobile');
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const bannerInputRef = React.useRef<HTMLInputElement>(null);
   const digitalUploadRef = React.useRef<HTMLInputElement>(null);
 
   const isEditMode = !!initialProduct;
@@ -143,33 +169,32 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema) as any,
     defaultValues: {
-      type: initialProduct?.type || 'DIGITAL',
+      type: initialProduct?.type || initialType || 'DIGITAL',
       title: initialProduct?.title || '',
+      subtitle: initialProduct?.subtitle || '',
       coverImage: initialProduct?.coverImage || '',
+      featureImage: initialProduct?.bannerImage || '',
       description: initialProduct?.description || '',
-      price: initialProduct ? initialProduct.price : 0,
+      price: initialProduct
+        ? initialProduct.type === 'LEAD_MAGNET'
+          ? 0
+          : initialProduct.price
+        : 149000,
+      hasDiscount: !!initialProduct?.originalPrice,
+      originalPrice: initialProduct?.originalPrice ?? null,
       isPublished: initialProduct ? initialProduct.isPublished : true,
       buttonText: initialProduct?.buttonText || 'Mua ngay',
 
-      deliveryType:
-        initialProduct?.deliveryType ||
-        (initialProduct?.fileUrl?.startsWith('http') && !initialProduct.fileName
-          ? 'REDIRECT_LINK'
-          : 'UPLOAD_FILE'),
+      deliveryType: initialProduct?.deliveryType || 'UPLOAD_FILE',
       fileUrl: initialProduct?.fileUrl || '',
       fileName: initialProduct?.fileName || '',
       fileSize: initialProduct?.fileSize || '',
       redirectUrl: initialProduct?.fileUrl || '',
-      successMessage: initialProduct?.successMessage || 'Cảm ơn bạn đã mua sản phẩm!',
 
-      stock: initialProduct?.stock !== undefined ? initialProduct.stock : 999,
-      estimatedFulfillment: initialProduct?.estimatedFulfillment || '',
-      variants: initialProduct?.variants || [],
-      enableZaloConfirm: initialProduct?.enableZaloConfirm ?? false,
+      stock: initialProduct?.stock !== undefined ? initialProduct.stock : 50,
+      estimatedFulfillment: initialProduct?.estimatedFulfillment || '3 - 5 ngày làm việc',
 
-      destinationUrl: initialProduct?.externalUrl || '',
-      iconType: initialProduct?.iconType || 'external',
-      openInNewTab: initialProduct?.openInNewTab ?? true
+      destinationUrl: initialProduct?.externalUrl || ''
     }
   });
 
@@ -184,183 +209,219 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
 
   const watchedValues = watch();
 
-  // Load creator profile & existing products for Live Mockup
+  // Reset form khi có initialProduct hoặc initialType
   React.useEffect(() => {
+    if (initialProduct) {
+      form.reset({
+        type: initialProduct.type,
+        title: initialProduct.title || '',
+        subtitle: initialProduct.subtitle || '',
+        coverImage: initialProduct.coverImage || '',
+        featureImage: initialProduct.bannerImage || '',
+        description: initialProduct.description || '',
+        price: initialProduct.type === 'LEAD_MAGNET' ? 0 : (initialProduct.price ?? 0),
+        hasDiscount: !!initialProduct.originalPrice,
+        originalPrice: initialProduct.originalPrice ?? null,
+        isPublished: initialProduct.isPublished ?? true,
+        buttonText: initialProduct.buttonText || 'Mua ngay',
+
+        deliveryType: initialProduct.deliveryType || 'UPLOAD_FILE',
+        fileUrl: initialProduct.fileUrl || '',
+        fileName: initialProduct.fileName || '',
+        fileSize: initialProduct.fileSize || '',
+        redirectUrl: initialProduct.fileUrl || '',
+
+        stock: initialProduct.stock !== undefined ? initialProduct.stock : 50,
+        estimatedFulfillment: initialProduct.estimatedFulfillment || '3 - 5 ngày làm việc',
+
+        destinationUrl: initialProduct.externalUrl || ''
+      });
+    } else if (initialType) {
+      setValue('type', initialType);
+      if (initialType === 'LEAD_MAGNET') {
+        setValue('price', 0);
+        setValue('buttonText', 'Nhận ngay');
+      } else if (initialType === 'PHYSICAL') {
+        setValue('buttonText', 'Đặt trước');
+      } else if (initialType === 'EXTERNAL_LINK') {
+        setValue('buttonText', 'Mở liên kết');
+      }
+    }
+  }, [initialProduct, initialType, form, setValue]);
+
+  // Load Creator profile & products for preview
+  React.useEffect(() => {
+    let isMounted = true;
     async function loadData() {
       try {
-        const [prof, pay, prods] = await Promise.all([
-          getProfile().catch(() => defaultCreatorProfile),
-          getPaymentConfig().catch(() => defaultPaymentConfig),
-          getProducts().catch(() => [])
+        const [prof, payment, prods] = await Promise.all([
+          getProfile(),
+          getPaymentConfig(),
+          getProducts()
         ]);
-        setProfile(prof);
-        setPaymentConfig(pay);
-        setExistingProducts(prods);
-      } catch {
-        // fallback to defaults
+        if (isMounted) {
+          if (prof) setProfile(prof);
+          if (payment) setPaymentConfig(payment);
+          if (prods) setExistingProducts(prods);
+        }
+      } catch (err) {
+        console.error('Failed to load preview data', err);
       }
     }
     loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // When type changes: If LEAD_MAGNET, lock price to 0
-  React.useEffect(() => {
-    if (watchedValues.type === 'LEAD_MAGNET') {
+  // Thay đổi loại sản phẩm
+  const handleTypeChange = (newType: ProductType) => {
+    setValue('type', newType);
+    if (newType === 'LEAD_MAGNET') {
       setValue('price', 0);
-    } else if (watchedValues.type === 'DIGITAL' && watchedValues.price === 0) {
-      setValue('price', 149000);
-    } else if (watchedValues.type === 'PHYSICAL' && watchedValues.price === 0) {
-      setValue('price', 250000);
+      setValue('hasDiscount', false);
+      setValue('originalPrice', null);
+      if (!watchedValues.buttonText || watchedValues.buttonText === 'Mua ngay') {
+        setValue('buttonText', 'Nhận ngay');
+      }
+    } else if (newType === 'PHYSICAL') {
+      if (!watchedValues.buttonText || watchedValues.buttonText === 'Mua ngay') {
+        setValue('buttonText', 'Đặt trước');
+      }
+    } else if (newType === 'EXTERNAL_LINK') {
+      if (!watchedValues.buttonText || watchedValues.buttonText === 'Mua ngay') {
+        setValue('buttonText', 'Mở liên kết');
+      }
+    } else {
+      if (
+        !watchedValues.buttonText ||
+        watchedValues.buttonText === 'Nhận ngay' ||
+        watchedValues.buttonText === 'Đặt trước' ||
+        watchedValues.buttonText === 'Mở liên kết'
+      ) {
+        setValue('buttonText', 'Mua ngay');
+      }
     }
-  }, [watchedValues.type, setValue, watchedValues.price]);
+  };
 
-  // Handle Cover Image Upload
+  // Upload Thumbnail 1:1
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIsUploading(true);
-      try {
-        const res = await uploadClientFile(file, { folder: 'products/covers' });
-        setValue('coverImage', res.url);
-        toast.success(
-          `Đã tải ảnh thumbnail thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`
-        );
-      } catch (err: any) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setValue('coverImage', reader.result as string);
-        };
-        reader.readAsDataURL(file);
-        toast.warning(err.message || 'Lỗi tải ảnh lên máy chủ, đã dùng bản xem trước tạm.');
-      } finally {
-        setIsUploading(false);
-      }
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chỉ chọn tệp hình ảnh (PNG, JPG, WebP)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Dung lượng ảnh tối đa là 5MB');
+      return;
+    }
+
+    setIsUploadingThumb(true);
+    try {
+      const res = await uploadClientFile(file, 'products');
+      setValue('coverImage', res.url, { shouldValidate: true, shouldDirty: true });
+      toast.success('Tải ảnh đại diện thành công!');
+    } catch {
+      toast.error('Có lỗi xảy ra khi tải ảnh lên');
+    } finally {
+      setIsUploadingThumb(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // Handle Digital File Upload
+  // Upload Banner 16:9
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chỉ chọn tệp hình ảnh');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Dung lượng ảnh bìa tối đa là 10MB');
+      return;
+    }
+
+    setIsUploadingBanner(true);
+    try {
+      const res = await uploadClientFile(file, 'products');
+      setValue('featureImage', res.url, { shouldValidate: true, shouldDirty: true });
+      toast.success('Tải ảnh bìa thành công!');
+    } catch {
+      toast.error('Có lỗi xảy ra khi tải ảnh bìa');
+    } finally {
+      setIsUploadingBanner(false);
+      if (bannerInputRef.current) bannerInputRef.current.value = '';
+    }
+  };
+
+  // Upload File giao cho khách
   const handleDigitalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      const toastId = toast.loading(`Đang tải file ${file.name} (${sizeMb} MB)...`);
-      try {
-        const res = await uploadClientFile(file, { folder: 'products/files' });
-        setValue('fileName', file.name);
-        setValue('fileSize', `${sizeMb} MB`);
-        setValue('fileUrl', res.url);
-        toast.success(
-          `Đã tải file đính kèm thành công (${res.storage === 'r2' ? 'Cloudflare R2' : 'Lưu trữ local'})!`,
-          { id: toastId }
-        );
-      } catch (err: any) {
-        toast.error(err.message || 'Không thể tải file lên server.', { id: toastId });
-      }
+    if (!file) return;
+
+    const toastId = toast.loading(`Đang tải lên tệp: ${file.name}...`);
+    try {
+      const res = await uploadClientFile(file, 'products');
+      setValue('fileUrl', res.url);
+      setValue('fileName', file.name);
+      setValue('fileSize', `${(file.size / (1024 * 1024)).toFixed(1)} MB`);
+      toast.success('Tải tệp tài nguyên lên máy chủ thành công!', { id: toastId });
+    } catch {
+      toast.error('Có lỗi xảy ra khi tải tệp lên', { id: toastId });
+    } finally {
+      if (digitalUploadRef.current) digitalUploadRef.current.value = '';
     }
   };
 
-  // Handle adding variants
-  const handleAddVariant = () => {
-    const trimmed = newVariantInput.trim();
-    if (!trimmed) return;
-    const currentVariants = watchedValues.variants || [];
-    if (!currentVariants.includes(trimmed)) {
-      setValue('variants', [...currentVariants, trimmed]);
-      setNewVariantInput('');
-    } else {
-      toast.error('Phân loại này đã tồn tại');
-    }
-  };
-
-  const handleRemoveVariant = (indexToRemove: number) => {
-    const currentVariants = watchedValues.variants || [];
-    setValue(
-      'variants',
-      currentVariants.filter((_, idx) => idx !== indexToRemove)
-    );
-  };
-
-  // Submit Handler
+  // Xử lý lưu form
   const onSubmit = async (values: ProductFormValues) => {
     setLoading(true);
     try {
-      const finalFileUrl =
-        values.type === 'EXTERNAL_LINK'
-          ? undefined
-          : values.deliveryType === 'REDIRECT_LINK'
-            ? values.redirectUrl?.trim()
-            : values.fileUrl;
+      const payload: Partial<Product> = {
+        creatorId: profile.id,
+        type: values.type,
+        title: values.title.trim(),
+        subtitle: values.subtitle?.trim() || undefined,
+        description: values.description?.trim() || '',
+        price: values.type === 'LEAD_MAGNET' ? 0 : values.price,
+        originalPrice:
+          values.hasDiscount && values.originalPrice ? Number(values.originalPrice) : undefined,
+        buttonText: values.buttonText?.trim() || 'Mua ngay',
+        coverImage: values.coverImage || PRESET_COVERS[0],
+        bannerImage: values.featureImage || undefined,
+        deliveryType: values.deliveryType,
+        fileUrl: values.deliveryType === 'REDIRECT_LINK' ? values.redirectUrl : values.fileUrl,
+        fileName: values.fileName,
+        fileSize: values.fileSize,
+        stock: values.type === 'PHYSICAL' ? (values.stock ?? 50) : 999,
+        estimatedFulfillment: values.type === 'PHYSICAL' ? values.estimatedFulfillment : undefined,
+        externalUrl: values.type === 'EXTERNAL_LINK' ? values.destinationUrl : undefined,
+        isPublished: values.isPublished,
+        isFeatured: true
+      };
 
-      const finalFileName =
-        values.type === 'EXTERNAL_LINK' || values.deliveryType === 'REDIRECT_LINK'
-          ? undefined
-          : values.fileName;
-
-      const finalFileSize =
-        values.type === 'EXTERNAL_LINK' || values.deliveryType === 'REDIRECT_LINK'
-          ? undefined
-          : values.fileSize;
-
-      let savedProduct: Product;
-
+      let saved: Product;
       if (isEditMode && initialProduct) {
-        savedProduct = await updateProduct(initialProduct.id, {
-          type: values.type,
-          title: values.title.trim(),
-          description: values.description?.trim() || '',
-          price: values.type === 'LEAD_MAGNET' ? 0 : values.price,
-          coverImage: values.coverImage || PRESET_COVERS[0],
-          fileUrl: finalFileUrl,
-          fileName: finalFileName,
-          fileSize: finalFileSize,
-          deliveryType: values.deliveryType,
-          successMessage: values.type === 'LEAD_MAGNET' ? values.successMessage?.trim() : undefined,
-          estimatedFulfillment:
-            values.type === 'PHYSICAL' ? values.estimatedFulfillment?.trim() : undefined,
-          variants: values.type === 'PHYSICAL' ? values.variants : undefined,
-          enableZaloConfirm: values.type === 'PHYSICAL' ? values.enableZaloConfirm : undefined,
-          externalUrl: values.type === 'EXTERNAL_LINK' ? values.destinationUrl?.trim() : undefined,
-          iconType: values.type === 'EXTERNAL_LINK' ? values.iconType : undefined,
-          openInNewTab: values.type === 'EXTERNAL_LINK' ? values.openInNewTab : undefined,
-          buttonText: values.buttonText?.trim() || undefined,
-          isPublished: values.isPublished,
-          stock: values.type === 'PHYSICAL' ? (values.stock ?? 999) : 999
-        });
-        toast.success('Đã cập nhật sản phẩm thành công!');
+        saved = await updateProduct(initialProduct.id, payload);
+        toast.success('Cập nhật sản phẩm thành công!');
       } else {
-        savedProduct = await createProduct({
-          type: values.type,
-          title: values.title.trim(),
-          description: values.description?.trim() || '',
-          price: values.type === 'LEAD_MAGNET' ? 0 : values.price,
-          coverImage: values.coverImage || PRESET_COVERS[0],
-          fileUrl: finalFileUrl,
-          fileName: finalFileName,
-          fileSize: finalFileSize,
-          deliveryType: values.deliveryType,
-          successMessage: values.type === 'LEAD_MAGNET' ? values.successMessage?.trim() : undefined,
-          estimatedFulfillment:
-            values.type === 'PHYSICAL' ? values.estimatedFulfillment?.trim() : undefined,
-          variants: values.type === 'PHYSICAL' ? values.variants : undefined,
-          enableZaloConfirm: values.type === 'PHYSICAL' ? values.enableZaloConfirm : undefined,
-          externalUrl: values.type === 'EXTERNAL_LINK' ? values.destinationUrl?.trim() : undefined,
-          iconType: values.type === 'EXTERNAL_LINK' ? values.iconType : undefined,
-          openInNewTab: values.type === 'EXTERNAL_LINK' ? values.openInNewTab : undefined,
-          buttonText: values.buttonText?.trim() || undefined,
-          isPublished: values.isPublished,
-          isFeatured: false,
-          stock: values.type === 'PHYSICAL' ? (values.stock ?? 999) : 999
-        });
-        toast.success('Đã tạo và đưa sản phẩm lên gian hàng thành công!');
+        saved = await createProduct(payload as any);
+        toast.success('Đã tạo và đưa sản phẩm lên gian hàng!');
       }
 
       if (onSuccess) {
-        onSuccess(savedProduct);
+        onSuccess(saved);
       } else {
         router.push('/dashboard/products');
       }
-    } catch (err) {
-      toast.error('Có lỗi xảy ra khi lưu sản phẩm. Vui lòng thử lại.');
+    } catch {
+      toast.error('Có lỗi xảy ra khi lưu sản phẩm.');
     } finally {
       setLoading(false);
     }
@@ -370,27 +431,29 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
   const previewProduct: Product = React.useMemo(() => {
     const defaultBtn =
       watchedValues.type === 'LEAD_MAGNET'
-        ? 'Nhận 0đ'
+        ? 'Nhận ngay'
         : watchedValues.type === 'PHYSICAL'
-          ? watchedValues.stock !== undefined &&
-            watchedValues.stock !== null &&
-            watchedValues.stock <= 0
-            ? 'Hết hàng'
-            : 'Đặt trước'
+          ? 'Đặt trước'
           : watchedValues.type === 'EXTERNAL_LINK'
-            ? 'Mở link'
+            ? 'Mở liên kết'
             : 'Mua ngay';
 
     return {
       id: initialProduct?.id || 'preview-draft',
       creatorId: profile.id,
       type: watchedValues.type,
-      title: watchedValues.title.trim() || 'Tên sản phẩm của bạn',
+      title: watchedValues.title?.trim() || 'Tên sản phẩm của bạn',
+      subtitle: watchedValues.subtitle?.trim() || '',
       description:
         watchedValues.description?.trim() ||
-        'Mô tả ngắn gọn về giá trị của tài nguyên số hoặc sản phẩm cá nhân của bạn.',
-      price: watchedValues.type === 'LEAD_MAGNET' ? 0 : watchedValues.price,
+        'Mô tả chi tiết giá trị tài nguyên số hoặc sản phẩm cá nhân của bạn.',
+      price: watchedValues.type === 'LEAD_MAGNET' ? 0 : (watchedValues.price ?? 0),
+      originalPrice:
+        watchedValues.hasDiscount && watchedValues.originalPrice
+          ? Number(watchedValues.originalPrice)
+          : undefined,
       coverImage: watchedValues.coverImage || PRESET_COVERS[0],
+      bannerImage: watchedValues.featureImage,
       fileUrl:
         watchedValues.deliveryType === 'REDIRECT_LINK'
           ? watchedValues.redirectUrl
@@ -398,19 +461,14 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
       fileName: watchedValues.fileName,
       fileSize: watchedValues.fileSize,
       deliveryType: watchedValues.deliveryType,
-      successMessage: watchedValues.successMessage,
       estimatedFulfillment: watchedValues.estimatedFulfillment,
-      variants: watchedValues.variants,
-      enableZaloConfirm: watchedValues.enableZaloConfirm,
       externalUrl: watchedValues.destinationUrl,
-      iconType: watchedValues.iconType,
-      openInNewTab: watchedValues.openInNewTab,
       buttonText: watchedValues.buttonText?.trim() || defaultBtn,
       isPublished: watchedValues.isPublished,
       isFeatured: true,
       stock: watchedValues.stock ?? 50,
       displayOrder: 0,
-      soldCount: initialProduct?.soldCount || 0,
+      soldCount: initialProduct?.soldCount || 128,
       createdAt: initialProduct?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -432,827 +490,509 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
   };
 
   return (
-    <div className='max-w-7xl mx-auto space-y-6 pb-16'>
-      {/* Top Bar Header */}
-      <div className='flex items-center justify-between pb-4 border-b border-border/60'>
-        <div className='flex items-center gap-3'>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={handleBack}
-            className='h-9 w-9 p-0 rounded-xl cursor-pointer hover:bg-muted'
-          >
-            <Icons.arrowLeft className='h-4 w-4 text-foreground' />
-          </Button>
-          <div>
-            <h1 className='text-lg sm:text-xl font-bold tracking-tight text-foreground flex items-center gap-2'>
-              {isEditMode ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới'}
-            </h1>
-            <p className='text-xs text-muted-foreground'>
-              Thiết lập thông tin bán hàng, phương thức trả hàng tự động và xem trước trực tiếp trên
-              điện thoại.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main 2-Column Desktop Layout (60% Form / 40% Mobile Preview) */}
-      <div className='grid grid-cols-1 lg:grid-cols-12 gap-8 items-start'>
+    <div className='w-full max-w-[1600px] mx-auto space-y-6 pb-24'>
+      {/* Main 2-Column Grid (Bố cục 65% Biểu mẫu - 35% Khung xem trước cố định) */}
+      <div className='grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pt-1'>
         {/* ========================================================= */}
-        {/* CỘT TRÁI: DYNAMIC PRODUCT FORM (60% - 7 Cols trên lg)     */}
+        {/* CỘT TRÁI: BIỂU MẪU NHẬP LIỆU (CHIẾM ~65% BỀ NGANG)         */}
         {/* ========================================================= */}
-        <div className='lg:col-span-7 xl:col-span-7 space-y-6'>
-          <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
-            {/* 1. CHỌN LOẠI SẢN PHẨM (4 ĐỊNH DẠNG THEO BUSINESS CORE) */}
-            <Card className='border border-border/80 shadow-xs rounded-2xl overflow-hidden'>
-              <div className='p-4 border-b border-border/60 bg-muted/20'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  1. Chọn định dạng sản phẩm
-                </h3>
-              </div>
-              <CardContent className='p-4 pt-4'>
+        <div className='lg:col-span-8 xl:col-span-8 space-y-6'>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* ----------------------------------------------------- */}
+            {/* THẺ 1: THẺ HIỂN THỊ VÀ GIÁ BÁN                        */}
+            {/* ----------------------------------------------------- */}
+            <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card p-6 md:p-8 shadow-xs space-y-6 mb-6'>
+              {/* Trạng thái mở bán */}
+              <div className='flex items-center justify-between pb-3.5 border-b border-neutral-100 dark:border-neutral-800/80'>
+                <span className='text-xs font-bold text-neutral-900 dark:text-white'>
+                  Trạng thái hiển thị trên Tiệm
+                </span>
                 <Controller
                   control={control}
-                  name='type'
+                  name='isPublished'
                   render={({ field }) => (
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-                      {[
-                        {
-                          type: 'DIGITAL' as ProductType,
-                          title: 'Sản phẩm số',
-                          desc: 'Ebook, template Notion, preset, tài liệu nén',
-                          icon: Icons.post,
-                          badge: 'File / Link bảo mật'
-                        },
-                        {
-                          type: 'LEAD_MAGNET' as ProductType,
-                          title: 'Quà tặng 0đ',
-                          desc: 'Checklist, cẩm nang miễn phí thu thập Email/SĐT',
-                          icon: Icons.gift,
-                          badge: 'Giá cố định 0đ'
-                        },
-                        {
-                          type: 'PHYSICAL' as ProductType,
-                          title: 'Hàng đặt trước / Thủ công',
-                          desc: 'Sách in kèm chữ ký, áo merch, đồ handmade làm theo yêu cầu',
-                          icon: Icons.product,
-                          badge: 'Pre-order / Handmade'
-                        },
-                        {
-                          type: 'EXTERNAL_LINK' as ProductType,
-                          title: 'Nút liên kết',
-                          desc: 'Trỏ sang Shopee, TikTok Shop, Zalo kín, link Affiliate',
-                          icon: Icons.link,
-                          badge: 'Mở tab mới'
-                        }
-                      ].map((item) => {
-                        const IconComp = item.icon;
-                        const isSelected = field.value === item.type;
-                        return (
-                          <div
-                            key={item.type}
-                            onClick={() => field.onChange(item.type)}
-                            className={`p-3.5 rounded-2xl border transition-all cursor-pointer relative ${
-                              isSelected
-                                ? 'border-[#FE2C55] bg-[#FE2C55]/5 ring-2 ring-[#FE2C55]/20 shadow-xs'
-                                : 'border-border/80 bg-card hover:border-border hover:bg-muted/40'
-                            }`}
-                          >
-                            <div className='flex items-start gap-3'>
-                              <div
-                                className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                                  isSelected
-                                    ? 'bg-[#FE2C55] text-white shadow-xs'
-                                    : 'bg-muted text-muted-foreground'
-                                }`}
-                              >
-                                <IconComp className='w-4.5 h-4.5' />
-                              </div>
-                              <div className='flex-1 min-w-0'>
-                                <div className='flex items-center justify-between'>
-                                  <span className='font-bold text-xs text-foreground'>
-                                    {item.title}
-                                  </span>
-                                  {isSelected && (
-                                    <span className='h-4 w-4 rounded-full bg-[#FE2C55] text-white flex items-center justify-center text-[10px]'>
-                                      <Icons.check className='w-2.5 h-2.5' />
-                                    </span>
-                                  )}
-                                </div>
-                                <p className='text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed'>
-                                  {item.desc}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className='flex items-center gap-2'>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <span className='text-xs font-bold text-neutral-900 dark:text-white'>
+                        {field.value ? 'Đang mở bán' : 'Ẩn sản phẩm'}
+                      </span>
                     </div>
                   )}
                 />
-              </CardContent>
-            </Card>
-
-            {/* 2. CỤM FORM FIELDS CHUNG (HIỂN THỊ CHO MỌI LOẠI SẢN PHẨM) */}
-            <Card className='border border-border/80 shadow-xs rounded-2xl overflow-hidden'>
-              <div className='p-4 border-b border-border/60 bg-muted/20 flex items-center justify-between'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  2. Cụm trường thông tin chung
-                </h3>
-                <span className='text-[11px] text-muted-foreground'>
-                  Hiển thị thẻ (Card) ngoài Bio Storefront
-                </span>
               </div>
-              <CardContent className='p-4.5 space-y-4 text-xs'>
-                {/* A. Tiêu đề / Tên sản phẩm */}
-                <div className='space-y-1.5'>
-                  <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                    <span>
-                      Tiêu đề / Tên sản phẩm <span className='text-[#FE2C55]'>*</span>
-                    </span>
-                    <span className='text-[10px] text-muted-foreground'>
-                      {watchedValues.title?.length || 0}/100 ký tự
-                    </span>
-                  </label>
-                  <Input
-                    {...register('title')}
-                    placeholder='VD: Bộ template Notion Quản lý tài chính'
-                    className='h-10 text-xs rounded-xl'
+
+              {/* 1.1 Ô chọn ảnh đại diện vuông */}
+              <div className='space-y-2'>
+                <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                  Ảnh đại diện sản phẩm <span className='text-[#FE2C55]'>*</span>
+                </label>
+
+                <div className='flex items-center gap-4 p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/30'>
+                  <input
+                    type='file'
+                    ref={fileInputRef}
+                    onChange={handleCoverUpload}
+                    accept='image/*'
+                    className='hidden'
                   />
-                  {errors.title && (
-                    <p className='text-[11px] text-destructive font-medium'>
-                      {errors.title.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* B. Ảnh bìa / Thumbnail */}
-                <div className='space-y-2 pt-1'>
-                  <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                    <span>Ảnh bìa / Thumbnail (Tùy chọn)</span>
-                    <span className='text-[10px] text-muted-foreground'>Tỉ lệ 1:1 hoặc 16:9</span>
-                  </label>
-
-                  <div className='flex items-start gap-4'>
-                    <div className='relative h-20 w-20 rounded-2xl border-2 border-dashed border-border overflow-hidden bg-muted flex items-center justify-center shrink-0 shadow-xs'>
-                      {watchedValues.coverImage ? (
-                        <img
-                          src={watchedValues.coverImage}
-                          alt='Preview'
-                          className='h-full w-full object-cover'
-                        />
-                      ) : (
-                        <Icons.media className='w-6 h-6 text-muted-foreground' />
-                      )}
-                    </div>
-
-                    <div className='flex-1 space-y-2'>
-                      <div className='flex items-center gap-2'>
-                        <input
-                          type='file'
-                          ref={fileInputRef}
-                          onChange={handleCoverUpload}
-                          accept='image/*'
-                          className='hidden'
-                        />
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploading}
-                          className='h-8.5 rounded-xl text-xs gap-1.5 cursor-pointer hover:bg-muted'
-                        >
-                          <Icons.upload className='w-3.5 h-3.5' />
-                          {isUploading ? 'Đang tải lên...' : 'Tải ảnh từ máy'}
-                        </Button>
-                      </div>
-
-                      {/* Dán link ảnh trực tiếp */}
-                      <Input
-                        {...register('coverImage')}
-                        placeholder='Hoặc dán URL ảnh bìa...'
-                        className='h-8 text-xs rounded-xl font-mono'
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className='relative group w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary transition-all flex items-center justify-center cursor-pointer shrink-0 shadow-2xs'
+                  >
+                    {watchedValues.coverImage ? (
+                      <img
+                        src={watchedValues.coverImage}
+                        alt='Thumbnail'
+                        className='w-full h-full object-cover transition-transform group-hover:scale-105 duration-200'
                       />
-
-                      {/* Ảnh mẫu có sẵn */}
-                      <div className='flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none'>
-                        <span className='text-[10px] text-muted-foreground shrink-0'>Preset:</span>
-                        {PRESET_COVERS.map((url, i) => (
-                          <button
-                            key={i}
-                            type='button'
-                            onClick={() => setValue('coverImage', url)}
-                            className={`h-7 w-7 rounded-lg overflow-hidden border transition-all cursor-pointer shrink-0 ${
-                              watchedValues.coverImage === url
-                                ? 'border-[#FE2C55] ring-2 ring-[#FE2C55]/30'
-                                : 'border-border/60 hover:opacity-80'
-                            }`}
-                          >
-                            <img
-                              src={url}
-                              alt={`Preset ${i}`}
-                              className='h-full w-full object-cover'
-                            />
-                          </button>
-                        ))}
+                    ) : (
+                      <div className='flex flex-col items-center justify-center text-neutral-400 group-hover:text-primary transition-colors p-2 text-center'>
+                        <Camera className='w-6 h-6 mb-1' />
+                        <span className='text-[10px] font-semibold'>Tải ảnh</span>
                       </div>
+                    )}
+                    <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1'>
+                      <Upload className='w-4 h-4' />
+                      <span>{watchedValues.coverImage ? 'Đổi ảnh' : 'Tải ảnh'}</span>
                     </div>
                   </div>
-                </div>
 
-                {/* C. Mô tả ngắn gọn lợi ích nhận được (textarea tối đa 200 ký tự) */}
-                <div className='space-y-1.5 pt-1'>
-                  <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                    <span>Mô tả ngắn gọn lợi ích nhận được (Tùy chọn)</span>
-                    <span
-                      className={`text-[10px] ${
-                        (watchedValues.description?.length || 0) > 200
-                          ? 'text-destructive font-bold'
-                          : 'text-muted-foreground'
-                      }`}
+                  <div>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingThumb}
+                      className='h-9 text-xs font-semibold rounded-xl gap-2 cursor-pointer'
                     >
-                      {watchedValues.description?.length || 0}/200 ký tự
-                    </span>
-                  </label>
-                  <Textarea
-                    {...register('description')}
-                    rows={3}
-                    maxLength={200}
-                    placeholder='Mô tả ngắn gọn lợi ích nổi bật của tài liệu hoặc sản phẩm để kích thích khách bấm mua...'
-                    className='text-xs rounded-xl resize-none'
-                  />
-                  {errors.description && (
-                    <p className='text-[11px] text-destructive font-medium'>
-                      {errors.description.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* D. Giá bán tính bằng VNĐ */}
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1'>
-                  <div className='space-y-1.5'>
-                    <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
+                      <Upload className='w-3.5 h-3.5' />
                       <span>
-                        Giá bán (VNĐ) <span className='text-[#FE2C55]'>*</span>
+                        {isUploadingThumb
+                          ? 'Đang tải lên...'
+                          : watchedValues.coverImage
+                            ? 'Thay ảnh khác'
+                            : 'Chọn ảnh từ máy'}
                       </span>
-                      {watchedValues.type === 'LEAD_MAGNET' && (
-                        <Badge
-                          variant='outline'
-                          className='text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                        >
-                          Tự động khóa 0đ (LEAD_MAGNET)
-                        </Badge>
-                      )}
+                    </Button>
+                  </div>
+                </div>
+                {errors.coverImage && (
+                  <p className='text-xs text-destructive font-medium'>
+                    {errors.coverImage.message}
+                  </p>
+                )}
+              </div>
+
+              {/* 1.2 Tiêu đề sản phẩm * */}
+              <div className='space-y-2'>
+                <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                  Tiêu đề sản phẩm <span className='text-[#FE2C55]'>*</span>
+                </label>
+                <Input
+                  {...register('title')}
+                  maxLength={60}
+                  placeholder='VD: Bộ 100 Hook Viral & Kịch Bản Triệu View TikTok'
+                  className='h-11 text-sm md:text-base font-medium rounded-xl'
+                />
+                {errors.title && (
+                  <p className='text-xs text-destructive font-medium'>{errors.title.message}</p>
+                )}
+              </div>
+
+              {/* 1.3 Dòng tóm tắt ngắn */}
+              <div className='space-y-2'>
+                <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                  Dòng tóm tắt ngắn
+                </label>
+                <Input
+                  {...register('subtitle')}
+                  maxLength={100}
+                  placeholder='VD: Nhận ngay bộ 13 kịch bản triệu view 🔥 hoặc Never run out of ideas'
+                  className='h-11 text-sm rounded-xl'
+                />
+              </div>
+
+              {/* 1.4 Hàng giá bán gồm hai cột song song */}
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1'>
+                {/* Cột 1: Giá bán thực tế (VNĐ) * */}
+                <div className='space-y-2'>
+                  <div className='flex items-center justify-between'>
+                    <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                      Giá bán thực tế (VNĐ) <span className='text-[#FE2C55]'>*</span>
                     </label>
-                    <Input
-                      type='number'
-                      disabled={watchedValues.type === 'LEAD_MAGNET'}
-                      value={watchedValues.type === 'LEAD_MAGNET' ? 0 : watchedValues.price}
-                      onChange={(e) => setValue('price', Number(e.target.value))}
-                      placeholder='149000'
-                      className={`h-10 text-xs rounded-xl font-mono ${
-                        watchedValues.type === 'LEAD_MAGNET'
-                          ? 'bg-muted/70 text-muted-foreground cursor-not-allowed opacity-80'
-                          : ''
-                      }`}
-                    />
-                    {errors.price && (
-                      <p className='text-[11px] text-destructive font-medium'>
-                        {errors.price.message}
-                      </p>
+                    {watchedValues.type === 'LEAD_MAGNET' && (
+                      <Badge
+                        variant='outline'
+                        className='text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      >
+                        Khóa 0đ
+                      </Badge>
                     )}
                   </div>
-
-                  {/* E. Chữ hiển thị trên nút CTA (buttonText) */}
-                  <div className='space-y-1.5'>
-                    <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                      <span>Chữ hiển thị trên nút CTA (buttonText)</span>
-                      <span className='text-[10px] text-muted-foreground'>Tùy chọn</span>
-                    </label>
+                  <div className='relative'>
                     <Input
-                      {...register('buttonText')}
-                      placeholder={
+                      type='text'
+                      inputMode='numeric'
+                      disabled={watchedValues.type === 'LEAD_MAGNET'}
+                      value={
                         watchedValues.type === 'LEAD_MAGNET'
-                          ? 'VD: Nhận 0đ'
-                          : watchedValues.type === 'PHYSICAL'
-                            ? 'VD: Đặt trước'
-                            : watchedValues.type === 'EXTERNAL_LINK'
-                              ? 'VD: Mở link'
-                              : 'VD: Mua ngay'
+                          ? '0'
+                          : watchedValues.price
+                            ? formatCurrencyDisplay(watchedValues.price)
+                            : ''
                       }
-                      className='h-10 text-xs rounded-xl'
+                      onChange={(e) => {
+                        const parsed = parseCurrencyInput(e.target.value);
+                        setValue('price', parsed, { shouldValidate: true });
+                      }}
+                      placeholder='149.000'
+                      className={cn(
+                        'h-11 text-sm md:text-base font-semibold rounded-xl pr-12 font-mono',
+                        watchedValues.type === 'LEAD_MAGNET' &&
+                          'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-80'
+                      )}
                     />
-                    <p className='text-[10px] text-muted-foreground'>
-                      Để trống sẽ tự động lấy theo loại mặt hàng.
-                    </p>
+                    <span className='absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400'>
+                      VNĐ
+                    </span>
                   </div>
+                  {errors.price && (
+                    <p className='text-xs text-destructive font-medium'>{errors.price.message}</p>
+                  )}
                 </div>
 
-                {/* F. Toggle Bật/Tắt hiển thị sản phẩm trên Storefront (isPublished) */}
-                <div className='flex items-center justify-between rounded-xl border border-border/80 p-3.5 bg-muted/20 mt-2'>
-                  <div className='space-y-0.5 pr-2'>
-                    <div className='font-semibold text-xs text-foreground flex items-center gap-2'>
-                      Bật hiển thị sản phẩm trên Storefront
-                      {watchedValues.isPublished ? (
-                        <Badge className='text-[10px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20'>
-                          Đang hiển thị
-                        </Badge>
-                      ) : (
-                        <Badge variant='outline' className='text-[10px] text-muted-foreground'>
-                          Đang ẩn
-                        </Badge>
+                {/* Cột 2: Giá gốc niêm yết (kèm nút gạt Switch) */}
+                <div className='space-y-2'>
+                  <div className='flex items-center justify-between'>
+                    <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                      Giá gốc niêm yết
+                    </label>
+                    <Controller
+                      control={control}
+                      name='hasDiscount'
+                      render={({ field }) => (
+                        <Switch
+                          checked={field.value}
+                          disabled={watchedValues.type === 'LEAD_MAGNET'}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className='relative'>
+                    <Input
+                      type='text'
+                      inputMode='numeric'
+                      disabled={!watchedValues.hasDiscount || watchedValues.type === 'LEAD_MAGNET'}
+                      value={
+                        watchedValues.originalPrice
+                          ? formatCurrencyDisplay(watchedValues.originalPrice)
+                          : ''
+                      }
+                      onChange={(e) => {
+                        const parsed = parseCurrencyInput(e.target.value);
+                        setValue('originalPrice', parsed);
+                      }}
+                      placeholder='350.000'
+                      className={cn(
+                        'h-11 text-sm md:text-base font-semibold rounded-xl pr-12 font-mono',
+                        (!watchedValues.hasDiscount || watchedValues.type === 'LEAD_MAGNET') &&
+                          'bg-neutral-100 dark:bg-neutral-800 cursor-not-allowed opacity-60'
+                      )}
+                    />
+                    <span className='absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400'>
+                      VNĐ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1.5 Chữ trên nút bấm * */}
+              <div className='space-y-2 pt-1'>
+                <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                  Chữ trên nút bấm <span className='text-[#FE2C55]'>*</span>
+                </label>
+                <Input
+                  {...register('buttonText')}
+                  maxLength={30}
+                  placeholder='Mua ngay'
+                  className='h-11 text-sm rounded-xl'
+                />
+                {/* Các ô chọn nhanh: Mua ngay, Tải ngay, Đặt trước */}
+                <div className='flex items-center gap-2 flex-wrap pt-1'>
+                  {['Mua ngay', 'Tải ngay', 'Đặt trước', 'Nhận tài liệu'].map((label) => (
+                    <button
+                      key={label}
+                      type='button'
+                      onClick={() => setValue('buttonText', label, { shouldValidate: true })}
+                      className={cn(
+                        'text-xs px-3 py-1.5 rounded-lg border transition-all cursor-pointer font-medium',
+                        watchedValues.buttonText === label
+                          ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-transparent shadow-2xs'
+                          : 'bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ----------------------------------------------------- */}
+            {/* THẺ 2: BÀI VIẾT MÔ TẢ CHI TIẾT                        */}
+            {/* ----------------------------------------------------- */}
+            <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card p-6 md:p-8 shadow-xs space-y-6 mb-6'>
+              <h2 className='text-base font-bold text-neutral-900 dark:text-white tracking-tight pb-3 border-b border-neutral-100 dark:border-neutral-800/80'>
+                Bài viết mô tả chi tiết
+              </h2>
+
+              {/* 2.1 Ảnh bìa nổi bật */}
+              <div className='space-y-2'>
+                <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                  Ảnh bìa nổi bật
+                </label>
+
+                <input
+                  type='file'
+                  ref={bannerInputRef}
+                  onChange={handleBannerUpload}
+                  accept='image/*'
+                  className='hidden'
+                />
+                <div
+                  onClick={() => bannerInputRef.current?.click()}
+                  className='relative group w-full aspect-video sm:h-44 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary transition-all flex items-center justify-center cursor-pointer shadow-2xs'
+                >
+                  {watchedValues.featureImage ? (
+                    <img
+                      src={watchedValues.featureImage}
+                      alt='Ảnh bìa 16:9'
+                      className='w-full h-full object-cover transition-transform group-hover:scale-105 duration-200'
+                    />
+                  ) : (
+                    <div className='flex flex-col items-center justify-center text-neutral-400 group-hover:text-primary transition-colors p-4 text-center'>
+                      <ImageIcon className='w-8 h-8 mb-1.5' />
+                      <span className='text-xs font-semibold'>Tải ảnh bìa (16:9)</span>
+                    </div>
+                  )}
+                  <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5'>
+                    <Upload className='w-4 h-4' />
+                    <span>{watchedValues.featureImage ? 'Thay ảnh bìa khác' : 'Tải ảnh bìa'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2.2 Mô tả chi tiết sản phẩm * */}
+              <div className='space-y-2'>
+                <ProductDescriptionEditor
+                  value={watchedValues.description || ''}
+                  onChange={(val) =>
+                    setValue('description', val, { shouldValidate: true, shouldDirty: true })
+                  }
+                  productTitle={watchedValues.title}
+                  error={errors.description?.message}
+                  required={true}
+                  label='Mô tả chi tiết sản phẩm'
+                />
+              </div>
+            </div>
+
+            {/* ----------------------------------------------------- */}
+            {/* THẺ 3: TÀI NGUYÊN GIAO CHO KHÁCH                      */}
+            {/* ----------------------------------------------------- */}
+            <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card p-6 md:p-8 shadow-xs space-y-6 mb-6'>
+              {/* Chuyển đổi giữa hai thẻ theo yêu cầu */}
+              {watchedValues.type === 'DIGITAL' || watchedValues.type === 'LEAD_MAGNET' ? (
+                <div className='space-y-4'>
+                  <div className='inline-flex p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs w-full sm:w-auto'>
+                    <button
+                      type='button'
+                      onClick={() => setValue('deliveryType', 'UPLOAD_FILE')}
+                      className={cn(
+                        'flex-1 sm:flex-initial px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer text-center',
+                        watchedValues.deliveryType === 'UPLOAD_FILE'
+                          ? 'bg-white dark:bg-card text-neutral-900 dark:text-white shadow-xs'
+                          : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                      )}
+                    >
+                      Tải tệp lên máy chủ
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => setValue('deliveryType', 'REDIRECT_LINK')}
+                      className={cn(
+                        'flex-1 sm:flex-initial px-4 py-2 rounded-lg font-semibold transition-all cursor-pointer text-center',
+                        watchedValues.deliveryType === 'REDIRECT_LINK'
+                          ? 'bg-white dark:bg-card text-neutral-900 dark:text-white shadow-xs'
+                          : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                      )}
+                    >
+                      Dán liên kết bí mật
+                    </button>
+                  </div>
+
+                  {watchedValues.deliveryType === 'UPLOAD_FILE' ? (
+                    <div className='space-y-3'>
+                      <input
+                        type='file'
+                        ref={digitalUploadRef}
+                        onChange={handleDigitalFileUpload}
+                        accept='.pdf,.zip,.epub,.xlsx,.xls'
+                        className='hidden'
+                      />
+                      <div
+                        onClick={() => digitalUploadRef.current?.click()}
+                        className='p-7 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-emerald-500 dark:hover:border-emerald-500 bg-neutral-50/50 dark:bg-neutral-900/30 transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-2 group'
+                      >
+                        <div className='w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-110'>
+                          <Upload className='w-5 h-5' />
+                        </div>
+                        <div className='text-xs font-semibold text-neutral-800 dark:text-neutral-200'>
+                          Bấm hoặc kéo thả để tải tệp lên (.pdf, .zip, .epub, .xlsx)
+                        </div>
+                      </div>
+
+                      {watchedValues.fileName && (
+                        <div className='p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-card flex items-center justify-between shadow-2xs'>
+                          <div className='flex items-center gap-3 min-w-0'>
+                            <div className='h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0'>
+                              <FileCheck className='w-5 h-5' />
+                            </div>
+                            <div className='min-w-0'>
+                              <div className='text-xs font-bold text-neutral-900 dark:text-white truncate font-mono'>
+                                {watchedValues.fileName}
+                              </div>
+                              <div className='text-[11px] text-neutral-500'>
+                                {watchedValues.fileSize || 'Đã sẵn sàng'}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => digitalUploadRef.current?.click()}
+                            className='h-8 text-xs text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+                          >
+                            Đổi tệp
+                          </Button>
+                        </div>
                       )}
                     </div>
-                    <p className='text-[11px] text-muted-foreground'>
-                      Khi tắt, sản phẩm vẫn được lưu trữ trong Dashboard nhưng sẽ ẩn khỏi trang Bio
-                      Storefront công khai của bạn.
-                    </p>
+                  ) : (
+                    <div className='space-y-2 rounded-xl bg-neutral-50/70 dark:bg-neutral-900/40 border border-neutral-200/80 dark:border-neutral-800 p-4'>
+                      <label className='font-bold text-neutral-900 dark:text-white text-xs block'>
+                        Liên kết bí mật <span className='text-[#FE2C55]'>*</span>
+                      </label>
+                      <Input
+                        {...register('redirectUrl')}
+                        placeholder='https://notion.so/... hoặc https://drive.google.com/...'
+                        className='h-11 text-xs rounded-xl font-mono bg-white dark:bg-card'
+                      />
+                      {errors.redirectUrl && (
+                        <p className='text-[11px] text-destructive font-medium'>
+                          {errors.redirectUrl.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : watchedValues.type === 'PHYSICAL' ? (
+                <div className='space-y-4'>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <label className='font-bold text-neutral-900 dark:text-white text-xs block'>
+                        Giới hạn tồn kho / nhận đơn (stock)
+                      </label>
+                      <Input
+                        type='number'
+                        value={watchedValues.stock ?? ''}
+                        onChange={(e) =>
+                          setValue('stock', e.target.value === '' ? null : Number(e.target.value))
+                        }
+                        placeholder='50'
+                        className='h-11 text-sm rounded-xl font-mono'
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <label className='font-bold text-neutral-900 dark:text-white text-xs block'>
+                        Thời gian hoàn thiện dự kiến
+                      </label>
+                      <Input
+                        {...register('estimatedFulfillment')}
+                        placeholder='VD: 3 - 5 ngày làm việc'
+                        className='h-11 text-sm rounded-xl'
+                      />
+                    </div>
                   </div>
+                </div>
+              ) : (
+                /* EXTERNAL_LINK */
+                <div className='space-y-2 rounded-xl bg-neutral-50/70 dark:bg-neutral-900/40 border border-neutral-200/80 dark:border-neutral-800 p-4'>
+                  <label className='font-bold text-neutral-900 dark:text-white text-xs block'>
+                    Đường link chuyển hướng đích <span className='text-[#FE2C55]'>*</span>
+                  </label>
+                  <Input
+                    {...register('destinationUrl')}
+                    placeholder='https://shopee.vn/... hoặc https://tiktok.com/@...'
+                    className='h-11 text-xs sm:text-sm rounded-xl font-mono bg-white dark:bg-card'
+                  />
+                  {errors.destinationUrl && (
+                    <p className='text-[11px] text-destructive font-medium'>
+                      {errors.destinationUrl.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ----------------------------------------------------- */}
+            {/* THANH HÀNH ĐỘNG DÍNH CHẶT ĐÁY (STICKY BOTTOM ACTION BAR) */}
+            {/* ----------------------------------------------------- */}
+            <div
+              className='fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200/90 dark:border-neutral-800 px-4 py-3 lg:sticky lg:bottom-4 lg:z-20 lg:rounded-2xl lg:border lg:py-3.5 lg:px-6 lg:shadow-lg lg:mt-6 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.08)]'
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+            >
+              <div className='flex items-center gap-3 sm:gap-4'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={handleBack}
+                  className='h-10 px-4 text-xs font-semibold rounded-xl text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white cursor-pointer'
+                >
+                  Hủy
+                </Button>
+                <div className='flex items-center gap-2 pl-2 sm:pl-3 border-l border-neutral-200 dark:border-neutral-700'>
                   <Controller
                     control={control}
                     name='isPublished'
                     render={({ field }) => (
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className='data-[state=checked]:bg-[#FE2C55]'
-                      />
+                      <div className='flex items-center gap-2'>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        <span className='text-xs font-semibold text-neutral-600 dark:text-neutral-400 hidden xs:inline'>
+                          {field.value ? 'Mở bán' : 'Ẩn'}
+                        </span>
+                      </div>
                     )}
                   />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* 3. CỤM TRƯỜNG ĐỘNG ĐẶC THÙ (FULFILLMENT FIELDS) THEO TỪNG LOẠI SẢN PHẨM */}
-            <Card className='border border-border/80 shadow-xs rounded-2xl overflow-hidden'>
-              <div className='p-4 border-b border-border/60 bg-muted/20 flex items-center justify-between'>
-                <h3 className='text-xs font-bold uppercase tracking-wider text-muted-foreground'>
-                  3. Cụm trường đặc thù (Fulfillment Fields)
-                </h3>
-                <Badge variant='outline' className='text-[10px] font-semibold uppercase'>
-                  {watchedValues.type}
-                </Badge>
               </div>
-
-              <CardContent className='p-4.5 space-y-4 text-xs'>
-                {/* ========================================================= */}
-                {/* A. LOẠI "SẢN PHẨM SỐ" (DIGITAL)                          */}
-                {/* ========================================================= */}
-                {watchedValues.type === 'DIGITAL' && (
-                  <div className='space-y-4'>
-                    <div className='space-y-1.5'>
-                      <label className='font-semibold text-foreground text-xs'>
-                        Hình thức giao hàng tự động (deliveryType)
-                      </label>
-                      <div className='grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/70 border border-border/60'>
-                        <button
-                          type='button'
-                          onClick={() => setValue('deliveryType', 'UPLOAD_FILE')}
-                          className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            watchedValues.deliveryType === 'UPLOAD_FILE'
-                              ? 'bg-background text-foreground shadow-xs'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <Icons.upload className='w-3.5 h-3.5 text-blue-500' />
-                          Tải file lên hệ thống
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => setValue('deliveryType', 'REDIRECT_LINK')}
-                          className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            watchedValues.deliveryType === 'REDIRECT_LINK'
-                              ? 'bg-background text-foreground shadow-xs'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <Icons.link className='w-3.5 h-3.5 text-indigo-500' />
-                          Dán link truy cập bảo mật
-                        </button>
-                      </div>
-                    </div>
-
-                    {watchedValues.deliveryType === 'UPLOAD_FILE' ? (
-                      <div className='space-y-3 rounded-xl bg-muted/20 border border-border p-3.5'>
-                        <label className='font-semibold text-foreground text-xs'>
-                          Kéo thả file đính kèm (.pdf, .zip, .epub, .xlsx)
-                        </label>
-                        <input
-                          type='file'
-                          ref={digitalUploadRef}
-                          onChange={handleDigitalFileUpload}
-                          accept='.pdf,.zip,.epub,.xlsx,.xls'
-                          className='hidden'
-                        />
-                        <div
-                          onClick={() => digitalUploadRef.current?.click()}
-                          className='border-2 border-dashed border-border/80 hover:border-primary/60 rounded-xl p-5 text-center cursor-pointer transition-colors bg-card hover:bg-muted/40'
-                        >
-                          <Icons.upload className='w-6 h-6 text-muted-foreground mx-auto mb-1.5' />
-                          <div className='text-xs font-semibold text-foreground'>
-                            {watchedValues.fileName
-                              ? watchedValues.fileName
-                              : 'Bấm để tải file tài nguyên'}
-                          </div>
-                          <p className='text-[10px] text-muted-foreground mt-0.5'>
-                            Hỗ trợ định dạng: .pdf, .zip, .epub, .xlsx
-                          </p>
-                          {watchedValues.fileName && (
-                            <div className='mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[11px] font-mono'>
-                              <Icons.circleCheck className='w-3.5 h-3.5' />
-                              <span>{watchedValues.fileName}</span>
-                              <span className='opacity-60'>
-                                ({watchedValues.fileSize || '12.4 MB'})
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className='space-y-2 rounded-xl bg-muted/20 border border-border p-3.5'>
-                        <label className='font-semibold text-foreground text-xs'>
-                          Ô Input redirectUrl (Link Notion, Google Drive, Canva...){' '}
-                          <span className='text-[#FE2C55]'>*</span>
-                        </label>
-                        <Input
-                          {...register('redirectUrl')}
-                          placeholder='Link Notion Duplicate, Google Drive cấp quyền, link Canva'
-                          className='h-10 text-xs rounded-xl font-mono'
-                        />
-                        {errors.redirectUrl && (
-                          <p className='text-[11px] text-destructive font-medium'>
-                            {errors.redirectUrl.message}
-                          </p>
-                        )}
-                        <p className='text-[11px] text-muted-foreground'>
-                          Sau khi thanh toán VietQR thành công, khách hàng sẽ nhận được quyền truy
-                          cập link bảo mật này tức thì.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ========================================================= */}
-                {/* B. LOẠI "QUÀ 0Đ" (LEAD_MAGNET)                           */}
-                {/* ========================================================= */}
-                {watchedValues.type === 'LEAD_MAGNET' && (
-                  <div className='space-y-4'>
-                    <div className='p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 flex items-center gap-2'>
-                      <Icons.gift className='w-4 h-4 text-emerald-500 shrink-0' />
-                      <span className='text-[11px]'>
-                        <strong>Quà tặng 0đ:</strong> Giá bán được tự động ép bằng{' '}
-                        <strong>0 VNĐ</strong>. Khách chỉ cần điền Họ tên & Email là nhận được quà
-                        ngay.
-                      </span>
-                    </div>
-
-                    <div className='space-y-1.5'>
-                      <label className='font-semibold text-foreground text-xs'>
-                        Hình thức gửi quà tặng miễn phí
-                      </label>
-                      <div className='grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/70 border border-border/60'>
-                        <button
-                          type='button'
-                          onClick={() => setValue('deliveryType', 'UPLOAD_FILE')}
-                          className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            watchedValues.deliveryType === 'UPLOAD_FILE'
-                              ? 'bg-background text-foreground shadow-xs'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <Icons.upload className='w-3.5 h-3.5 text-emerald-500' />
-                          Tải file tài liệu miễn phí (.pdf, .zip)
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => setValue('deliveryType', 'REDIRECT_LINK')}
-                          className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            watchedValues.deliveryType === 'REDIRECT_LINK'
-                              ? 'bg-background text-foreground shadow-xs'
-                              : 'text-muted-foreground hover:text-foreground'
-                          }`}
-                        >
-                          <Icons.link className='w-3.5 h-3.5 text-indigo-500' />
-                          Link Google Drive / Canva
-                        </button>
-                      </div>
-                    </div>
-
-                    {watchedValues.deliveryType === 'UPLOAD_FILE' ? (
-                      <div className='space-y-3 rounded-xl bg-muted/20 border border-border p-3.5'>
-                        <input
-                          type='file'
-                          ref={digitalUploadRef}
-                          onChange={handleDigitalFileUpload}
-                          accept='.pdf,.zip,.epub,.xlsx'
-                          className='hidden'
-                        />
-                        <div
-                          onClick={() => digitalUploadRef.current?.click()}
-                          className='border-2 border-dashed border-border/80 hover:border-primary/60 rounded-xl p-5 text-center cursor-pointer transition-colors bg-card hover:bg-muted/40'
-                        >
-                          <Icons.upload className='w-6 h-6 text-muted-foreground mx-auto mb-1.5' />
-                          <div className='text-xs font-semibold text-foreground'>
-                            {watchedValues.fileName
-                              ? watchedValues.fileName
-                              : 'Bấm tải file quà tặng (Ebook, Checklist...)'}
-                          </div>
-                          <p className='text-[10px] text-muted-foreground mt-0.5'>
-                            Hỗ trợ .pdf, .zip, .epub, .xlsx
-                          </p>
-                          {watchedValues.fileName && (
-                            <div className='mt-2 inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 text-[11px] font-mono'>
-                              <Icons.circleCheck className='w-3.5 h-3.5' />
-                              <span>{watchedValues.fileName}</span>
-                              <span className='opacity-60'>
-                                ({watchedValues.fileSize || '3.2 MB'})
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className='space-y-2 rounded-xl bg-muted/20 border border-border p-3.5'>
-                        <label className='font-semibold text-foreground text-xs'>
-                          Đường link nhận quà (Google Drive / Canva / Notion){' '}
-                          <span className='text-[#FE2C55]'>*</span>
-                        </label>
-                        <Input
-                          {...register('redirectUrl')}
-                          placeholder='https://drive.google.com/file/d/...'
-                          className='h-10 text-xs rounded-xl font-mono'
-                        />
-                        {errors.redirectUrl && (
-                          <p className='text-[11px] text-destructive font-medium'>
-                            {errors.redirectUrl.message}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Lời nhắn sau khi nhận quà thành công (successMessage) */}
-                    <div className='space-y-1.5 rounded-xl bg-muted/20 border border-border p-3.5'>
-                      <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                        <span>Lời nhắn sau khi nhận quà thành công (successMessage)</span>
-                        <span className='text-[10px] text-muted-foreground'>Tùy chọn</span>
-                      </label>
-                      <Input
-                        {...register('successMessage')}
-                        placeholder='Tài liệu đã được gửi vào Email của bạn!'
-                        className='h-10 text-xs rounded-xl'
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* ========================================================= */}
-                {/* C. LOẠI "HÀNG VẬT LÝ" (PHYSICAL - Made-to-Order)          */}
-                {/* ========================================================= */}
-                {watchedValues.type === 'PHYSICAL' && (
-                  <div className='space-y-4'>
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                      {/* Giới hạn số lượng nhận đơn / tồn kho (stock) */}
-                      <div className='space-y-1.5'>
-                        <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                          <span>Giới hạn số lượng nhận đơn / tồn kho (stock)</span>
-                          <span className='text-[10px] text-muted-foreground'>
-                            Để trống = Không giới hạn
-                          </span>
-                        </label>
-                        <Input
-                          type='number'
-                          value={watchedValues.stock ?? ''}
-                          onChange={(e) =>
-                            setValue('stock', e.target.value === '' ? null : Number(e.target.value))
-                          }
-                          placeholder='VD: 50 (để trống nếu không giới hạn)'
-                          className='h-10 text-xs rounded-xl font-mono'
-                        />
-                        <p className='text-[10px] text-muted-foreground'>
-                          Khi hết hàng, nút ngoài Storefront tự chuyển thành &quot;Hết hàng&quot;.
-                        </p>
-                      </div>
-
-                      {/* Thời gian dự kiến hoàn thiện / giao hàng (estimatedFulfillment) */}
-                      <div className='space-y-1.5'>
-                        <label className='font-semibold text-foreground text-xs'>
-                          Thời gian dự kiến hoàn thiện / giao hàng
-                        </label>
-                        <Input
-                          {...register('estimatedFulfillment')}
-                          placeholder='VD: Giao sau 3-5 ngày làm việc'
-                          className='h-10 text-xs rounded-xl'
-                        />
-                      </div>
-                    </div>
-
-                    {/* Danh sách phân loại (variants tags input: S, M, L hoặc Đen, Trắng) */}
-                    <div className='space-y-2 rounded-xl bg-muted/20 border border-border p-3.5'>
-                      <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                        <span>Danh sách phân loại hàng (variants)</span>
-                        <span className='text-[10px] text-muted-foreground'>Tags input</span>
-                      </label>
-
-                      <div className='flex items-center gap-2'>
-                        <Input
-                          value={newVariantInput}
-                          onChange={(e) => setNewVariantInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddVariant();
-                            }
-                          }}
-                          placeholder='Nhập phân loại (VD: Size S, Size M, Màu Đen) rồi nhấn Thêm'
-                          className='h-9 text-xs rounded-xl'
-                        />
-                        <Button
-                          type='button'
-                          size='sm'
-                          onClick={handleAddVariant}
-                          className='h-9 px-3 rounded-xl text-xs gap-1 cursor-pointer bg-primary'
-                        >
-                          <Icons.add className='w-3.5 h-3.5' /> Thêm
-                        </Button>
-                      </div>
-
-                      {/* Hiển thị tags variants */}
-                      <div className='flex flex-wrap items-center gap-1.5 pt-1'>
-                        {(watchedValues.variants || []).map((variant, idx) => (
-                          <Badge
-                            key={idx}
-                            variant='secondary'
-                            className='px-2.5 py-1 text-xs rounded-lg gap-1.5 bg-background border border-border'
-                          >
-                            <span>{variant}</span>
-                            <button
-                              type='button'
-                              onClick={() => handleRemoveVariant(idx)}
-                              className='text-muted-foreground hover:text-destructive cursor-pointer'
-                            >
-                              <Icons.close className='w-3 h-3' />
-                            </button>
-                          </Badge>
-                        ))}
-                        {(watchedValues.variants || []).length === 0 && (
-                          <span className='text-[11px] text-muted-foreground italic'>
-                            Chưa có phân loại nào (Sản phẩm chỉ có 1 phiên bản chuẩn).
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Toggle: Gửi tin nhắn Zalo xác nhận đơn hàng sau khi quét QR */}
-                    <div className='flex items-center justify-between rounded-xl border border-border p-3.5 bg-card'>
-                      <div className='space-y-0.5 pr-2'>
-                        <div className='font-semibold text-xs text-foreground flex items-center gap-1.5'>
-                          <Icons.chat className='w-3.5 h-3.5 text-blue-500' />
-                          Gửi tin nhắn Zalo xác nhận đơn hàng sau khi quét QR
-                        </div>
-                        <p className='text-[11px] text-muted-foreground'>
-                          Hệ thống tự động kích hoạt thông báo Zalo ZNS kèm mã vận đơn tới số điện
-                          thoại người mua.
-                        </p>
-                      </div>
-                      <Controller
-                        control={control}
-                        name='enableZaloConfirm'
-                        render={({ field }) => (
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className='data-[state=checked]:bg-[#FE2C55]'
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* ========================================================= */}
-                {/* D. LOẠI "NÚT LINK LIÊN KẾT" (EXTERNAL_LINK)               */}
-                {/* ========================================================= */}
-                {watchedValues.type === 'EXTERNAL_LINK' && (
-                  <div className='space-y-4'>
-                    {/* URL chuyển hướng đích (destinationUrl) */}
-                    <div className='space-y-1.5 rounded-xl bg-muted/20 border border-border p-3.5'>
-                      <label className='font-semibold text-foreground text-xs flex items-center justify-between'>
-                        <span>
-                          URL chuyển hướng đích (destinationUrl){' '}
-                          <span className='text-[#FE2C55]'>*</span>
-                        </span>
-                      </label>
-                      <Input
-                        {...register('destinationUrl')}
-                        placeholder='https://shopee.vn/... hoặc https://zalo.me/g/...'
-                        className='h-10 text-xs rounded-xl font-mono'
-                      />
-                      {errors.destinationUrl && (
-                        <p className='text-[11px] text-destructive font-medium'>
-                          {errors.destinationUrl.message}
-                        </p>
-                      )}
-                      <p className='text-[11px] text-muted-foreground'>
-                        Người xem nhấn vào nút trên Bio Storefront sẽ được chuyển hướng thẳng tới
-                        link này.
-                      </p>
-                    </div>
-
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-                      {/* Chọn icon đại diện (iconType) */}
-                      <div className='space-y-1.5'>
-                        <label className='font-semibold text-foreground text-xs'>
-                          Chọn icon đại diện (iconType)
-                        </label>
-                        <Controller
-                          control={control}
-                          name='iconType'
-                          render={({ field }) => (
-                            <div className='grid grid-cols-5 gap-2'>
-                              {[
-                                { key: 'shopee', label: 'Shopee', icon: Icons.shoppingCart },
-                                { key: 'tiktok', label: 'TikTok', icon: Icons.tiktok },
-                                { key: 'zalo', label: 'Zalo', icon: Icons.zalo },
-                                { key: 'youtube', label: 'YouTube', icon: Icons.youtube },
-                                { key: 'external', label: 'Khác', icon: Icons.externalLink }
-                              ].map((item) => {
-                                const IconComp = item.icon;
-                                const isSelected = field.value === item.key;
-                                return (
-                                  <button
-                                    key={item.key}
-                                    type='button'
-                                    onClick={() => field.onChange(item.key)}
-                                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all cursor-pointer ${
-                                      isSelected
-                                        ? 'border-[#FE2C55] bg-[#FE2C55]/10 text-[#FE2C55] font-bold'
-                                        : 'border-border/80 bg-background hover:bg-muted text-muted-foreground'
-                                    }`}
-                                  >
-                                    <IconComp className='w-4 h-4 mb-1' />
-                                    <span className='text-[10px]'>{item.label}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        />
-                      </div>
-
-                      {/* Toggle: Mở link trên tab mới khi khách bấm (openInNewTab) */}
-                      <div className='flex items-center justify-between rounded-xl border border-border p-3.5 bg-card self-end'>
-                        <div className='space-y-0.5 pr-2'>
-                          <div className='font-semibold text-xs text-foreground'>
-                            Mở link trên tab mới khi khách bấm
-                          </div>
-                          <p className='text-[10px] text-muted-foreground'>
-                            Khuyên dùng để giữ chân khách trên Bio Storefront
-                          </p>
-                        </div>
-                        <Controller
-                          control={control}
-                          name='openInNewTab'
-                          render={({ field }) => (
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              className='data-[state=checked]:bg-[#FE2C55]'
-                            />
-                          )}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* 4. NÚT LƯU FOOTER */}
-            <div className='flex items-center justify-end gap-3 pt-4 border-t border-border/60'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={handleBack}
-                className='h-10 px-5 text-xs font-semibold rounded-xl cursor-pointer hover:bg-muted'
-              >
-                Hủy
-              </Button>
               <Button
                 type='submit'
                 disabled={loading}
-                className='h-10 px-6 text-xs font-bold rounded-xl gap-2 shadow-md bg-[#FE2C55] hover:bg-[#ef244b] text-white cursor-pointer transition-all active:scale-[0.99]'
+                className='h-10 px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-bold rounded-xl gap-2 shadow-sm cursor-pointer transition-all active:scale-[0.98]'
               >
                 {loading ? (
                   <>
                     <Icons.spinner className='h-4 w-4 animate-spin' />
-                    Đang lưu...
+                    <span>Đang lưu...</span>
                   </>
                 ) : (
                   <>
-                    <Icons.sparkles className='h-4 w-4' />
-                    {isEditMode ? 'Cập nhật sản phẩm' : 'Lưu & Đưa lên Tiệm'}
+                    <Icons.check className='w-4 h-4 stroke-[2.5]' />
+                    <span>{isEditMode ? 'Cập nhật sản phẩm' : 'Lưu và Đưa lên Tiệm'}</span>
                   </>
                 )}
               </Button>
@@ -1261,24 +1001,52 @@ export function ProductForm({ initialProduct, onSuccess, onCancel }: ProductForm
         </div>
 
         {/* ========================================================= */}
-        {/* CỘT PHẢI: XEM TRƯỚC ĐIỆN THOẠI                            */}
+        {/* CỘT PHẢI: KHUNG XEM TRƯỚC TRỰC TIẾP (CỐ ĐỊNH KHI CUỘN)    */}
         {/* ========================================================= */}
-        <div className='lg:col-span-5 xl:col-span-5 hidden lg:block sticky top-20'>
-          <div className='space-y-3 text-center'>
-            <div className='inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border text-[11px] font-semibold text-muted-foreground'>
-              <Icons.smartphone className='w-3.5 h-3.5 text-[#FE2C55]' />
-              <span>Xem trước điện thoại (Thời gian thực)</span>
+        <div className='lg:col-span-4 xl:col-span-4 hidden lg:block sticky top-6 space-y-4'>
+          {/* Thanh chuyển đổi xem trước phía trên khung: Điện thoại / Máy tính */}
+          <div className='flex items-center justify-center'>
+            <div className='inline-flex items-center p-1 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-xs shadow-xs'>
+              <button
+                type='button'
+                onClick={() => setPreviewDevice('mobile')}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium transition-all cursor-pointer',
+                  previewDevice === 'mobile'
+                    ? 'bg-white dark:bg-card text-neutral-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                )}
+              >
+                <Smartphone className='w-4 h-4' />
+                <span>Điện thoại</span>
+              </button>
+              <button
+                type='button'
+                onClick={() => setPreviewDevice('desktop')}
+                className={cn(
+                  'flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium transition-all cursor-pointer',
+                  previewDevice === 'desktop'
+                    ? 'bg-white dark:bg-card text-neutral-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+                )}
+              >
+                <Monitor className='w-4 h-4' />
+                <span>Máy tính</span>
+              </button>
             </div>
+          </div>
 
-            <div className='relative'>
-              <div className='absolute -inset-1 rounded-[60px] bg-gradient-to-tr from-[#FE2C55]/20 via-emerald-500/10 to-indigo-500/20 blur-2xl opacity-50' />
-              <PhoneMockup
-                profile={profile}
-                products={previewProductsList}
-                paymentConfig={paymentConfig}
-                className='scale-[0.92] origin-top shadow-2xl'
-              />
-            </div>
+          {/* Khung mô phỏng hiển thị thời gian thực */}
+          <div className='relative'>
+            <div className='absolute -inset-1 rounded-[44px] bg-gradient-to-tr from-[#FE2C55]/20 via-primary/10 to-blue-500/20 blur-2xl opacity-40' />
+            <PhoneMockup
+              profile={profile}
+              products={previewProductsList}
+              paymentConfig={paymentConfig}
+              deviceMode={previewDevice}
+              activeProduct={previewProduct}
+              className='shadow-2xl'
+            />
           </div>
         </div>
       </div>

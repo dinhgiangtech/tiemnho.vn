@@ -9,7 +9,7 @@ import { auth } from '@clerk/nextjs/server';
 import { UserButton } from '@clerk/nextjs';
 
 export const metadata = {
-  title: 'Tiệm Nhỏ (TiemNho.vn) - Nền tảng Bio Storefront Chuẩn Stan Store Cho Creator Việt Nam',
+  title: 'Tiệm Nhỏ (TiemNho.vn) - Nền tảng Bán Hàng & Nhận Tiền Cho Creator Việt Nam',
   description:
     'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng, tiền về thẳng 100% tài khoản ngân hàng của bạn.'
 };
@@ -34,7 +34,7 @@ export default async function LandingPage() {
               variant='outline'
               className='hidden sm:inline-flex text-[10px] uppercase font-bold text-foreground border-border bg-muted/40'
             >
-              Stan Store VN
+              Tiệm Nhỏ VN
             </Badge>
           </div>
 

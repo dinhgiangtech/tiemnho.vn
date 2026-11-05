@@ -3,15 +3,12 @@ import { StorefrontSettingsView } from '@/features/tiemnho/components/settings/s
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cài đặt tài khoản | Tiệm Nhỏ'
+  title: 'Thiết kế tiệm | Tiệm Nhỏ'
 };
 
 export default function StorefrontSettingsPage() {
   return (
-    <PageContainer
-      pageTitle='Cài đặt tài khoản'
-      pageDescription='Chỉnh sửa thông tin cá nhân, username (@slug), tiểu sử và liên kết mạng xã hội với khung xem trước điện thoại cập nhật thời gian thực.'
-    >
+    <PageContainer>
       <StorefrontSettingsView />
     </PageContainer>
   );

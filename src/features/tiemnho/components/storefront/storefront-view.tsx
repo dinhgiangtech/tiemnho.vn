@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { CreatorProfile, Product, PaymentConfig, ProductType } from '@/constants/mock-tiemnho';
-import { CheckoutDrawer } from './checkout-drawer';
+import { AdaptiveCheckout } from './adaptive-checkout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
@@ -131,17 +131,11 @@ export function StorefrontView({
             )}
           >
             <div className='h-full w-full rounded-full overflow-hidden bg-white dark:bg-zinc-900 flex items-center justify-center'>
-              {profile.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={profile.displayName}
-                  className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
-                />
-              ) : (
-                <div className='h-full w-full bg-white dark:bg-zinc-900 flex items-center justify-center text-zinc-300 dark:text-zinc-600'>
-                  <Icons.user className='h-12 w-12' />
-                </div>
-              )}
+              <img
+                src={profile.avatarUrl || '/default-avatar.svg'}
+                alt={profile.displayName}
+                className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+              />
             </div>
           </div>
           {profile.verified && (
@@ -354,7 +348,7 @@ export function StorefrontView({
                     : 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
               )}
-              title='Kiểu 1: Row Card tối giản chuẩn Stan Store'
+              title='Kiểu 1: Thẻ ngang tối giản'
             >
               <Icons.page className='h-3 w-3' />
               <span className='hidden sm:inline'>Row</span>
@@ -683,13 +677,13 @@ export function StorefrontView({
         >
           <Icons.sparkles className='h-3.5 w-3.5 text-primary' />
           <span>
-            Tạo Storefront chuẩn Stan Store cùng <strong>Tiệm Nhỏ</strong>
+            Tạo tiệm bán hàng online cùng <strong>Tiệm Nhỏ</strong>
           </span>
         </a>
       </div>
 
-      {/* 2.3 & 2.4 Luồng Checkout 1-Chạm (Bottom Sheet Drawer) */}
-      <CheckoutDrawer
+      {/* 2.3 & 2.4 Luồng Checkout 1-Chạm (Adaptive Drawer/Dialog) */}
+      <AdaptiveCheckout
         product={selectedProduct}
         paymentConfig={paymentConfig}
         isOpen={!!selectedProduct}

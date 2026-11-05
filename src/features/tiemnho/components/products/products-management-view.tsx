@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   DndContext,
   closestCenter,
@@ -33,24 +34,23 @@ import {
   getPaymentConfig
 } from '../../api/service';
 import { SortableProductItem } from './sortable-product-item';
-import { StanProductEditor } from './stan-product-editor';
-import { PhoneMockup } from '../mobile-preview/phone-mockup';
+import { ProductForm } from '@/components/dashboard/products/ProductForm';
+import { LivePreviewContainer } from '../mobile-preview/live-preview-container';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Icons } from '@/components/icons';
+import { SocialIconBadge } from '@/components/common/social-icons';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export function ProductsManagementView() {
+  const router = useRouter();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [profile, setProfile] = React.useState<CreatorProfile | null>(null);
   const [paymentConfig, setPaymentConfig] = React.useState<PaymentConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [filterType, setFilterType] = React.useState<string>('ALL');
-  const [search, setSearch] = React.useState<string>('');
 
-  // Stan Store Editor states
-  const [isCreating, setIsCreating] = React.useState(false);
+  // State sản phẩm đang chỉnh sửa
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
 
   // DnD Sensors
@@ -86,20 +86,6 @@ export function ProductsManagementView() {
   React.useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Filter & Search
-  const filteredProducts = React.useMemo(() => {
-    return products
-      .filter((p) => {
-        if (filterType === 'ALL') return true;
-        return p.type === filterType;
-      })
-      .filter((p) => {
-        if (!search.trim()) return true;
-        const q = search.toLowerCase();
-        return p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
-      });
-  }, [products, filterType, search]);
 
   // Drag and Drop Reordering
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -157,27 +143,25 @@ export function ProductsManagementView() {
     toast.success('Đã sao chép link tiệm của bạn: ' + url);
   };
 
-  // IF USER IS CREATING OR EDITING: SHOW STAN STORE PRODUCT EDITOR
-  if (isCreating || editingProduct !== null) {
-    const fallbackProfile: CreatorProfile = profile || defaultCreatorProfile;
-    const fallbackPayment: PaymentConfig = paymentConfig || defaultPaymentConfig;
+  // NẾU ĐANG CHỈNH SỬA: HIỂN THỊ MÀN HÌNH FORM CHỈNH SỬA ĐỒNG BỘ VỚI MÀN TẠO SẢN PHẨM
+  if (editingProduct !== null) {
+    const handleCloseEdit = () => {
+      setEditingProduct(null);
+    };
+
+    const handleSuccessEdit = () => {
+      setEditingProduct(null);
+      fetchData();
+    };
 
     return (
-      <StanProductEditor
-        product={editingProduct}
-        profile={fallbackProfile}
-        paymentConfig={fallbackPayment}
-        allProducts={products}
-        onBack={() => {
-          setIsCreating(false);
-          setEditingProduct(null);
-        }}
-        onSaved={() => {
-          setIsCreating(false);
-          setEditingProduct(null);
-          fetchData();
-        }}
-      />
+      <div className='w-full animate-in fade-in duration-200'>
+        <ProductForm
+          initialProduct={editingProduct}
+          onCancel={handleCloseEdit}
+          onSuccess={handleSuccessEdit}
+        />
+      </div>
     );
   }
 
@@ -188,176 +172,163 @@ export function ProductsManagementView() {
       <div className='grid grid-cols-1 lg:grid-cols-12 gap-8 items-start'>
         {/* CỘT TRÁI (Khu vực làm việc & Quản trị - 7 Cột) */}
         <div className='lg:col-span-7 xl:col-span-7 space-y-4'>
-          {/* Top Page Header chuẩn Base dự án */}
-          <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/80'>
-            <div>
-              <h1 className='text-lg font-bold text-foreground tracking-tight'>
-                Quản lý sản phẩm & Cửa hàng
-              </h1>
-              <p className='text-xs text-muted-foreground'>
-                Sắp xếp thứ tự hiển thị, bật/tắt và quản lý danh mục sản phẩm số trên Bio.
-              </p>
-            </div>
-
-            <div className='flex items-center gap-2'>
-              <Link href='/dashboard/products/create'>
-                <Button size='sm' className='h-8.5 px-3.5 text-xs font-semibold gap-1.5 rounded-lg'>
-                  <Icons.add className='w-3.5 h-3.5' />
-                  <span>Thêm sản phẩm</span>
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Profile Card Header chuẩn Base shadcn Card */}
-          <div className='flex items-center justify-between p-4 rounded-xl border bg-card shadow-xs'>
-            <div className='flex items-center gap-3.5'>
-              <div className='relative h-12 w-12 rounded-full overflow-hidden border border-border bg-muted/40 shadow-2xs shrink-0 flex items-center justify-center'>
-                {profile?.avatarUrl ? (
-                  <img
-                    src={profile.avatarUrl}
-                    alt={profile?.displayName || 'Creator'}
-                    className='h-full w-full object-cover'
-                  />
-                ) : (
-                  <div className='h-full w-full bg-muted/40 flex items-center justify-center text-muted-foreground/60'>
-                    <Icons.user className='h-6 w-6' />
-                  </div>
-                )}
-              </div>
-              <div className='min-w-0'>
-                <h3 className='font-bold text-sm text-foreground truncate'>
-                  {profile?.displayName || 'Đinh Trường Giang'}
-                </h3>
-                <p className='text-xs text-muted-foreground font-mono'>
-                  @{profile?.username || 'dinhgiang'}
-                </p>
-                {/* Social icons if any */}
-                <div className='flex items-center gap-1.5 mt-1.5'>
-                  {profile?.socials?.tiktok && (
-                    <div
-                      className='h-5.5 w-5.5 rounded-md bg-muted flex items-center justify-center text-foreground'
-                      title='TikTok'
-                    >
-                      <Icons.tiktok className='w-3 h-3' />
-                    </div>
-                  )}
-                  {profile?.socials?.instagram && (
-                    <div
-                      className='h-5.5 w-5.5 rounded-md bg-muted flex items-center justify-center text-pink-600'
-                      title='Instagram'
-                    >
-                      <Icons.instagram className='w-3 h-3' />
-                    </div>
-                  )}
-                  {profile?.socials?.youtube && (
-                    <div
-                      className='h-5.5 w-5.5 rounded-md bg-muted flex items-center justify-center text-red-600'
-                      title='YouTube'
-                    >
-                      <Icons.youtube className='w-3 h-3' />
-                    </div>
-                  )}
-                  {profile?.socials?.facebook && (
-                    <div
-                      className='h-5.5 w-5.5 rounded-md bg-muted flex items-center justify-center text-blue-600'
-                      title='Facebook'
-                    >
-                      <Icons.facebook className='w-3 h-3' />
-                    </div>
-                  )}
-                  {profile?.socials?.zalo && (
-                    <div
-                      className='h-5.5 w-5.5 rounded-md bg-muted flex items-center justify-center text-blue-500'
-                      title='Zalo'
-                    >
-                      <Icons.zalo className='w-3 h-3' />
-                    </div>
-                  )}
-                  {profile?.socials?.threads && (
-                    <div
-                      className='h-5.5 w-5.5 rounded-md bg-muted flex items-center justify-center text-foreground'
-                      title='Threads'
-                    >
-                      <Icons.threads className='w-3 h-3' />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <Link href='/dashboard/settings/storefront'>
+          {/* 1. Header điều hướng + Nút chính + Thêm sản phẩm đỏ hồng TikTok */}
+          <div className='flex items-center justify-between pb-1'>
+            <h1 className='text-xl md:text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight'>
+              Tiệm của bạn
+            </h1>
+            <Link href='/dashboard/products/create'>
               <Button
-                type='button'
-                variant='outline'
                 size='sm'
-                className='text-xs h-8 rounded-lg gap-1.5 shrink-0'
+                className='h-10 px-5 py-2.5 text-sm font-bold gap-2 rounded-xl shadow-sm cursor-pointer transition-all active:scale-[0.98]'
               >
-                <Icons.edit className='w-3.5 h-3.5' />
-                <span>Chỉnh sửa hồ sơ</span>
+                <Icons.add className='w-4 h-4' />
+                <span>Thêm sản phẩm</span>
               </Button>
             </Link>
           </div>
 
-          {/* Category Filter Tabs & Search */}
-          <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3'>
-            <div className='flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none'>
-              {[
-                { key: 'ALL', label: 'Tất cả', icon: Icons.dashboard, color: 'text-foreground' },
-                { key: 'DIGITAL', label: 'Sản phẩm số', icon: Icons.post, color: 'text-amber-500' },
-                { key: 'LEAD_MAGNET', label: 'Quà 0đ', icon: Icons.gift, color: 'text-rose-500' },
-                {
-                  key: 'EXTERNAL_LINK',
-                  label: 'Liên kết',
-                  icon: Icons.link,
-                  color: 'text-blue-500'
-                }
-              ].map((tab) => {
-                const TabIcon = tab.icon;
-                const count =
-                  tab.key === 'ALL'
-                    ? products.length
-                    : products.filter((p) => p.type === tab.key).length;
-                return (
-                  <button
-                    key={tab.key}
-                    type='button'
-                    onClick={() => setFilterType(tab.key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-                      filterType === tab.key
-                        ? 'bg-primary text-primary-foreground shadow-2xs font-semibold'
-                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
-                    }`}
-                  >
-                    <TabIcon
-                      className={`w-3.5 h-3.5 ${
-                        filterType === tab.key ? 'text-inherit' : tab.color
-                      }`}
-                    />
-                    <span>{tab.label}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                        filterType === tab.key
-                          ? 'bg-primary-foreground/20 text-inherit'
-                          : 'bg-background/80 text-muted-foreground'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+          {/* 2. Thẻ Profile Creator: Desktop giữ ngang hàng như cũ, Mobile tách nút xuống dưới */}
+          <div className='p-4 md:p-5 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card shadow-xs transition-all'>
+            <div className='flex items-start md:items-center justify-between gap-4'>
+              <div className='flex items-start md:items-center gap-3.5 sm:gap-4 min-w-0'>
+                {/* Avatar tròn cố định 56x56px (w-14 h-14) */}
+                <div className='w-14 h-14 rounded-full overflow-hidden border border-neutral-200/80 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 shadow-2xs shrink-0 flex items-center justify-center'>
+                  <img
+                    src={profile?.avatarUrl || '/default-avatar.svg'}
+                    alt={profile?.displayName || 'Creator'}
+                    className='w-full h-full object-cover shrink-0'
+                  />
+                </div>
+
+                {/* Khối chữ: Tên đầy đủ, link tiệm & icon mạng xã hội */}
+                <div className='min-w-0'>
+                  {/* Dòng 1: Tên hiển thị */}
+                  <h3 className='font-bold text-base md:text-lg text-neutral-900 dark:text-white leading-tight tracking-tight'>
+                    {profile?.displayName || 'Đinh Trường Giang'}
+                  </h3>
+
+                  {/* Dòng 2: username và link tiệm kèm icon sao chép */}
+                  <div className='flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 mt-1 flex-wrap'>
+                    <span className='font-medium'>@{profile?.username || 'giangdinh'}</span>
+                    <span className='text-neutral-300 dark:text-neutral-700'>•</span>
+                    <div className='flex items-center gap-1 font-mono text-neutral-600 dark:text-neutral-300'>
+                      <span>tiemnho.vn/@{profile?.username || 'giangdinh'}</span>
+                      <button
+                        type='button'
+                        onClick={handleCopyBioLink}
+                        className='p-0.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer inline-flex items-center justify-center'
+                        title='Sao chép link tiệm nhanh'
+                      >
+                        <Icons.copy className='w-3 h-3' />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dòng 3 (Hàng icon mạng xã hội): Đặt ngay dưới link, kích thước cố định */}
+                  <div className='flex items-center gap-2 mt-2 flex-wrap'>
+                    {profile?.socials?.tiktok && (
+                      <a
+                        href={profile.socials.tiktok}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='w-6 h-6 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-muted dark:hover:bg-muted/80 border border-border/40 flex items-center justify-center shrink-0 text-neutral-600 hover:text-neutral-900 transition-colors shadow-2xs'
+                        title='TikTok'
+                      >
+                        <SocialIconBadge platform='tiktok' size='xs' className='w-4 h-4' />
+                      </a>
+                    )}
+                    {profile?.socials?.instagram && (
+                      <a
+                        href={profile.socials.instagram}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='w-6 h-6 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-muted dark:hover:bg-muted/80 border border-border/40 flex items-center justify-center shrink-0 text-neutral-600 hover:text-neutral-900 transition-colors shadow-2xs'
+                        title='Instagram'
+                      >
+                        <SocialIconBadge platform='instagram' size='xs' className='w-4 h-4' />
+                      </a>
+                    )}
+                    {profile?.socials?.youtube && (
+                      <a
+                        href={profile.socials.youtube}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='w-6 h-6 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-muted dark:hover:bg-muted/80 border border-border/40 flex items-center justify-center shrink-0 text-neutral-600 hover:text-neutral-900 transition-colors shadow-2xs'
+                        title='YouTube'
+                      >
+                        <SocialIconBadge platform='youtube' size='xs' className='w-4 h-4' />
+                      </a>
+                    )}
+                    {profile?.socials?.facebook && (
+                      <a
+                        href={profile.socials.facebook}
+                        target='_blank'
+                        rel='noreferrer'
+                        className='w-6 h-6 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-muted dark:hover:bg-muted/80 border border-border/40 flex items-center justify-center shrink-0 text-neutral-600 hover:text-neutral-900 transition-colors shadow-2xs'
+                        title='Facebook'
+                      >
+                        <SocialIconBadge platform='facebook' size='xs' className='w-4 h-4' />
+                      </a>
+                    )}
+                    {profile?.socials?.zalo && (
+                      <a
+                        href={
+                          profile.socials.zalo.startsWith('http')
+                            ? profile.socials.zalo
+                            : `https://zalo.me/${profile.socials.zalo}`
+                        }
+                        target='_blank'
+                        rel='noreferrer'
+                        className='w-6 h-6 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-muted dark:hover:bg-muted/80 border border-border/40 flex items-center justify-center shrink-0 text-neutral-600 hover:text-neutral-900 transition-colors shadow-2xs'
+                        title='Zalo'
+                      >
+                        <SocialIconBadge platform='zalo' size='xs' className='w-4 h-4' />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Nút Chỉnh sửa hồ sơ trên Desktop (>= md) nằm bên phải ngang hàng như cũ */}
+              <Link href='/dashboard/settings/storefront' className='hidden md:block shrink-0'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='text-xs sm:text-sm h-9 px-3.5 rounded-xl gap-1.5 shrink-0 font-medium'
+                >
+                  <Icons.edit className='w-3.5 h-3.5' />
+                  <span>Chỉnh sửa hồ sơ</span>
+                </Button>
+              </Link>
             </div>
 
-            <div className='relative w-full sm:w-48'>
-              <Icons.search className='absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground' />
-              <Input
-                placeholder='Tìm kiếm...'
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className='pl-8 h-8 text-xs rounded-lg'
-              />
+            {/* Nút Chỉnh sửa hồ sơ trên Mobile (< md) dãn rộng toàn bộ chiều ngang thẻ */}
+            <Link href='/dashboard/settings/storefront' className='block md:hidden w-full'>
+              <button
+                type='button'
+                className='w-full mt-3.5 py-2.5 rounded-xl border border-neutral-200/90 dark:border-neutral-700 text-sm font-semibold flex items-center justify-center gap-2 bg-neutral-50 hover:bg-neutral-100 active:bg-neutral-100 dark:bg-neutral-800/60 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer shadow-2xs'
+              >
+                <Icons.edit className='w-4 h-4' />
+                <span>Chỉnh sửa hồ sơ</span>
+              </button>
+            </Link>
+          </div>
+
+          {/* 3. Tiêu đề danh sách sản phẩm */}
+          <div className='flex items-center justify-between pt-1 pb-0.5'>
+            <div className='flex items-center gap-2'>
+              <h4 className='text-sm font-bold text-neutral-900 dark:text-white'>
+                Danh sách sản phẩm
+              </h4>
+              <span className='inline-flex items-center px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[11px] font-bold text-neutral-500 dark:text-neutral-400'>
+                {products.length}
+              </span>
             </div>
+            <p className='text-xs text-neutral-400 hidden sm:block'>
+              Kéo thả các thẻ để sắp xếp thứ tự hiển thị
+            </p>
           </div>
 
           {/* Drag & Drop Sortable List */}
@@ -367,8 +338,8 @@ export function ProductsManagementView() {
                 <Icons.spinner className='h-5 w-5 animate-spin mx-auto mb-2 text-primary' />
                 Đang tải danh sách sản phẩm...
               </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className='py-12 text-center rounded-xl border border-dashed border-border p-6 bg-card space-y-3'>
+            ) : products.length === 0 ? (
+              <div className='py-12 text-center rounded-2xl border border-dashed border-border p-6 bg-card space-y-3'>
                 <div className='h-12 w-12 rounded-xl bg-muted/60 text-muted-foreground flex items-center justify-center mx-auto shadow-2xs'>
                   <Icons.product className='h-6 w-6' />
                 </div>
@@ -381,7 +352,7 @@ export function ProductsManagementView() {
                 </div>
                 <div className='pt-2'>
                   <Link href='/dashboard/products/create'>
-                    <Button size='sm' className='text-xs h-8 rounded-lg gap-1.5'>
+                    <Button size='sm' className='text-xs h-8.5 rounded-xl gap-1.5'>
                       <Icons.add className='h-3.5 w-3.5' />
                       <span>Thêm sản phẩm mới</span>
                     </Button>
@@ -395,17 +366,16 @@ export function ProductsManagementView() {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={filteredProducts.map((p) => p.id)}
+                  items={products.map((p) => p.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className='space-y-2.5'>
-                    {filteredProducts.map((product) => (
+                    {products.map((product) => (
                       <SortableProductItem
                         key={product.id}
                         product={product}
                         onEdit={(p) => {
-                          setEditingProduct(p);
-                          setIsCreating(false);
+                          router.push(`/dashboard/products/create?edit=${p.id}`);
                         }}
                         onDelete={handleDelete}
                         onTogglePublish={handleTogglePublish}
@@ -415,27 +385,11 @@ export function ProductsManagementView() {
                 </SortableContext>
               </DndContext>
             )}
-
-            {/* Nút thêm sản phẩm full-width dưới list khi đã có sản phẩm */}
-            {filteredProducts.length > 0 && (
-              <div className='pt-1'>
-                <Link href='/dashboard/products/create' className='block w-full'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    className='w-full h-10 rounded-xl font-semibold text-xs border-dashed hover:border-primary hover:bg-primary/5 gap-1.5'
-                  >
-                    <Icons.add className='h-4 w-4' />
-                    <span>+ Thêm sản phẩm mới</span>
-                  </Button>
-                </Link>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* CỘT PHẢI (Khung giả lập điện thoại - Live Mobile Preview - 5 Cột) */}
-        <div className='lg:col-span-5 xl:col-span-5 lg:sticky lg:top-6'>
+        {/* CỘT PHẢI (Khung giả lập điện thoại - Live Mobile Preview - Chỉ hiển thị trên Desktop >= md) */}
+        <div className='hidden md:block lg:col-span-5 xl:col-span-5 lg:sticky lg:top-6'>
           <div className='rounded-3xl border border-border bg-card/60 p-5 shadow-xs backdrop-blur-md space-y-4'>
             {/* Preview Toolbar */}
             <div className='flex items-center justify-between pb-2 border-b border-border/60'>
@@ -478,13 +432,13 @@ export function ProductsManagementView() {
               </div>
             </div>
 
-            {/* Mobile Mockup Simulator */}
+            {/* Mobile / Desktop Simulator */}
             {profile && paymentConfig && (
-              <PhoneMockup
+              <LivePreviewContainer
                 profile={profile}
                 products={products}
                 paymentConfig={paymentConfig}
-                className='max-w-[340px] transform scale-95 origin-top'
+                className='w-full'
               />
             )}
           </div>

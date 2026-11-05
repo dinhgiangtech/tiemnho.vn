@@ -75,7 +75,7 @@ export function StanProductEditor({
   const [showImagePicker, setShowImagePicker] = React.useState(false);
   const PRESET_IMAGES = [
     {
-      label: 'Hộp quà 3D Stan Store',
+      label: 'Hộp quà 3D Tiệm Nhỏ',
       url: '/images/red-giftbox.jpg'
     },
     {
@@ -443,7 +443,7 @@ export function StanProductEditor({
                     <div className='p-4 rounded-2xl border border-border bg-card space-y-3 animate-in fade-in-50'>
                       <div className='flex items-center justify-between'>
                         <span className='text-xs font-semibold text-slate-600 dark:text-slate-300'>
-                          Bộ sưu tập ảnh mẫu chuẩn Stan Store:
+                          Bộ sưu tập ảnh mẫu Tiệm Nhỏ:
                         </span>
                         <button
                           type='button'
@@ -1050,7 +1050,7 @@ export function StanProductEditor({
                   <div className='h-2.5 w-2.5 rounded-full bg-yellow-400' />
                   <div className='h-2.5 w-2.5 rounded-full bg-green-400' />
                   <div className='mx-auto px-4 py-0.5 rounded-md bg-white dark:bg-slate-800 text-[10px] text-slate-500 border border-border truncate max-w-[200px]'>
-                    stan.store/{profile.username}
+                    tiemnho.vn/@{profile.username}
                   </div>
                 </div>
 
@@ -1059,7 +1059,7 @@ export function StanProductEditor({
                   <div className='text-center space-y-2 pb-2 border-b border-border'>
                     <div className='h-16 w-16 rounded-full overflow-hidden mx-auto border-2 border-[#5851DF]'>
                       <img
-                        src={profile.avatarUrl}
+                        src={profile.avatarUrl || '/default-avatar.svg'}
                         alt={profile.displayName}
                         className='h-full w-full object-cover'
                       />
@@ -1109,9 +1109,9 @@ export function StanProductEditor({
               </span>
               Cách thức hoạt động (How it works)
             </DialogTitle>
-            {/* <DialogDescription className='text-xs text-muted-foreground pt-1'>
-              Quy trình xuất bản sản phẩm số & quà tặng chuẩn Stan Store
-            </DialogDescription> */}
+            <DialogDescription className='text-xs text-muted-foreground pt-1'>
+              Quy trình xuất bản sản phẩm số & quà tặng trên Tiệm Nhỏ
+            </DialogDescription>
           </DialogHeader>
 
           <div className='space-y-4 pt-2 text-xs'>

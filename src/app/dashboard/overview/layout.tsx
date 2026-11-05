@@ -82,10 +82,10 @@ export default function OverViewLayout({
               {pingLoading ? 'Đang test...' : 'Bắn thử Ping Test'}
             </Button>
 
-            <Link href='/dashboard/preview'>
+            <Link href='/dashboard/products'>
               <Button variant='outline' size='sm' className='h-9 text-xs gap-1.5 rounded-xl'>
-                <Icons.deviceMobile className='h-3.5 w-3.5' />
-                Xem trước tiệm
+                <Icons.store className='h-3.5 w-3.5' />
+                Tiệm của bạn
               </Button>
             </Link>
 

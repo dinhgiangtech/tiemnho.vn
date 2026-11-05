@@ -2,64 +2,69 @@
 
 import * as React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ProductType } from '@/constants/mock-tiemnho';
-import { DigitalProductForm } from '@/components/dashboard/products/DigitalProductForm';
-import { LeadMagnetForm } from '@/components/dashboard/products/LeadMagnetForm';
-import { ExternalLinkForm } from '@/components/dashboard/products/ExternalLinkForm';
-import { PhysicalProductForm } from '@/components/dashboard/products/PhysicalProductForm';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Product, ProductType } from '@/constants/mock-tiemnho';
+import { getProductById } from '@/features/tiemnho/api/service';
+import { ProductForm } from '@/components/dashboard/products/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, ChevronRight, Sparkles, Gift, ShoppingBag, Link2 } from 'lucide-react';
 
 interface ProductOption {
   type: ProductType;
   title: string;
+  badge: string;
   desc: string;
-  badge?: string;
-  tag: string;
-  iconName: keyof typeof Icons;
-  iconBg: string;
-  iconColor: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  iconBoxBg: string;
+  badgeBg: string;
 }
 
-// Dùng icon chính thống từ thư viện Icons (@tabler/icons-react) kết hợp styling màu pastel nổi bật
 const PRODUCT_OPTIONS: ProductOption[] = [
   {
     type: 'DIGITAL',
     title: 'Sản phẩm số',
-    desc: 'Ebook, template Notion, preset, tài liệu nén trả tự động sau khi thanh toán VietQR.',
-    tag: 'Trả hàng tự động',
-    iconName: 'post',
-    iconBg: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',
-    iconColor: 'text-amber-600 dark:text-amber-400'
+    badge: 'Tự động 24/7',
+    desc: 'Bán Ebook, template Notion, preset màu, khóa học. Tự động trả file/link sau khi quét VietQR.',
+    icon: Sparkles,
+    iconBoxBg:
+      'bg-blue-50 border border-blue-100 text-blue-600 dark:bg-blue-950/40 dark:border-blue-900/60 dark:text-blue-400',
+    badgeBg:
+      'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-100 dark:border-blue-900/50'
   },
   {
     type: 'LEAD_MAGNET',
     title: 'Quà tặng 0đ',
-    desc: 'Checklist, cẩm nang miễn phí thu thập Email & SĐT khách hàng tiềm năng.',
-    tag: 'Miễn phí 0đ',
-    iconName: 'gift',
-    iconBg: 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400',
-    iconColor: 'text-rose-600 dark:text-rose-400'
+    badge: 'Thu hút khách hàng',
+    desc: 'Tặng tài liệu miễn phí đổi lấy Email và Số điện thoại khách hàng tiềm năng.',
+    icon: Gift,
+    iconBoxBg:
+      'bg-emerald-50 border border-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-900/60 dark:text-emerald-400',
+    badgeBg:
+      'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/50'
   },
   {
     type: 'PHYSICAL',
     title: 'Hàng đặt trước / Thủ công',
-    desc: 'Sách in kèm chữ ký, áo merch, đồ handmade làm theo yêu cầu.',
-    tag: 'Pre-order / Handmade',
-    iconName: 'product',
-    iconBg: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
-    iconColor: 'text-emerald-600 dark:text-emerald-400'
+    badge: 'Vận chuyển',
+    desc: 'Bán sách in kèm chữ ký, áo merch, phụ kiện thủ công theo yêu cầu (thu địa chỉ giao hàng).',
+    icon: ShoppingBag,
+    iconBoxBg:
+      'bg-amber-50 border border-amber-100 text-amber-600 dark:bg-amber-950/40 dark:border-amber-900/60 dark:text-amber-400',
+    badgeBg:
+      'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-100 dark:border-amber-900/50'
   },
   {
     type: 'EXTERNAL_LINK',
     title: 'Nút liên kết',
-    desc: 'Trỏ sang Shopee, TikTok Shop, Zalo kín, link Affiliate.',
-    tag: 'Chuyển hướng link',
-    iconName: 'link',
-    iconBg: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400',
-    iconColor: 'text-blue-600 dark:text-blue-400'
+    badge: 'Chuyển hướng',
+    desc: 'Dẫn người theo dõi sang Shopee, TikTok Shop, nhóm Zalo hoặc link tiếp thị liên kết.',
+    icon: Link2,
+    iconBoxBg:
+      'bg-purple-50 border border-purple-100 text-purple-600 dark:bg-purple-950/40 dark:border-purple-900/60 dark:text-purple-400',
+    badgeBg:
+      'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-100 dark:border-purple-900/50'
   }
 ];
 
@@ -67,9 +72,46 @@ export function CreateProductView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type')?.toUpperCase() as ProductType | null;
+  const idParam =
+    searchParams.get('id') || searchParams.get('edit') || searchParams.get('productId');
 
-  // Nếu có typeParam trên URL thì vào thẳng form, nếu không thì hiển thị Step chọn sản phẩm
+  const [loadingProduct, setLoadingProduct] = React.useState<boolean>(!!idParam);
+  const [initialProduct, setInitialProduct] = React.useState<Product | null>(null);
   const [selectedType, setSelectedType] = React.useState<ProductType | null>(typeParam || null);
+
+  // Tải dữ liệu sản phẩm nếu URL có id / edit
+  React.useEffect(() => {
+    if (!idParam) return;
+
+    let isMounted = true;
+    async function loadEditProduct() {
+      setLoadingProduct(true);
+      try {
+        const prod = await getProductById(idParam);
+        if (isMounted) {
+          if (prod) {
+            setInitialProduct(prod);
+            setSelectedType(prod.type);
+          } else {
+            toast.error('Không tìm thấy thông tin sản phẩm cần chỉnh sửa');
+          }
+        }
+      } catch {
+        if (isMounted) {
+          toast.error('Có lỗi xảy ra khi tải dữ liệu sản phẩm');
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingProduct(false);
+        }
+      }
+    }
+
+    loadEditProduct();
+    return () => {
+      isMounted = false;
+    };
+  }, [idParam]);
 
   const handleSelectType = (type: ProductType) => {
     setSelectedType(type);
@@ -79,62 +121,50 @@ export function CreateProductView() {
   };
 
   const handleBackToSelect = () => {
+    if (initialProduct) {
+      router.push('/dashboard/products');
+      return;
+    }
     setSelectedType(null);
     const params = new URLSearchParams(searchParams.toString());
     params.delete('type');
+    params.delete('id');
+    params.delete('edit');
+    params.delete('productId');
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  // STEP 1: Chọn loại sản phẩm (Base Shadcn Card UI)
+  // Loading skeleton khi đang fetch sản phẩm để edit
+  if (loadingProduct) {
+    return (
+      <div className='flex flex-col items-center justify-center min-h-[360px] gap-3 text-muted-foreground'>
+        <Icons.spinner className='h-7 w-7 animate-spin text-primary' />
+        <p className='text-xs font-medium'>Đang tải thông tin sản phẩm...</p>
+      </div>
+    );
+  }
+
+  // STEP 1: Chọn loại sản phẩm (Căn từ trái qua phải, trải rộng toàn màn hình)
   if (!selectedType) {
     return (
-      <div className='max-w-5xl mx-auto space-y-6 animate-in fade-in duration-200'>
-        {/* Banner thông báo theo style base card/alert */}
-        <div className='flex items-center justify-between rounded-xl border bg-muted/40 p-4 text-xs sm:text-sm text-foreground shadow-xs'>
-          <div className='flex items-center gap-3'>
-            <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary'>
-              <Icons.sparkles className='h-4 w-4' />
-            </div>
-            <div>
-              <p className='font-medium'>
-                Khách hàng thanh toán tự động qua <strong>VietQR 24/7</strong> và nhận hàng tức thì.
-              </p>
-              <p className='text-xs text-muted-foreground'>
-                Hệ thống tự động kích hoạt đơn hàng và gửi file/link sau khi phát hiện giao dịch
-                thành công.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => router.push('/dashboard/payment')}
-            className='hidden sm:inline-flex text-xs font-medium text-primary hover:text-primary hover:bg-primary/10'
-          >
-            Cài đặt tài khoản ngân hàng
-            <Icons.chevronRight className='ml-1 h-3.5 w-3.5' />
-          </Button>
-        </div>
-
-        {/* Tiêu đề & Hướng dẫn */}
-        <div className='space-y-1'>
-          <h2 className='text-xl sm:text-2xl font-bold tracking-tight text-foreground'>
-            Chọn loại sản phẩm
-          </h2>
-          <p className='text-sm text-muted-foreground'>
-            Lựa chọn mô hình sản phẩm phù hợp nhất với nội dung bạn muốn chia sẻ hoặc mở bán.
+      <div className='w-full py-4 animate-in fade-in duration-200'>
+        {/* 1. Header trang */}
+        <div className='mb-6'>
+          <h1 className='text-2xl md:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight'>
+            Tạo sản phẩm mới
+          </h1>
+          <p className='text-[14.5px] text-neutral-500 dark:text-neutral-400 mt-1.5 leading-relaxed'>
+            Chọn định dạng mặt hàng bạn muốn bán hoặc chia sẻ trên trang Bio của mình.
           </p>
         </div>
 
-        {/* Grid danh sách loại sản phẩm theo chuẩn shadcn Card của Base template */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          {PRODUCT_OPTIONS.map((item, idx) => {
-            const IconComp = (Icons[item.iconName] || Icons.product) as React.ComponentType<{
-              className?: string;
-            }>;
+        {/* 2. Lưới 2 hàng căn từ trái qua phải (2 cột trải rộng toàn màn hình) */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-5 w-full'>
+          {PRODUCT_OPTIONS.map((item) => {
+            const IconComp = item.icon;
             return (
-              <Card
-                key={idx}
+              <div
+                key={item.type}
                 role='button'
                 tabIndex={0}
                 onClick={() => handleSelectType(item.type)}
@@ -144,46 +174,49 @@ export function CreateProductView() {
                     handleSelectType(item.type);
                   }
                 }}
-                className='group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-5.5 text-left transition-all duration-200 hover:border-primary/50 hover:shadow-md hover:bg-card/90 cursor-pointer shadow-xs'
+                className='rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-card p-5 md:p-6 shadow-xs hover:border-neutral-400 dark:hover:border-neutral-600 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer group gap-4 w-full'
               >
-                <div className='flex items-start justify-between gap-4'>
-                  <div className='flex items-start gap-4'>
-                    {/* Icon container dùng Icons từ thư viện đồng bộ */}
-                    <div
-                      className={`flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl border shadow-2xs transition-all duration-200 group-hover:scale-105 ${item.iconBg}`}
-                    >
-                      <IconComp className='h-6.5 w-6.5' />
-                    </div>
-
-                    <div className='space-y-1.5'>
-                      <div className='flex items-center gap-2'>
-                        <span className='font-bold text-base text-foreground group-hover:text-primary transition-colors'>
-                          {item.title}
-                        </span>
-                      </div>
-                      <p className='text-xs leading-relaxed text-muted-foreground'>{item.desc}</p>
-                    </div>
-                  </div>
-
-                  <div className='text-muted-foreground/60 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-primary shrink-0 pt-1'>
-                    <Icons.chevronRight className='h-5 w-5' />
-                  </div>
-                </div>
-
-                {/* Footer tag nhỏ bên dưới card */}
-                <div className='mt-5 flex items-center justify-between border-t border-border/50 pt-3.5'>
-                  <Badge
-                    variant='secondary'
-                    className='text-[10px] font-semibold px-2 py-0.5 rounded-lg'
+                {/* Bên trái: Cụm Icon & Nội dung */}
+                <div className='flex items-center gap-5 min-w-0'>
+                  {/* Box Icon vuông bo góc tròn mềm mại */}
+                  <div
+                    className={cn(
+                      'w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs',
+                      item.iconBoxBg
+                    )}
                   >
-                    {item.tag}
-                  </Badge>
-                  <span className='text-[11px] font-semibold text-muted-foreground group-hover:text-primary transition-colors inline-flex items-center gap-1'>
-                    Bắt đầu tạo
-                    <Icons.chevronRight className='h-3.5 w-3.5' />
-                  </span>
+                    <IconComp className='w-6 h-6' strokeWidth={2.2} />
+                  </div>
+
+                  {/* Cụm văn bản */}
+                  <div className='min-w-0 flex-1'>
+                    {/* Dòng trên: Tiêu đề + Badge */}
+                    <div className='flex items-center gap-2.5 flex-wrap'>
+                      <h3 className='text-base sm:text-lg font-bold text-neutral-900 dark:text-white tracking-tight group-hover:text-neutral-950 dark:group-hover:text-white transition-colors'>
+                        {item.title}
+                      </h3>
+                      <span
+                        className={cn(
+                          'text-[11px] px-2 py-0.5 rounded-md font-semibold tracking-normal shrink-0',
+                          item.badgeBg
+                        )}
+                      >
+                        {item.badge}
+                      </span>
+                    </div>
+
+                    {/* Dòng dưới: Mô tả ngắn gọn súc tích */}
+                    <p className='text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-2 leading-relaxed font-normal'>
+                      {item.desc}
+                    </p>
+                  </div>
                 </div>
-              </Card>
+
+                {/* Bên phải: Nút mũi tên chuyển tiếp tròn tối giản */}
+                <div className='w-9 h-9 rounded-full bg-neutral-50 dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700 flex items-center justify-center text-neutral-400 dark:text-neutral-500 group-hover:bg-[#161823] group-hover:text-white group-hover:border-[#161823] dark:group-hover:bg-white dark:group-hover:text-neutral-900 dark:group-hover:border-white transition-all shrink-0 shadow-2xs'>
+                  <ChevronRight className='w-4.5 h-4.5 group-hover:translate-x-0.5 transition-transform' />
+                </div>
+              </div>
             );
           })}
         </div>
@@ -193,41 +226,13 @@ export function CreateProductView() {
 
   // STEP 2: Render Form chi tiết theo loại sản phẩm được chọn
   return (
-    <div className='space-y-6 animate-in fade-in duration-200'>
-      {/* Thanh nút quay lại chọn sản phẩm khác */}
-      <div className='flex items-center justify-between pb-3 border-b border-border/60'>
-        <button
-          type='button'
-          onClick={handleBackToSelect}
-          className='inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer py-1.5 px-3 rounded-xl hover:bg-muted border border-transparent hover:border-border/60'
-        >
-          <Icons.arrowLeft className='h-3.5 w-3.5' />
-          <span>Chọn lại loại sản phẩm khác</span>
-        </button>
-
-        <span className='text-xs font-medium text-muted-foreground'>
-          Đang tạo:{' '}
-          <strong className='text-foreground uppercase'>
-            {selectedType === 'DIGITAL'
-              ? 'Sản phẩm số'
-              : selectedType === 'LEAD_MAGNET'
-                ? 'Quà tặng 0đ'
-                : selectedType === 'EXTERNAL_LINK'
-                  ? 'Nút liên kết'
-                  : 'Hàng đặt trước / Thủ công'}
-          </strong>
-        </span>
-      </div>
-
-      {selectedType === 'DIGITAL' ? (
-        <DigitalProductForm onCancel={handleBackToSelect} />
-      ) : selectedType === 'LEAD_MAGNET' ? (
-        <LeadMagnetForm onCancel={handleBackToSelect} />
-      ) : selectedType === 'EXTERNAL_LINK' ? (
-        <ExternalLinkForm onCancel={handleBackToSelect} />
-      ) : (
-        <PhysicalProductForm onCancel={handleBackToSelect} />
-      )}
+    <div className='w-full animate-in fade-in duration-200'>
+      <ProductForm
+        initialProduct={initialProduct}
+        initialType={selectedType}
+        onCancel={handleBackToSelect}
+        onSuccess={() => router.push('/dashboard/products')}
+      />
     </div>
   );
 }

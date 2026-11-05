@@ -1,4 +1,17 @@
 import {
+  House,
+  Tote,
+  Storefront,
+  QrCode as PhosphorQrCode,
+  Wallet,
+  UsersThree,
+  FileText as PhosphorFileText,
+  Gift as PhosphorGift,
+  Package as PhosphorPackage,
+  ArrowSquareOut,
+  Palette as PhosphorPalette
+} from '@phosphor-icons/react/dist/ssr';
+import {
   IconAdjustmentsHorizontal,
   IconAlertCircle,
   IconAlertTriangle,
@@ -66,6 +79,7 @@ import {
   IconProps,
   IconRosetteDiscountCheck,
   IconSearch,
+  IconShoppingBag,
   IconSelector,
   IconSend,
   IconSettings,
@@ -119,7 +133,13 @@ import {
   IconRefresh,
   IconWorld,
   IconBuildingStore,
-  IconHome
+  IconHome,
+  IconList,
+  IconListNumbers,
+  IconQuote,
+  IconStrikethrough,
+  IconHeading,
+  IconMoodSmile
 } from '@tabler/icons-react';
 import { ZaloIcon } from '@/components/common/brand-icons';
 
@@ -221,6 +241,7 @@ export const Icons = {
   billing: IconCreditCard,
   creditCard: IconCreditCard,
   product: IconBox,
+  shoppingBag: IconShoppingBag,
   pro: IconCrown,
   exclusive: IconStar,
   sparkles: IconSparkles,
@@ -238,6 +259,12 @@ export const Icons = {
   italic: IconItalic,
   underline: IconUnderline,
   text: IconTypography,
+  heading: IconHeading,
+  strikethrough: IconStrikethrough,
+  list: IconList,
+  listNumbers: IconListNumbers,
+  quote: IconQuote,
+  moodSmile: IconMoodSmile,
 
   // Toast
   toastSuccess: IconCircleCheck,
@@ -290,5 +317,18 @@ export const Icons = {
   zalo: ZaloIcon,
   fileSpreadsheet: IconFileSpreadsheet,
   refresh: IconRefresh,
-  world: IconWorld
+  world: IconWorld,
+
+  // Phosphor Icons mapping
+  house: House,
+  tote: Tote,
+  storefront: Storefront,
+  wallet: Wallet,
+  usersThree: UsersThree,
+  arrowSquareOut: ArrowSquareOut,
+  phosphorFileText: PhosphorFileText,
+  phosphorGift: PhosphorGift,
+  phosphorPackage: PhosphorPackage,
+  phosphorPalette: PhosphorPalette,
+  phosphorQrCode: PhosphorQrCode
 };

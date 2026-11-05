@@ -8,7 +8,15 @@ import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import NextTopLoader from 'nextjs-toploader';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/globals.css';
+
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ['vietnamese', 'latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-sans',
+  display: 'swap'
+});
 
 const META_THEME_COLORS = {
   light: '#ffffff',
@@ -60,7 +68,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const themeToApply = isValidTheme ? activeThemeValue! : DEFAULT_THEME;
 
   return (
-    <html lang='en' suppressHydrationWarning data-theme={themeToApply}>
+    <html
+      lang='en'
+      suppressHydrationWarning
+      data-theme={themeToApply}
+      className={fontSans.variable}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -78,6 +91,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body
         className={cn(
           'bg-background overflow-x-hidden overscroll-none font-sans antialiased',
+          fontSans.variable,
           fontVariables
         )}
       >
