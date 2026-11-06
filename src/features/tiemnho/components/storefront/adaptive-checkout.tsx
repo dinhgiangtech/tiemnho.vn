@@ -31,6 +31,9 @@ import {
   VIETNAMESE_BANKS
 } from '@/constants/mock-tiemnho';
 import { createOrder } from '../../api/service';
+import { tiemNhoKeys } from '../../api/queries';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { CheckoutDrawerStep1, CheckoutStep1Values } from './CheckoutDrawerStep1';
 import {
   CheckCircle2,
   Copy,
@@ -302,23 +305,17 @@ export function AdaptiveCheckout({
     }
   };
 
-  // =========================================================================
-  // XỬ LÝ SUBMIT BƯỚC 1: Validate -> Tạo đơn PENDING -> Chuyển sang Bước 2
-  // =========================================================================
-  const onSubmitStep1 = async (values: CheckoutFormValues) => {
-    setLoading(true);
+  const queryClient = useQueryClient();
 
-    try {
-      const order = await createOrder({
-        productId: product.id,
-        customerName: values.fullName.trim(),
-        customerEmail: values.email?.trim() || `${values.phone?.trim() || 'customer'}@tiemnho.vn`,
-        customerPhone: values.phone?.trim() || '',
-        shippingAddress: isPhysical ? values.shippingAddress?.trim() : undefined,
-        customerNote: values.shippingNote?.trim() || undefined
-      });
-
+  const createOrderMutation = useMutation({
+    mutationFn: createOrder,
+    onSuccess: (order) => {
       setCurrentOrder(order);
+
+      // Tự động invalidate các queries liên quan trong TanStack Query
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.orders() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.analytics() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.leads() });
 
       // Nếu là quà tặng 0đ (Lead Magnet): Bỏ qua Bước 2, chuyển thẳng sang Thành công!
       if (isLeadMagnet) {
@@ -329,11 +326,24 @@ export function AdaptiveCheckout({
         // Chuyển sang Bước 2 (Quét mã VietQR)
         setStep('VIETQR');
       }
-    } catch {
-      toast.error('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!');
     }
+  });
+
+  // =========================================================================
+  // XỬ LÝ SUBMIT BƯỚC 1: Validate -> Tạo đơn PENDING -> Chuyển sang Bước 2
+  // =========================================================================
+  const onSubmitStep1 = (values: CheckoutStep1Values) => {
+    createOrderMutation.mutate({
+      productId: product.id,
+      customerName: values.fullName.trim(),
+      customerEmail: values.email?.trim() || `${values.phone?.trim() || 'customer'}@tiemnho.vn`,
+      customerPhone: values.phone?.trim() || '',
+      shippingAddress: isPhysical ? values.shippingAddress?.trim() : undefined,
+      customerNote: values.shippingNote?.trim() || undefined
+    });
   };
 
   // Nút phụ: "Tôi đã chuyển khoản xong" (Kích hoạt kiểm tra trạng thái tức thì)
@@ -393,223 +403,12 @@ export function AdaptiveCheckout({
       {/* BƯỚC 1: FORM THÔNG TIN NGƯỜI NHẬN (CUSTOMER INFO STEP)             */}
       {/* ----------------------------------------------------------------- */}
       {step === 'FORM' && (
-        <form onSubmit={handleSubmit(onSubmitStep1)} className='space-y-4 pt-1'>
-          {/* Header Bước 1: Tiêu đề Drawer & Tóm tắt sản phẩm */}
-          <div className='text-left space-y-2.5 border-b border-neutral-100 pb-3'>
-            <div>
-              <h3 className='text-base sm:text-lg font-black tracking-tight text-neutral-900'>
-                Thông tin nhận hàng
-              </h3>
-              <p className='text-xs text-neutral-500'>
-                {isLeadMagnet
-                  ? 'Điền thông tin để nhận tài liệu miễn phí tức thì'
-                  : 'Điền thông tin người nhận trước khi quét mã VietQR'}
-              </p>
-            </div>
-
-            {/* Thẻ tóm tắt sản phẩm & giá bán */}
-            <div className='flex items-center gap-3 bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200/70'>
-              <div className='relative h-13 w-13 rounded-xl overflow-hidden shrink-0 border border-neutral-200/80 bg-white shadow-2xs'>
-                <Image
-                  src={product.coverImage}
-                  alt={product.title}
-                  fill
-                  className='object-cover'
-                  unoptimized
-                />
-              </div>
-              <div className='flex-1 min-w-0 text-left'>
-                <h4 className='text-xs sm:text-sm font-bold text-neutral-900 line-clamp-1'>
-                  {product.title}
-                </h4>
-                <div className='flex items-baseline gap-2 mt-0.5'>
-                  <span className='font-extrabold text-sm text-[#FE2C55]'>
-                    {formatPrice(product.price)}
-                  </span>
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <span className='text-[11px] text-neutral-400 line-through'>
-                      {formatPrice(product.originalPrice)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Các trường nhập liệu tùy biến linh hoạt theo product.type */}
-          <div className='space-y-3.5 text-xs text-left max-h-[52vh] overflow-y-auto px-0.5 overscroll-contain'>
-            {/* 1. Họ và tên (Dùng chung cho mọi loại sản phẩm) */}
-            <div className='space-y-1'>
-              <label className='font-bold text-neutral-800 text-xs flex items-center justify-between'>
-                <span>
-                  Họ và tên <strong className='text-rose-500'>*</strong>
-                </span>
-                <span className='text-[10px] text-neutral-400 font-normal'>Bắt buộc</span>
-              </label>
-              <Input
-                {...register('fullName')}
-                placeholder='VD: Nguyễn Văn A'
-                className='h-10 text-xs rounded-xl border-neutral-200 bg-white focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-              />
-              {errors.fullName && (
-                <p className='text-[11px] font-semibold text-rose-500 pt-0.5'>
-                  {errors.fullName.message}
-                </p>
-              )}
-            </div>
-
-            {/* 2. Các trường dành riêng cho DIGITAL (Sản phẩm số) */}
-            {!isPhysical && (
-              <>
-                <div className='space-y-1'>
-                  <label className='font-bold text-neutral-800 text-xs flex items-center justify-between'>
-                    <span>
-                      Email nhận tài liệu <strong className='text-rose-500'>*</strong>
-                    </span>
-                    <span className='text-[10px] text-neutral-400 font-normal'>
-                      Gửi link tải tự động
-                    </span>
-                  </label>
-                  <Input
-                    type='email'
-                    {...register('email')}
-                    placeholder='email@gmail.com'
-                    className='h-10 text-xs rounded-xl border-neutral-200 bg-white focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                  {errors.email && (
-                    <p className='text-[11px] font-semibold text-rose-500 pt-0.5'>
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='font-bold text-neutral-800 text-xs flex items-center justify-between'>
-                    <span>Số điện thoại (Zalo)</span>
-                    <span className='text-[10px] text-neutral-400 font-normal'>Tùy chọn</span>
-                  </label>
-                  <Input
-                    type='tel'
-                    {...register('phone')}
-                    placeholder='0912345678'
-                    className='h-10 text-xs rounded-xl border-neutral-200 bg-white focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-              </>
-            )}
-
-            {/* 3. Các trường dành riêng cho PHYSICAL (Hàng vật lý / Đặt trước) */}
-            {isPhysical && (
-              <>
-                <div className='space-y-1'>
-                  <label className='font-bold text-neutral-800 text-xs flex items-center justify-between'>
-                    <span>
-                      Số điện thoại nhận hàng <strong className='text-rose-500'>*</strong>
-                    </span>
-                    <span className='text-[10px] text-neutral-400 font-normal'>
-                      Bưu tá gọi khi giao
-                    </span>
-                  </label>
-                  <Input
-                    type='tel'
-                    {...register('phone')}
-                    placeholder='VD: 0912345678'
-                    className='h-10 text-xs rounded-xl border-neutral-200 bg-white focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                  {errors.phone && (
-                    <p className='text-[11px] font-semibold text-rose-500 pt-0.5'>
-                      {errors.phone.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='font-bold text-neutral-800 text-xs flex items-center justify-between'>
-                    <span>Email (Tùy chọn)</span>
-                    <span className='text-[10px] text-neutral-400 font-normal'>
-                      Nhận mã vận đơn
-                    </span>
-                  </label>
-                  <Input
-                    type='email'
-                    {...register('email')}
-                    placeholder='email@gmail.com'
-                    className='h-10 text-xs rounded-xl border-neutral-200 bg-white focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                  {errors.email && (
-                    <p className='text-[11px] font-semibold text-rose-500 pt-0.5'>
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='font-bold text-neutral-800 text-xs flex items-center justify-between'>
-                    <span>
-                      Địa chỉ giao hàng chi tiết <strong className='text-rose-500'>*</strong>
-                    </span>
-                  </label>
-                  <Textarea
-                    {...register('shippingAddress')}
-                    placeholder='Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/TP'
-                    className='min-h-[72px] text-xs rounded-xl border-neutral-200 bg-white resize-none focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                  {errors.shippingAddress && (
-                    <p className='text-[11px] font-semibold text-rose-500 pt-0.5'>
-                      {errors.shippingAddress.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='font-bold text-neutral-800 text-xs'>
-                    Ghi chú phân loại / yêu cầu riêng
-                  </label>
-                  <Input
-                    {...register('shippingNote')}
-                    placeholder='VD: Size L, màu trắng, hoặc giao giờ hành chính...'
-                    className='h-10 text-xs rounded-xl border-neutral-200 bg-white focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Thông báo tin cậy */}
-            <div className='flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80 text-[11px] text-neutral-600'>
-              <ShieldCheck className='h-4 w-4 text-emerald-600 shrink-0' />
-              <span>
-                Thông tin được mã hóa bảo mật & gửi trực tiếp tới tài khoản chính chủ Creator.
-              </span>
-            </div>
-          </div>
-
-          {/* Nút CTA Dưới cùng */}
-          <div className='pt-2'>
-            <Button
-              type='submit'
-              disabled={loading}
-              className='w-full h-11 sm:h-12 text-xs sm:text-sm font-bold rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 px-3 cursor-pointer overflow-hidden'
-            >
-              {loading ? (
-                <>
-                  <Loader2 className='h-4 w-4 animate-spin shrink-0' />
-                  <span className='truncate'>Đang xử lý thông tin...</span>
-                </>
-              ) : isLeadMagnet ? (
-                <>
-                  <Gift className='h-4 w-4 shrink-0' />
-                  <span className='truncate'>Nhận tài liệu ngay (0đ)</span>
-                </>
-              ) : (
-                <>
-                  <span className='truncate'>Tiếp tục thanh toán</span>
-                  <span className='shrink-0'>• {formatPrice(product.price)}</span>
-                  <ArrowRight className='h-4 w-4 shrink-0' />
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
+        <CheckoutDrawerStep1
+          product={product}
+          onSubmit={onSubmitStep1}
+          loading={createOrderMutation.isPending}
+          submitButtonText={product.buttonText}
+        />
       )}
 
       {/* ----------------------------------------------------------------- */}
@@ -871,7 +670,7 @@ export function AdaptiveCheckout({
 
           <div className='space-y-1'>
             <h3 className='text-lg sm:text-xl font-black text-neutral-900'>
-              {isLeadMagnet ? 'Nhận tài liệu thành công 🎉' : 'Thanh toán thành công 🎉'}
+              {isLeadMagnet ? 'Nhận tài liệu thành công' : 'Thanh toán thành công'}
             </h3>
             <p className='text-xs text-neutral-600 max-w-xs mx-auto leading-relaxed'>
               Cảm ơn <strong>{currentOrder.customerName}</strong>! Mã đơn hàng:{' '}

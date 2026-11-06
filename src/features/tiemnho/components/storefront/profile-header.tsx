@@ -28,15 +28,15 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
   // ==========================================
   if (variant === 'mobile') {
     return (
-      <div className={`flex flex-col items-center text-center space-y-2.5 pt-2 pb-4 ${className}`}>
-        {/* Avatar tròn lớn ở tâm w-28 h-28 */}
+      <div className={`flex flex-col items-center text-center space-y-1.5 pt-1 pb-1 ${className}`}>
+        {/* Avatar tròn lớn ở tâm w-24 h-24 */}
         <div className='relative'>
-          <div className='w-28 h-28 rounded-full overflow-hidden bg-neutral-100 shadow-sm mx-auto'>
+          <div className='w-24 h-24 rounded-full overflow-hidden bg-neutral-100 shadow-sm mx-auto border border-neutral-200/80'>
             <Image
               src={profile.avatarUrl || '/default-avatar.svg'}
               alt={profile.displayName}
-              width={112}
-              height={112}
+              width={96}
+              height={96}
               className='w-full h-full object-cover'
               unoptimized
             />
@@ -46,31 +46,33 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
         {/* Tên Creator in đậm */}
         <div className='space-y-0.5 pt-1'>
           <div className='flex items-center justify-center gap-1.5'>
-            <h1 className='text-2xl font-extrabold tracking-tight text-neutral-900'>
+            <h1 className='text-xl sm:text-2xl font-bold tracking-tight text-neutral-900'>
               {profile.displayName || profile.username}
             </h1>
             {profile.verified && (
               <span title='Creator đã xác thực' className='inline-flex items-center shrink-0'>
-                <BadgeCheck className='w-5 h-5 text-neutral-400 fill-neutral-100 stroke-[2.2]' />
+                <BadgeCheck className='w-4 h-4 text-neutral-400 fill-neutral-100 stroke-[2.2]' />
               </span>
             )}
           </div>
         </div>
 
         {/* Dòng Bio tóm tắt */}
-        <p className='font-normal text-[13.5px] leading-relaxed text-neutral-600 text-center max-w-[300px] mt-2'>
-          {profile.bio}
-        </p>
+        {profile.bio && (
+          <p className='font-normal text-xs leading-relaxed text-neutral-600 text-center max-w-[240px] mt-1.5 px-1'>
+            {profile.bio}
+          </p>
+        )}
 
-        {/* Hàng icon mạng xã hội bọc trong ô vuông bo góc xám nhạt w-8 h-8 */}
+        {/* Hàng icon mạng xã hội màu sắc thương hiệu nổi bật trên nền sáng */}
         {profile.socials && Object.values(profile.socials).some(Boolean) && (
-          <div className='flex items-center justify-center gap-2 mt-3 text-neutral-700 flex-wrap'>
+          <div className='flex items-center justify-center gap-2 mt-2.5 text-neutral-700 flex-wrap'>
             {profile.socials.instagram && (
               <a
                 href={profile.socials.instagram}
                 target='_blank'
                 rel='noreferrer'
-                className='w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors shadow-2xs'
+                className='w-7 h-7 rounded-full bg-neutral-100/90 hover:bg-neutral-200/90 border border-neutral-200/60 shadow-2xs flex items-center justify-center transition-all hover:scale-110'
                 title='Instagram'
               >
                 <SocialIconBadge platform='instagram' size='sm' />
@@ -81,7 +83,7 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
                 href={profile.socials.tiktok}
                 target='_blank'
                 rel='noreferrer'
-                className='w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors shadow-2xs'
+                className='w-7 h-7 rounded-full bg-neutral-100/90 hover:bg-neutral-200/90 border border-neutral-200/60 shadow-2xs flex items-center justify-center transition-all hover:scale-110'
                 title='TikTok'
               >
                 <SocialIconBadge platform='tiktok' size='sm' />
@@ -92,7 +94,7 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
                 href={profile.socials.youtube}
                 target='_blank'
                 rel='noreferrer'
-                className='w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors shadow-2xs'
+                className='w-7 h-7 rounded-full bg-neutral-100/90 hover:bg-neutral-200/90 border border-neutral-200/60 shadow-2xs flex items-center justify-center transition-all hover:scale-110'
                 title='YouTube'
               >
                 <SocialIconBadge platform='youtube' size='sm' />
@@ -103,7 +105,7 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
                 href={profile.socials.facebook}
                 target='_blank'
                 rel='noreferrer'
-                className='w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors shadow-2xs'
+                className='w-7 h-7 rounded-full bg-neutral-100/90 hover:bg-neutral-200/90 border border-neutral-200/60 shadow-2xs flex items-center justify-center transition-all hover:scale-110'
                 title='Facebook'
               >
                 <SocialIconBadge platform='facebook' size='sm' />
@@ -114,7 +116,7 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
                 href={`https://zalo.me/${profile.socials.zalo}`}
                 target='_blank'
                 rel='noreferrer'
-                className='w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors shadow-2xs'
+                className='w-7 h-7 rounded-full bg-neutral-100/90 hover:bg-neutral-200/90 border border-neutral-200/60 shadow-2xs flex items-center justify-center transition-all hover:scale-110'
                 title='Zalo'
               >
                 <SocialIconBadge platform='zalo' size='sm' />
@@ -123,7 +125,7 @@ export function ProfileHeader({ profile, variant = 'mobile', className = '' }: P
             <button
               type='button'
               onClick={handleShareBio}
-              className='w-8 h-8 rounded-lg bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-700 transition-colors cursor-pointer shadow-2xs'
+              className='w-7 h-7 rounded-full bg-neutral-100/90 hover:bg-neutral-200/90 border border-neutral-200/60 shadow-2xs flex items-center justify-center text-neutral-600 hover:text-neutral-900 transition-all hover:scale-110 cursor-pointer'
               title='Chia sẻ tiệm'
             >
               <Share2 className='w-3.5 h-3.5' />

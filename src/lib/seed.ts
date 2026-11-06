@@ -2,47 +2,7 @@ import { prisma } from './prisma';
 
 export async function ensureDatabaseSeeded() {
   try {
-    const profileCount = await prisma.creatorProfile.count();
-    // Tự động làm sạch các avatar Unsplash cũ trong CSDL
-    await prisma.creatorProfile.updateMany({
-      where: {
-        avatarUrl: {
-          contains: 'photo-1534528741775-53994a69daeb'
-        }
-      },
-      data: {
-        avatarUrl: '/default-avatar.svg'
-      }
-    });
-
-    if (profileCount > 0) {
-      return;
-    }
-
-    console.log('🌱 Creating initial clean Creator Profile and Payment Config...');
-
-    // 1. Creator Profile (clean baseline)
-    await prisma.creatorProfile.create({
-      data: {
-        id: 'creator-giangdinh',
-        username: 'giangdinh',
-        displayName: 'Giang Định',
-        bio: 'Chào mừng bạn đến với Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số và sản phẩm chọn lọc.',
-        avatarUrl: '/default-avatar.svg',
-        coverUrl:
-          'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-        verified: true,
-        theme: 'obsidian',
-        tiktok: null,
-        instagram: null,
-        youtube: null,
-        threads: null,
-        facebook: null,
-        zalo: null
-      }
-    });
-
-    // 2. Payment Config (default)
+    // 1. Payment Config (default)
     await prisma.paymentConfig.upsert({
       where: { id: 'default-payment' },
       update: {},
@@ -60,8 +20,6 @@ export async function ensureDatabaseSeeded() {
         lastPingTestAt: new Date()
       }
     });
-
-    console.log('✅ Clean baseline created successfully!');
   } catch (error) {
     console.error('Error during database initialization:', error);
   }

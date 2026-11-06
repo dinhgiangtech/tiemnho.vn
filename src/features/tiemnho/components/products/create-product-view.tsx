@@ -85,6 +85,7 @@ export function CreateProductView() {
 
     let isMounted = true;
     async function loadEditProduct() {
+      if (!idParam) return;
       setLoadingProduct(true);
       try {
         const prod = await getProductById(idParam);

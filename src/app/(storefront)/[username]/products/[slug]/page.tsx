@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import {
   getProfile,
+  getProfileByUsername,
   getProductById,
   getProducts,
   getPaymentConfig
@@ -18,7 +19,7 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { username, slug } = await params;
   const cleanUsername = decodeURIComponent(username).replace(/^@/, '');
-  const profile = await getProfile();
+  const profile = (await getProfileByUsername(cleanUsername)) || (await getProfile());
 
   // Find product by id or slug
   let product = await getProductById(slug);
@@ -50,7 +51,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const decodedUsername = decodeURIComponent(username).replace(/^@/, '');
 
   const [profile, paymentConfig, allProducts] = await Promise.all([
-    getProfile(),
+    (async () => (await getProfileByUsername(decodedUsername)) || (await getProfile()))(),
     getPaymentConfig(),
     getProducts()
   ]);

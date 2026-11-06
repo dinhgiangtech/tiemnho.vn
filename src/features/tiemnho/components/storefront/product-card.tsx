@@ -53,17 +53,17 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
   }, [product.subtitle, product.description]);
 
   // ==========================================
-  // MOBILE CARD: Thumbnail to rõ nét + Dòng tóm tắt + Giá + Nút CTA ở đáy
+  // MOBILE CARD: Thumbnail vừa vặn + Dòng tóm tắt + Giá + Nút CTA tinh gọn
   // ==========================================
   if (layout === 'mobile') {
     return (
       <div
         onClick={() => onClick(product)}
-        className='w-full bg-white border border-neutral-100 rounded-2xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3 group'
+        className='w-full bg-white border border-neutral-100 rounded-2xl p-3 shadow-[0_2px_10px_rgba(0,0,0,0.05)] hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-2.5 group'
       >
-        <div className='flex items-start gap-3.5'>
-          {/* Thumbnail 1:1 to hơn (80px - 84px) bo góc mượt mà */}
-          <div className='w-20 h-20 sm:w-[84px] sm:h-[84px] rounded-2xl overflow-hidden shrink-0 bg-neutral-100 relative border border-neutral-100 shadow-2xs'>
+        <div className='flex items-start gap-2.5'>
+          {/* Thumbnail 1:1 tỉ lệ đẹp gọn gàng bo góc mượt mà */}
+          <div className='w-14 h-14 sm:w-18 sm:h-18 rounded-md overflow-hidden shrink-0 bg-neutral-100 relative border border-neutral-100 shadow-2xs'>
             <Image
               src={product.coverImage}
               alt={product.title}
@@ -72,7 +72,7 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
               unoptimized
             />
             {product.isFeatured && (
-              <span className='absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-[#FE2C55] text-white text-[8px] font-bold uppercase leading-tight shadow-xs'>
+              <span className='absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-[#FE2C55] text-white text-[8px] font-bold uppercase leading-tight shadow-xs'>
                 HOT
               </span>
             )}
@@ -80,20 +80,20 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
 
           {/* Tiêu đề + Dòng tóm tắt + Giá bán */}
           <div className='flex-1 min-w-0 text-left'>
-            <h3 className='font-bold text-[15px] text-neutral-900 leading-snug line-clamp-1 group-hover:text-[#FE2C55] transition-colors'>
+            <h3 className='font-bold text-xs sm:text-[13px] text-neutral-900 leading-snug line-clamp-2 group-hover:text-[#FE2C55] transition-colors'>
               {product.title}
             </h3>
             {summaryText ? (
-              <p className='font-normal text-[13.5px] text-neutral-600 line-clamp-2 mt-1 leading-relaxed'>
+              <p className='font-normal text-[11px] sm:text-xs text-neutral-500 line-clamp-4 mt-0.5 leading-snug'>
                 {summaryText}
               </p>
             ) : null}
-            <div className='flex items-baseline gap-1.5 mt-2'>
-              <span className='text-sm sm:text-base font-bold text-[#FE2C55]'>
+            <div className='flex items-baseline gap-1.5 mt-1'>
+              <span className='text-xs sm:text-sm font-bold text-[#FE2C55]'>
                 {formatPrice(product.price)}
               </span>
-              {product.originalPrice && product.originalPrice > product.price && (
-                <span className='text-xs text-neutral-400 line-through'>
+              {product.originalPrice && (
+                <span className='text-[10px] text-neutral-400 line-through'>
                   {formatPrice(product.originalPrice)}
                 </span>
               )}
@@ -101,14 +101,14 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
           </div>
         </div>
 
-        {/* Nút bấm CTA full-width ở đáy thẻ */}
+        {/* Nút bấm CTA gọn gàng ở đáy thẻ */}
         <button
           type='button'
           onClick={(e) => {
             e.stopPropagation();
             onClick(product);
           }}
-          className={`w-full mt-3 py-3 rounded-xl font-medium text-sm text-white shadow-sm active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`w-full py-2 rounded-xl font-medium text-xs text-white shadow-2xs active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             isLead
               ? 'bg-[#161823] hover:bg-neutral-800'
               : isLink
@@ -116,15 +116,7 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
                 : 'bg-primary hover:bg-primary/90 text-primary-foreground'
           }`}
         >
-          {isLead ? (
-            <Gift size={16} weight='bold' className='shrink-0' />
-          ) : isLink ? null : product.type === 'PHYSICAL' ? (
-            <Package size={16} weight='bold' className='shrink-0' />
-          ) : (
-            <FileText size={16} weight='bold' className='shrink-0' />
-          )}
           <span>{getCtaLabel(product)}</span>
-          {isLink && <ArrowSquareOut size={16} weight='bold' className='ml-1 shrink-0' />}
         </button>
       </div>
     );

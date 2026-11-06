@@ -608,7 +608,7 @@ export function ProductForm({
                 <Input
                   {...register('subtitle')}
                   maxLength={100}
-                  placeholder='VD: Nhận ngay bộ 13 kịch bản triệu view 🔥 hoặc Never run out of ideas'
+                  placeholder='VD: Nhận ngay bộ 13 kịch bản triệu view hoặc Never run out of ideas'
                   className='h-11 text-sm rounded-xl'
                 />
               </div>

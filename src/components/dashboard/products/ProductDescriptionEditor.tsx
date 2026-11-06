@@ -199,7 +199,7 @@ export function ProductDescriptionEditor({
       title: '🎯 Công thức AIDA chuẩn chuyển đổi cao',
       desc: 'Gây chú ý, khơi gợi nhu cầu, liệt kê 5 quyền lợi cốt lõi và kêu gọi thanh toán tức thì.',
       generate: (title: string) =>
-        `🚀 Bạn đang tìm kiếm giải pháp tối ưu cho: **${title}**?\n\n` +
+        `Bạn đang tìm kiếm giải pháp tối ưu cho: **${title}**?\n\n` +
         `Đây là bộ giải pháp được thiết kế tinh gọn, giúp bạn tiết kiệm hàng chục giờ mày mò và áp dụng được ngay lập tức.\n\n` +
         `### 💎 Quyền lợi vượt trội khi sở hữu:\n` +
         `✅ Truy cập toàn bộ file gốc và tài liệu hướng dẫn chi tiết từng bước.\n` +
@@ -241,7 +241,7 @@ export function ProductDescriptionEditor({
       title: '⚡ Hướng dẫn thanh toán & Nhận hàng tự động',
       desc: 'Giải thích rõ ràng quy trình nhận hàng tự động qua VietQR 24/7.',
       generate: (title: string) =>
-        `### 🚀 3 Bước đơn giản để nhận ${title}:\n\n` +
+        `### 3 Bước đơn giản để nhận ${title}:\n\n` +
         `1. Nhấn nút **MUA NGAY** bên dưới để mở mã thanh toán VietQR.\n` +
         `2. Dùng App ngân hàng bất kỳ quét mã QR (Hệ thống tự điền số tiền và nội dung chuyển khoản).\n` +
         `3. Giao dịch thành công, màn hình sẽ hiển thị link tải trực tiếp và gửi email sao lưu đến bạn ngay lập tức!\n\n` +

@@ -16,13 +16,11 @@ async function clearDatabase() {
     const deletedProducts = await prisma.product.deleteMany({});
     console.log(`🗑️ Đã xóa ${deletedProducts.count} sản phẩm (Product)`);
 
-    // Reset avatar profile về mặc định Facebook
-    await prisma.creatorProfile.updateMany({
-      data: { avatarUrl: '/default-avatar.svg' }
-    });
-    console.log('👤 Đã đặt lại avatar người bán về avatar mặc định Facebook (/default-avatar.svg)');
+    const deletedProfiles = await prisma.creatorProfile.deleteMany({});
+    console.log(`🗑️ Đã xóa ${deletedProfiles.count} hồ sơ người bán (CreatorProfile)`);
 
-    console.log('✨ Đã dọn sạch toàn bộ dữ liệu Đơn hàng, Khách hàng và Sản phẩm thành công!');
+    console.log('✨ Đã dọn sạch toàn bộ dữ liệu Đơn hàng, Khách hàng, Sản phẩm và Hồ sơ Creator!');
+    console.log('🚀 Hệ thống đã sẵn sàng 100% ở trạng thái sạch để kiểm thử đồng bộ Clerk!');
   } catch (error) {
     console.error('❌ Lỗi khi xóa dữ liệu:', error);
   } finally {

@@ -381,6 +381,16 @@ const { has } = await auth();
 const hasFeature = has({ feature: 'premium_access' });
 ```
 
+### Clerk to PostgreSQL Synchronization (Just-In-Time Resolver)
+
+The project syncs Clerk authenticated accounts to PostgreSQL without requiring inbound webhooks or public tunnels on localhost. See [docs/clerk-sync.md](file:///Users/giangdinh/My_Project/tiem-nho/docs/clerk-sync.md) for full architectural documentation.
+
+- **Schema**: `CreatorProfile` has `clerkUserId String? @unique` mapping to Clerk's `userId`.
+- **Sync Point**: `getProfile()` in `src/features/tiemnho/api/service.ts` automatically resolves `userId` via `await auth()`. If no profile exists for the user, it fetches `currentUser()` from Clerk and creates/links the `CreatorProfile` atomically before returning data to the client.
+- **Route Protection**: `src/app/dashboard/layout.tsx` enforces `await auth.protect()`. Unauthenticated users are redirected before any dashboard queries execute.
+- **Client UI**: `app-sidebar.tsx` uses `useUser()` from `@clerk/nextjs` to reflect the active creator's name, avatar, and public store link (`/@username`).
+
+
 ---
 
 ## Data Fetching Patterns

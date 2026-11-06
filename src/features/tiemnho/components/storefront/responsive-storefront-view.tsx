@@ -86,12 +86,12 @@ export function ResponsiveStorefrontView({
     }
 
     return (
-      <div className='w-full mx-auto bg-white text-[#161823] font-sans antialiased px-4 pt-8 pb-4 text-xs selection:bg-[#FE2C55] selection:text-white flex flex-col justify-between min-h-full'>
+      <div className='w-full mx-auto bg-white text-[#161823] font-sans antialiased px-3.5 pt-5 pb-6 text-xs selection:bg-[#FE2C55] selection:text-white flex flex-col justify-between min-h-full'>
         {/* Profile Header chuẩn Mobile Stan Store */}
         <ProfileHeader profile={profile} variant='mobile' />
 
         {/* Danh sách thẻ sản phẩm dọc */}
-        <div className='space-y-3 mt-5 pb-6 flex-1'>
+        <div className='space-y-2.5 mt-3.5 pb-4 flex-1'>
           {filteredProducts.map((product) => (
             <ProductCard
               key={product.id}
@@ -107,22 +107,6 @@ export function ResponsiveStorefrontView({
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        <footer className='pt-4 pb-2 text-center mt-auto border-t border-neutral-100'>
-          <div className='flex items-center justify-center gap-3 text-[10px] font-medium text-neutral-400'>
-            <span className='inline-flex items-center gap-1 hover:text-neutral-700 cursor-pointer'>
-              <ShieldCheck className='w-3 h-3 text-neutral-400' />
-              <span>Privacy Policy</span>
-            </span>
-            <span className='text-neutral-300'>|</span>
-            <div className='inline-flex items-center gap-1 hover:text-neutral-700 cursor-pointer'>
-              <Globe className='w-3 h-3 text-neutral-400' />
-              <span>EN</span>
-              <ChevronDown className='w-2.5 h-2.5 text-neutral-400' />
-            </div>
-          </div>
-        </footer>
       </div>
     );
   }

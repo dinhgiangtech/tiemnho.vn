@@ -1,43 +1,29 @@
 'use client';
 
-import * as React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CreatorProfile, Order, PaymentConfig, Product } from '@/constants/mock-tiemnho';
+import { cn } from '@/lib/utils';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  Download,
+  ExternalLink,
+  QrCode,
+  Share2,
+  ShieldCheck
+} from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import {
-  ChevronLeft,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  Check,
-  Sparkles,
-  ShieldCheck,
-  Copy,
-  Download,
-  CheckCircle2,
-  Clock,
-  ArrowRight,
-  QrCode,
-  Loader2,
-  Share2,
-  Building2,
-  ShoppingBag,
-  Gift
-} from 'lucide-react';
-import {
-  Product,
-  PaymentConfig,
-  CreatorProfile,
-  Order,
-  generateVietQrUrl,
-  VIETNAMESE_BANKS
-} from '@/constants/mock-tiemnho';
-import { createOrder } from '../../api/service';
+import * as React from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+import { createOrder } from '../../api/service';
+import { tiemNhoKeys } from '../../api/queries';
+import { CheckoutDrawerStep1, CheckoutStep1Values } from './CheckoutDrawerStep1';
+import { VietQrPaymentPopup } from './VietQrPaymentPopup';
 
 interface ProductDetailViewProps {
   product: Product;
@@ -66,10 +52,10 @@ export function ProductDetailView({
   const [shippingAddress, setShippingAddress] = React.useState('');
   const [customerNote, setCustomerNote] = React.useState('');
 
-  const [loadingOrder, setLoadingOrder] = React.useState(false);
-  // Quy trình 2 bước: FORM (Bước 1) -> VIETQR (Bước 2) -> SUCCESS (Bước 3)
-  const [step, setStep] = React.useState<'FORM' | 'VIETQR' | 'SUCCESS'>('FORM');
+  // Trạng thái màn hình: FORM (thông tin checkout) -> SUCCESS (thành công)
+  const [step, setStep] = React.useState<'FORM' | 'SUCCESS'>('FORM');
   const [confirmedOrder, setConfirmedOrder] = React.useState<Order | null>(null);
+  const [isPaymentPopupOpen, setIsPaymentPopupOpen] = React.useState(false);
 
   // Trạng thái thu gọn / xem thêm mô tả (5-10 dòng)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
@@ -81,23 +67,9 @@ export function ProductDetailView({
     return lines.length > 5 || product.description.length > 220;
   }, [product.description]);
 
-  // Copy state
-  const [copiedField, setCopiedField] = React.useState<'STK' | 'CODE' | 'AMOUNT' | null>(null);
-
-  // Đồng hồ đếm ngược 15 phút
-  const [timeLeft, setTimeLeft] = React.useState(900);
-
+  // Real-time Polling kiểm tra trạng thái thanh toán khi có đơn hàng chưa PAID
   React.useEffect(() => {
-    if (step !== 'VIETQR' || product.price === 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [step, product.price]);
-
-  // Real-time Polling kiểm tra trạng thái thanh toán mỗi 2s ở Bước 2
-  React.useEffect(() => {
-    if (step !== 'VIETQR' || !confirmedOrder) return;
+    if (!confirmedOrder || confirmedOrder.status === 'PAID') return;
 
     const interval = setInterval(async () => {
       try {
@@ -117,16 +89,17 @@ export function ProductDetailView({
                 : null
             );
             setStep('SUCCESS');
+            setIsPaymentPopupOpen(false);
             toast.success('Thanh toán thành công! VietQR đã xác nhận.');
           }
         }
       } catch (err) {
         console.error('Error polling order status:', err);
       }
-    }, 2000);
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [step, confirmedOrder]);
+  }, [confirmedOrder]);
 
   const isPhysical = product.type === 'PHYSICAL';
   const isFree = product.price === 0 || product.type === 'LEAD_MAGNET';
@@ -137,58 +110,7 @@ export function ProductDetailView({
     return new Intl.NumberFormat('vi-VN').format(p) + ' đ';
   };
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-  const formattedCountdown = `${minutes.toString().padStart(2, '0')}:${seconds
-    .toString()
-    .padStart(2, '0')}`;
-
-  // Tra cứu thông tin ngân hàng & logo VietQR chính thức
-  const bankInfo = React.useMemo(() => {
-    const rawBankId = (paymentConfig.bankId || '').trim().toLowerCase();
-    const rawBankName = (paymentConfig.bankName || '').trim().toLowerCase();
-    return VIETNAMESE_BANKS.find(
-      (b) =>
-        b.id.toLowerCase() === rawBankId ||
-        b.code.toLowerCase() === rawBankId ||
-        b.shortName.toLowerCase() === rawBankId ||
-        rawBankName.includes(b.shortName.toLowerCase()) ||
-        rawBankName.includes(b.code.toLowerCase()) ||
-        rawBankName.includes(b.id.toLowerCase())
-    );
-  }, [paymentConfig.bankId, paymentConfig.bankName]);
-
-  const bankLogoUrl =
-    bankInfo?.logo || `https://api.vietqr.io/img/${paymentConfig.bankId || 'MB'}.png`;
-  const bankShortName = bankInfo?.shortName || paymentConfig.bankId || 'Ngân hàng';
-  const bankFullName = paymentConfig.bankName || bankInfo?.name || 'Ngân hàng thụ hưởng';
-
-  // Thông báo copy thành công
-  const triggerCopySuccess = (field: 'STK' | 'CODE' | 'AMOUNT') => {
-    setCopiedField(field);
-    toast.success(
-      field === 'STK'
-        ? 'Đã sao chép Số tài khoản!'
-        : field === 'CODE'
-          ? 'Đã sao chép Nội dung chuyển khoản!'
-          : 'Đã sao chép Số tiền!'
-    );
-    setTimeout(() => setCopiedField(null), 2000);
-  };
-
-  // Cơ chế sao chép đa nền tảng
-  const handleCopy = (text: string, field: 'STK' | 'CODE' | 'AMOUNT') => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => triggerCopySuccess(field))
-        .catch(() => fallbackCopyText(text, field));
-      return;
-    }
-    fallbackCopyText(text, field);
-  };
-
-  const fallbackCopyText = (text: string, field: 'STK' | 'CODE' | 'AMOUNT') => {
+  const fallbackCopyText = (text: string) => {
     try {
       const textarea = document.createElement('textarea');
       textarea.value = text;
@@ -202,7 +124,7 @@ export function ProductDetailView({
       const successful = document.execCommand('copy');
       document.body.removeChild(textarea);
       if (successful) {
-        triggerCopySuccess(field);
+        toast.success('Đã sao chép liên kết!');
       } else {
         toast.info(`Vui lòng sao chép thủ công: ${text}`);
       }
@@ -226,96 +148,53 @@ export function ProductDetailView({
         navigator.clipboard
           .writeText(url)
           .then(() => toast.success('Đã sao chép link sản phẩm!'))
-          .catch(() => {
-            fallbackCopyText(url, 'STK');
-            toast.success('Đã sao chép link sản phẩm!');
-          });
+          .catch(() => fallbackCopyText(url));
       } else {
-        fallbackCopyText(url, 'STK');
-        toast.success('Đã sao chép link sản phẩm!');
+        fallbackCopyText(url);
       }
     }
   };
 
-  const handleConfirmOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const queryClient = useQueryClient();
 
-    if (!customerName.trim()) {
-      toast.error('Vui lòng nhập Họ và tên');
-      return;
-    }
-
-    if (!customerEmail.trim() && !isPhysical) {
-      toast.error('Vui lòng nhập Email để nhận link tải tài liệu');
-      return;
-    }
-
-    if (!customerPhone.trim() && isPhysical) {
-      toast.error('Vui lòng nhập Số điện thoại nhận hàng');
-      return;
-    }
-
-    if (isPhysical && !shippingAddress.trim()) {
-      toast.error('Vui lòng nhập địa chỉ nhận hàng');
-      return;
-    }
-
-    setLoadingOrder(true);
-    try {
-      const order = await createOrder({
-        productId: product.id,
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim() || `${customerPhone.trim() || 'customer'}@tiemnho.vn`,
-        customerPhone: customerPhone.trim(),
-        shippingAddress: isPhysical ? shippingAddress.trim() : undefined,
-        customerNote: customerNote.trim() || undefined
-      });
-
+  const createOrderMutation = useMutation({
+    mutationFn: createOrder,
+    onSuccess: (order) => {
       setConfirmedOrder(order);
+
+      // Invalidate các query dữ liệu đơn hàng và thống kê
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.orders() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.analytics() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.leads() });
 
       if (isFree) {
         setStep('SUCCESS');
         toast.success('Nhận quà thành công! Bạn có thể tải tài nguyên ngay bên dưới.');
       } else {
-        setStep('VIETQR');
+        setIsPaymentPopupOpen(true);
       }
-    } catch {
-      toast.error('Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!');
-    } finally {
-      setLoadingOrder(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Có lỗi xảy ra khi tạo đơn hàng');
     }
-  };
+  });
 
-  const handleManualCheck = async () => {
-    if (!confirmedOrder) return;
-    setLoadingOrder(true);
-    try {
-      const res = await fetch(`/api/orders/${confirmedOrder.id}/status`, {
-        method: 'POST'
-      });
-      if (res.ok) {
-        setStep('SUCCESS');
-        toast.success('Thanh toán thành công! VietQR đã xác nhận.');
-      } else {
-        toast.info('Hệ thống đang kiểm tra biến động số dư ngân hàng...');
-      }
-    } catch {
-      toast.error('Chưa ghi nhận biến động số dư. Bạn hãy kiểm tra lại nhé.');
-    } finally {
-      setLoadingOrder(false);
-    }
-  };
+  const handleStep1Submit = (values: CheckoutStep1Values) => {
+    setCustomerName(values.fullName);
+    setCustomerEmail(values.email || '');
+    if (values.phone) setCustomerPhone(values.phone);
+    if (values.shippingAddress) setShippingAddress(values.shippingAddress);
+    if (values.shippingNote) setCustomerNote(values.shippingNote);
 
-  // URL tạo mã QR VietQR chuẩn gắn cứng theo mã đơn và số tiền
-  const qrUrl = React.useMemo(() => {
-    return generateVietQrUrl({
-      bankId: paymentConfig.bankId,
-      accountNumber: paymentConfig.accountNumber,
-      accountName: paymentConfig.accountName,
-      amount: confirmedOrder?.amount || product.price,
-      orderCode: confirmedOrder?.orderCode || orderCode
+    createOrderMutation.mutate({
+      productId: product.id,
+      customerName: values.fullName.trim(),
+      customerEmail: values.email?.trim() || `${values.phone?.trim() || 'customer'}@tiemnho.vn`,
+      customerPhone: values.phone?.trim() || '',
+      shippingAddress: isPhysical ? values.shippingAddress?.trim() : undefined,
+      customerNote: values.shippingNote?.trim() || undefined
     });
-  }, [paymentConfig, product.price, confirmedOrder, orderCode]);
+  };
 
   // Parser định dạng Markdown phong phú
   const renderFormattedDescription = (text?: string) => {
@@ -536,7 +415,7 @@ export function ProductDetailView({
           </div>
           <div className='space-y-1'>
             <h3 className='text-lg font-black text-foreground'>
-              {isFree ? 'Nhận tài liệu thành công 🎉' : 'Thanh toán thành công 🎉'}
+              {isFree ? 'Nhận tài liệu thành công' : 'Thanh toán thành công'}
             </h3>
             <p className='text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto'>
               Mã đơn hàng:{' '}
@@ -552,18 +431,18 @@ export function ProductDetailView({
           {(confirmedOrder?.downloadUrl || product.fileUrl) && (
             <div className='pt-1'>
               <Button
-                asChild
+                render={
+                  <a
+                    href={confirmedOrder?.downloadUrl || product.fileUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  />
+                }
                 size='lg'
                 className='w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 cursor-pointer shadow-sm'
               >
-                <a
-                  href={confirmedOrder?.downloadUrl || product.fileUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
-                  <Download className='w-4 h-4' />
-                  <span>Tải tài liệu ngay ({product.fileName || 'File đính kèm'})</span>
-                </a>
+                <Download className='w-4 h-4' />
+                <span>Tải tài liệu ngay ({product.fileName || 'File đính kèm'})</span>
               </Button>
             </div>
           )}
@@ -571,7 +450,7 @@ export function ProductDetailView({
           {isPhysical && (
             <div className='p-3 rounded-2xl bg-muted/40 border border-border text-left text-xs space-y-1 text-foreground'>
               <p className='font-bold flex items-center gap-1.5'>
-                <span>📦 Đơn hàng sẽ được chuẩn bị giao tới:</span>
+                <span>Đơn hàng sẽ được chuẩn bị giao tới:</span>
               </p>
               <p className='text-[11px] text-muted-foreground pl-4'>{shippingAddress}</p>
             </div>
@@ -605,452 +484,61 @@ export function ProductDetailView({
             thức.
           </p>
           <Button
-            asChild
+            render={
+              <a href={product.externalUrl || '#'} target='_blank' rel='noopener noreferrer' />
+            }
             size='lg'
             className='w-full h-12 rounded-2xl font-bold text-sm gap-2 cursor-pointer shadow-md'
           >
-            <a href={product.externalUrl || '#'} target='_blank' rel='noopener noreferrer'>
-              <span>{product.buttonText || 'Mở liên kết ngay'}</span>
-              <ExternalLink className='w-4 h-4' />
-            </a>
+            <span>{product.buttonText || 'Mở liên kết ngay'}</span>
+            <ExternalLink className='w-4 h-4' />
           </Button>
         </div>
       );
     }
 
     // -----------------------------------------------------------------------
-    // BƯỚC 1: FORM THÔNG TIN NGƯỜI NHẬN (CUSTOMER INFO STEP)
-    // -----------------------------------------------------------------------
-    if (step === 'FORM') {
-      return (
-        <div className='p-4 sm:p-5 rounded-3xl bg-card border border-border shadow-xs space-y-4 text-left'>
-          <div className='flex items-center gap-2.5 pb-3 border-b border-border/60'>
-            <div className='w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0'>
-              <ShoppingBag className='w-4 h-4' />
-            </div>
-            <div>
-              <h3 className='text-sm font-bold text-foreground'>Thông tin nhận hàng</h3>
-              <p className='text-[11px] text-muted-foreground'>
-                {isFree
-                  ? 'Điền thông tin để nhận tài liệu miễn phí tức thì'
-                  : 'Bước 1: Điền thông tin trước khi thanh toán VietQR'}
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleConfirmOrder} className='space-y-3.5'>
-            {/* Họ và tên */}
-            <div className='space-y-1'>
-              <label className='text-xs font-bold text-foreground flex items-center justify-between'>
-                <span>
-                  Họ và tên <strong className='text-rose-500'>*</strong>
-                </span>
-                <span className='text-[10px] text-muted-foreground font-normal'>Bắt buộc</span>
-              </label>
-              <Input
-                type='text'
-                required
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder='VD: Nguyễn Văn A'
-                className='h-10 text-xs rounded-xl border border-input/80 bg-background px-3 focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-              />
-            </div>
-
-            {/* Sản phẩm số: Email bắt buộc, SĐT tùy chọn, ẨN ô địa chỉ */}
-            {!isPhysical && (
-              <>
-                <div className='space-y-1'>
-                  <label className='text-xs font-bold text-foreground flex items-center justify-between'>
-                    <span>
-                      Email nhận tài liệu <strong className='text-rose-500'>*</strong>
-                    </span>
-                    <span className='text-[10px] text-muted-foreground font-normal'>
-                      Gửi link tải tự động
-                    </span>
-                  </label>
-                  <Input
-                    type='email'
-                    required
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder='email@gmail.com'
-                    className='h-10 text-xs rounded-xl border border-input/80 bg-background px-3 focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='text-xs font-bold text-foreground flex items-center justify-between'>
-                    <span>Số điện thoại (Zalo)</span>
-                    <span className='text-[10px] text-muted-foreground font-normal'>Tùy chọn</span>
-                  </label>
-                  <Input
-                    type='tel'
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder='0912345678'
-                    className='h-10 text-xs rounded-xl border border-input/80 bg-background px-3 focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Hàng vật lý: SĐT bắt buộc, Địa chỉ bắt buộc (1 ô duy nhất) */}
-            {isPhysical && (
-              <>
-                <div className='space-y-1'>
-                  <label className='text-xs font-bold text-foreground flex items-center justify-between'>
-                    <span>
-                      Số điện thoại nhận hàng <strong className='text-rose-500'>*</strong>
-                    </span>
-                    <span className='text-[10px] text-muted-foreground font-normal'>
-                      Bưu tá gọi khi giao
-                    </span>
-                  </label>
-                  <Input
-                    type='tel'
-                    required
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder='0912345678'
-                    className='h-10 text-xs rounded-xl border border-input/80 bg-background px-3 focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='text-xs font-bold text-foreground flex items-center justify-between'>
-                    <span>Email (Tùy chọn)</span>
-                    <span className='text-[10px] text-muted-foreground font-normal'>
-                      Nhận thông báo đơn
-                    </span>
-                  </label>
-                  <Input
-                    type='email'
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder='email@gmail.com'
-                    className='h-10 text-xs rounded-xl border border-input/80 bg-background px-3 focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='text-xs font-bold text-foreground flex items-center justify-between'>
-                    <span>
-                      Địa chỉ nhận hàng chi tiết <strong className='text-rose-500'>*</strong>
-                    </span>
-                  </label>
-                  <Textarea
-                    required
-                    value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
-                    placeholder='Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/TP'
-                    className='min-h-[72px] text-xs rounded-xl border border-input/80 bg-background px-3 py-2 resize-none focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-
-                <div className='space-y-1'>
-                  <label className='text-xs font-bold text-foreground'>
-                    Ghi chú phân loại / yêu cầu riêng
-                  </label>
-                  <Input
-                    type='text'
-                    value={customerNote}
-                    onChange={(e) => setCustomerNote(e.target.value)}
-                    placeholder='Size, màu sắc hoặc lời nhắn riêng cho Creator'
-                    className='h-10 text-xs rounded-xl border border-input/80 bg-background px-3 focus-visible:ring-2 focus-visible:ring-[#FE2C55]/20 focus-visible:border-[#FE2C55]'
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Nút CTA Bước 1 - Đỏ hồng TikTok đồng bộ, tự động co giãn vừa vặn */}
-            <Button
-              type='submit'
-              disabled={loadingOrder}
-              className='w-full h-11 sm:h-12 rounded-2xl bg-primary hover:bg-primary/90 active:scale-[0.99] text-primary-foreground font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-1.5 px-3 transition-all cursor-pointer overflow-hidden'
-            >
-              {loadingOrder ? (
-                <>
-                  <Loader2 className='w-4 h-4 animate-spin shrink-0' />
-                  <span className='truncate'>Đang xử lý thông tin...</span>
-                </>
-              ) : isFree ? (
-                <>
-                  <Gift className='w-4 h-4 shrink-0' />
-                  <span className='truncate'>Nhận tài liệu ngay (0đ)</span>
-                </>
-              ) : (
-                <>
-                  <span className='truncate'>Tiếp tục thanh toán</span>
-                  <span className='shrink-0'>• {formatPrice(product.price)}</span>
-                  <ArrowRight className='w-4 h-4 shrink-0' />
-                </>
-              )}
-            </Button>
-          </form>
-        </div>
-      );
-    }
-
-    // -----------------------------------------------------------------------
-    // BƯỚC 2: MÀN HÌNH QUÉT VIETQR & THANH TOÁN (PAYMENT STEP)
+    // THÔNG TIN CHECKOUT (LUÔN HIỂN THỊ FORM CHECKOUT NHƯ CŨ)
     // -----------------------------------------------------------------------
     return (
-      <div className='rounded-3xl bg-card border border-border p-4 sm:p-5 text-left space-y-4 shadow-xs'>
-        {/* Nút quay lại Bước 1 sửa thông tin & Đồng hồ đếm ngược */}
-        <div className='flex items-center justify-between pb-3 border-b border-border/60 gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            size='sm'
-            onClick={() => setStep('FORM')}
-            className='h-8 px-2.5 rounded-xl text-xs font-bold gap-1 cursor-pointer shrink-0'
-            title='Quay lại sửa thông tin người nhận'
-          >
-            <ChevronLeft className='h-4 w-4' />
-            <span>Quay lại</span>
-          </Button>
-
-          {/* Đếm ngược 15 phút */}
-          <Badge
-            variant='outline'
-            className='bg-amber-500/10 border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs font-mono font-bold px-2.5 py-1 rounded-full gap-1 shadow-2xs shrink-0'
-          >
-            <Clock className='w-3 h-3 text-amber-600 animate-pulse' />
-            <span>Hết hạn: {formattedCountdown}</span>
-          </Badge>
-        </div>
-
-        {/* Tiêu đề & Thông báo quét mã */}
-        <div className='flex items-center gap-2'>
-          <div className='w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0'>
-            <QrCode className='w-4 h-4' />
-          </div>
-          <div className='min-w-0'>
-            <div className='flex items-center gap-1.5 flex-nowrap'>
-              <h3 className='text-xs sm:text-sm font-bold text-foreground whitespace-nowrap'>
-                Quét mã VietQR 24/7
-              </h3>
-              <Badge
-                variant='outline'
-                className='bg-emerald-500/10 border-emerald-500/25 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md gap-1 shrink-0'
-              >
-                <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse' />
-                Tự động
-              </Badge>
-            </div>
-            <p className='text-[10px] text-muted-foreground whitespace-nowrap truncate'>
-              Kích hoạt sau 3 giây thanh toán
-            </p>
-          </div>
-        </div>
-
-        {/* Khung Mã QR VietQR sắc nét */}
-        <div className='flex flex-col items-center justify-center p-3.5 bg-muted/30 rounded-2xl border border-border shadow-2xs'>
-          <div className='relative w-44 h-44 sm:w-52 sm:h-52 bg-white rounded-xl overflow-hidden flex items-center justify-center p-1 border border-border shadow-xs'>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={qrUrl}
-              alt='Mã QR Thanh Toán VietQR'
-              className='w-full h-full object-contain'
-            />
-          </div>
-          <p className='text-[11px] font-medium text-muted-foreground mt-2 text-center'>
-            Dùng App Ngân hàng bất kỳ (MB, VCB, TCB, VPB, MoMo...) quét mã
-          </p>
-        </div>
-
-        {/* Hộp thông tin chuyển khoản với logo ngân hàng & nút sao chép 1 chạm */}
-        <div className='space-y-2 text-xs'>
-          {/* Ngân hàng với Logo chính thức */}
-          <div className='flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-muted/40 border border-border gap-2.5'>
-            <div className='flex items-center gap-2.5 min-w-0 flex-1'>
-              <div className='w-10 h-10 rounded-xl bg-background border border-border p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs'>
-                {bankLogoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={bankLogoUrl}
-                    alt={bankShortName}
-                    className='w-full h-full object-contain'
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Building2 className='w-5 h-5 text-muted-foreground' />
-                )}
-              </div>
-              <div className='min-w-0 flex-1'>
-                <span className='text-muted-foreground text-[10px] block leading-none'>
-                  Ngân hàng thụ hưởng:
-                </span>
-                <span className='font-bold text-xs sm:text-sm text-foreground leading-tight block truncate mt-1'>
-                  {bankShortName}
-                </span>
-                <span
-                  className='text-[10px] text-muted-foreground block truncate leading-tight mt-0.5'
-                  title={bankFullName}
-                >
-                  {bankFullName}
-                </span>
-              </div>
-            </div>
-            <Badge
-              variant='secondary'
-              className='font-mono font-bold text-[10px] uppercase shrink-0'
-            >
-              {paymentConfig.bankId || 'NAPAS'}
-            </Badge>
-          </div>
-
-          {/* Số tài khoản */}
-          <div className='flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-muted/40 border border-border gap-2'>
-            <div className='space-y-0.5 min-w-0 flex-1'>
-              <span className='text-muted-foreground text-[10px] sm:text-[11px] block leading-none'>
-                Số tài khoản:
+      <div className='p-4 sm:p-5 rounded-3xl bg-card border border-border shadow-xs text-left'>
+        {/* Banner nhỏ nhắc nhở nếu có đơn hàng đang chờ thanh toán */}
+        {confirmedOrder && !isFree && confirmedOrder.status !== 'PAID' && (
+          <div className='mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 shadow-2xs'>
+            <div className='min-w-0'>
+              <span className='text-[10px] text-amber-800 dark:text-amber-300 font-bold block'>
+                Đơn hàng #{confirmedOrder.orderCode} đang chờ thanh toán
               </span>
-              <strong className='font-mono text-sm sm:text-base font-bold text-foreground tracking-wider block truncate mt-0.5'>
-                {paymentConfig.accountNumber}
-              </strong>
-            </div>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              onClick={() => handleCopy(paymentConfig.accountNumber, 'STK')}
-              className={cn(
-                'h-8 px-3 rounded-xl text-[11px] font-bold gap-1.5 shrink-0 whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-2xs',
-                copiedField === 'STK' &&
-                  'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
-              )}
-            >
-              {copiedField === 'STK' ? (
-                <>
-                  <Check className='w-3.5 h-3.5 text-emerald-600 shrink-0' />
-                  <span className='whitespace-nowrap'>Đã chép</span>
-                </>
-              ) : (
-                <>
-                  <Copy className='w-3.5 h-3.5 text-muted-foreground shrink-0' />
-                  <span className='whitespace-nowrap'>Sao chép</span>
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Chủ tài khoản */}
-          <div className='flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-muted/40 border border-border gap-2'>
-            <span className='text-muted-foreground text-[10px] sm:text-[11px] shrink-0'>
-              Chủ tài khoản:
-            </span>
-            <span className='font-bold text-xs sm:text-sm text-foreground uppercase text-right truncate'>
-              {paymentConfig.accountName}
-            </span>
-          </div>
-
-          {/* Số tiền */}
-          <div className='flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-muted/40 border border-border gap-2'>
-            <div className='space-y-0.5 min-w-0 flex-1'>
-              <span className='text-muted-foreground text-[10px] sm:text-[11px] block leading-none'>
-                Số tiền thanh toán:
+              <span className='text-xs font-bold text-neutral-900 dark:text-white'>
+                {formatPrice(confirmedOrder.amount)}
               </span>
-              <strong className='text-sm sm:text-base font-extrabold text-primary block mt-0.5'>
-                {formatPrice(confirmedOrder?.amount || product.price)}
-              </strong>
-            </div>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              onClick={() => handleCopy(String(confirmedOrder?.amount || product.price), 'AMOUNT')}
-              className={cn(
-                'h-8 px-3 rounded-xl text-[11px] font-bold gap-1.5 shrink-0 whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-2xs',
-                copiedField === 'AMOUNT' &&
-                  'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
-              )}
-            >
-              {copiedField === 'AMOUNT' ? (
-                <>
-                  <Check className='w-3.5 h-3.5 text-emerald-600 shrink-0' />
-                  <span className='whitespace-nowrap'>Đã chép</span>
-                </>
-              ) : (
-                <>
-                  <Copy className='w-3.5 h-3.5 text-muted-foreground shrink-0' />
-                  <span className='whitespace-nowrap'>Sao chép</span>
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Nội dung chuyển khoản */}
-          <div className='p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2.5 shadow-2xs'>
-            <div className='space-y-0.5 min-w-0 flex-1'>
-              <div className='flex items-center gap-1.5 flex-nowrap'>
-                <span className='text-amber-900 dark:text-amber-300 text-[11px] font-bold whitespace-nowrap block'>
-                  Nội dung CK:
-                </span>
-                <Badge
-                  variant='outline'
-                  className='bg-amber-500/20 text-amber-900 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0'
-                >
-                  Bắt buộc
-                </Badge>
-              </div>
-              <strong className='font-mono text-sm sm:text-base font-black text-amber-950 dark:text-amber-200 block tracking-wider mt-0.5'>
-                {confirmedOrder?.orderCode || orderCode}
-              </strong>
             </div>
             <Button
               type='button'
               size='sm'
-              onClick={() => handleCopy(confirmedOrder?.orderCode || orderCode, 'CODE')}
-              className={cn(
-                'h-8 px-3.5 rounded-xl text-xs font-bold gap-1.5 shrink-0 whitespace-nowrap cursor-pointer transition-all active:scale-95 shadow-xs',
-                copiedField === 'CODE'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold'
-              )}
+              onClick={() => setIsPaymentPopupOpen(true)}
+              className='h-8 px-3 rounded-xl bg-[#FE2C55] hover:bg-[#E0264B] text-white text-xs font-bold gap-1.5 shrink-0 shadow-2xs cursor-pointer'
             >
-              {copiedField === 'CODE' ? (
-                <>
-                  <Check className='w-4 h-4 shrink-0' />
-                  <span className='whitespace-nowrap'>Đã chép</span>
-                </>
-              ) : (
-                <>
-                  <Copy className='w-4 h-4 shrink-0' />
-                  <span className='whitespace-nowrap'>Sao chép</span>
-                </>
-              )}
+              <QrCode className='w-3.5 h-3.5' />
+              <span>Mở mã QR</span>
             </Button>
           </div>
-        </div>
+        )}
 
-        {/* Nút kiểm tra trạng thái tức thì */}
-        <div className='pt-2 space-y-2'>
-          <Button
-            type='button'
-            onClick={handleManualCheck}
-            disabled={loadingOrder}
-            className='w-full h-11 sm:h-12 rounded-2xl bg-primary hover:bg-primary/90 active:scale-[0.99] text-primary-foreground font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all'
-          >
-            {loadingOrder ? (
-              <>
-                <Loader2 className='w-4 h-4 animate-spin shrink-0' />
-                <span>Đang kiểm tra giao dịch...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className='w-4 h-4 shrink-0 text-white' />
-                <span>TÔI ĐÃ CHUYỂN KHOẢN XONG</span>
-              </>
-            )}
-          </Button>
-          <p className='text-[10px] text-muted-foreground text-center'>
-            Hệ thống tự động lắng nghe biến động 24/7 và duyệt đơn trong 3 giây.
-          </p>
-        </div>
+        {/* Thông tin form checkout luôn giữ nguyên như cũ */}
+        <CheckoutDrawerStep1
+          product={product}
+          onSubmit={handleStep1Submit}
+          loading={createOrderMutation.isPending}
+          submitButtonText={product.buttonText}
+          initialValues={{
+            fullName: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            shippingAddress: shippingAddress,
+            shippingNote: customerNote
+          }}
+        />
       </div>
     );
   };
@@ -1060,7 +548,7 @@ export function ProductDetailView({
   // =========================================================================
   if (isSimulator) {
     return (
-      <div className='w-full bg-background text-foreground font-sans antialiased px-3.5 py-3 text-xs flex flex-col min-h-full space-y-4'>
+      <div className='relative w-full bg-background text-foreground font-sans antialiased px-3.5 py-3 text-xs flex flex-col min-h-full space-y-4'>
         {/* Top Header */}
         <div className='flex items-center justify-between py-1 border-b border-border/60'>
           <Button
@@ -1126,6 +614,20 @@ export function ProductDetailView({
 
         {/* Khối QR Thanh toán trực tiếp theo quy trình 2 bước */}
         <div className='pt-2 border-t border-border/60'>{renderPaymentSection()}</div>
+
+        {/* VietQR Payment Popup trong Simulator */}
+        <VietQrPaymentPopup
+          isOpen={isPaymentPopupOpen}
+          onClose={() => setIsPaymentPopupOpen(false)}
+          order={confirmedOrder}
+          product={product}
+          paymentConfig={paymentConfig}
+          isSimulator={true}
+          onPaymentSuccess={(order) => {
+            setConfirmedOrder(order);
+            setStep('SUCCESS');
+          }}
+        />
       </div>
     );
   }
@@ -1339,6 +841,20 @@ export function ProductDetailView({
           </div>
         </div>
       </div>
+
+      {/* VietQR Payment Popup chuẩn Web Modal */}
+      <VietQrPaymentPopup
+        isOpen={isPaymentPopupOpen}
+        onClose={() => setIsPaymentPopupOpen(false)}
+        order={confirmedOrder}
+        product={product}
+        paymentConfig={paymentConfig}
+        isSimulator={false}
+        onPaymentSuccess={(order) => {
+          setConfirmedOrder(order);
+          setStep('SUCCESS');
+        }}
+      />
     </div>
   );
 }

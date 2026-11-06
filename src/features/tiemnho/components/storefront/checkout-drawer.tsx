@@ -18,6 +18,7 @@ import { Sparkles, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product, PaymentConfig, Order } from '@/constants/mock-tiemnho';
 import { generateVietQrUrl } from '@/constants/mock-tiemnho';
+import { CheckoutDrawerStep1, CheckoutStep1Values } from './CheckoutDrawerStep1';
 import Image from 'next/image';
 
 interface CheckoutDrawerProps {
@@ -120,6 +121,42 @@ export function CheckoutDrawer({
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const handleStep1Submit = async (values: CheckoutStep1Values) => {
+    setName(values.fullName);
+    setEmail(values.email || '');
+    if (values.phone) setPhone(values.phone);
+    if (values.shippingAddress) setAddress(values.shippingAddress);
+    if (values.shippingNote) setNote(values.shippingNote);
+
+    setLoading(true);
+
+    try {
+      const { createOrder } = await import('@/features/tiemnho/api/service');
+      const order = await createOrder({
+        productId: product.id,
+        customerName: values.fullName.trim(),
+        customerEmail: values.email?.trim() || `${values.phone?.trim() || 'customer'}@tiemnho.vn`,
+        customerPhone: values.phone?.trim() || '',
+        shippingAddress: isPhysical ? values.shippingAddress?.trim() : undefined,
+        customerNote: values.shippingNote?.trim() || undefined
+      });
+
+      setCurrentOrder(order);
+
+      if (isFree) {
+        setStep('SUCCESS');
+        toast.success('Đã mở khóa tài liệu thành công!');
+        if (onOrderCompleted) onOrderCompleted(order);
+      } else {
+        setStep('VIETQR');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Có lỗi xảy ra khi tạo đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -207,152 +244,62 @@ export function CheckoutDrawer({
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className='mx-auto max-w-md max-h-[92vh] overflow-hidden flex flex-col rounded-t-3xl border-t border-border bg-card shadow-2xl'>
-        {/* Header Summary */}
-        <DrawerHeader className='border-b border-border/60 pb-3 pt-4 px-5 text-left'>
-          <div className='flex items-start gap-3'>
-            <div className='relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-muted shadow-xs'>
-              <img
-                src={product.coverImage}
-                alt={product.title}
-                className='h-full w-full object-cover'
-              />
-            </div>
-            <div className='flex-1 min-w-0'>
-              <div className='flex items-center gap-1.5 mb-1'>
-                <Badge
-                  variant='secondary'
-                  className='text-[10px] font-semibold tracking-wider uppercase px-2 py-0'
-                >
-                  {product.type === 'DIGITAL' && 'Tài liệu số'}
-                  {product.type === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
-                  {product.type === 'PHYSICAL' && 'Hàng đặt trước / Thủ công'}
-                  {product.type === 'EXTERNAL_LINK' && 'Liên kết'}
-                </Badge>
-                {product.originalPrice && product.originalPrice > product.price && (
-                  <span className='text-[11px] text-muted-foreground line-through'>
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
+        {/* Header Summary (cho bước VietQR và Hoàn tất) */}
+        {step !== 'FORM' && (
+          <DrawerHeader className='border-b border-border/60 pb-3 pt-4 px-5 text-left'>
+            <div className='flex items-start gap-3'>
+              <div className='relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-muted shadow-xs'>
+                <img
+                  src={product.coverImage}
+                  alt={product.title}
+                  className='h-full w-full object-cover'
+                />
               </div>
-              <DrawerTitle className='line-clamp-1 text-base font-semibold leading-tight text-foreground'>
-                {product.title}
-              </DrawerTitle>
-              <DrawerDescription className='text-xs font-semibold text-primary mt-0.5'>
-                {formatPrice(product.price)}
-              </DrawerDescription>
+              <div className='flex-1 min-w-0'>
+                <div className='flex items-center gap-1.5 mb-1'>
+                  <Badge
+                    variant='secondary'
+                    className='text-[10px] font-semibold tracking-wider uppercase px-2 py-0'
+                  >
+                    {product.type === 'DIGITAL' && 'Tài liệu số'}
+                    {product.type === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
+                    {product.type === 'PHYSICAL' && 'Hàng đặt trước / Thủ công'}
+                    {product.type === 'EXTERNAL_LINK' && 'Liên kết'}
+                  </Badge>
+                  {product.originalPrice && product.originalPrice > product.price && (
+                    <span className='text-[11px] text-muted-foreground line-through'>
+                      {formatPrice(product.originalPrice)}
+                    </span>
+                  )}
+                </div>
+                <DrawerTitle className='line-clamp-1 text-base font-semibold leading-tight text-foreground'>
+                  {product.title}
+                </DrawerTitle>
+                <DrawerDescription className='text-xs font-semibold text-primary mt-0.5'>
+                  {formatPrice(product.price)}
+                </DrawerDescription>
+              </div>
             </div>
-          </div>
-        </DrawerHeader>
+          </DrawerHeader>
+        )}
 
         {/* Content Body */}
         <div className='flex-1 overflow-y-auto px-5 py-4 space-y-4'>
           {/* STEP 1: FORM */}
           {step === 'FORM' && (
-            <form id='checkout-form' onSubmit={handleSubmitForm} className='space-y-3.5'>
-              {/* Thông báo thời gian làm hàng nếu có */}
-              {isPhysical && product.estimatedFulfillment && (
-                <div className='rounded-xl bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2'>
-                  <Icons.clock className='h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400' />
-                  <span>
-                    Thời gian làm hàng: <strong>{product.estimatedFulfillment}</strong>
-                  </span>
-                </div>
-              )}
-
-              {/* fullName (Bắt buộc) */}
-              <div className='space-y-1.5'>
-                <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                  <span>Họ và tên người nhận</span>
-                  <span className='text-[10px] text-destructive font-semibold'>Bắt buộc</span>
-                </label>
-                <Input
-                  placeholder='VD: Nguyễn Văn A'
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className='h-10 text-sm rounded-xl'
-                  required
-                />
-              </div>
-
-              {/* phone (Bắt buộc) */}
-              <div className='space-y-1.5'>
-                <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                  <span>Số điện thoại nhận hàng</span>
-                  <span className='text-[10px] text-destructive font-semibold'>Bắt buộc</span>
-                </label>
-                <Input
-                  type='tel'
-                  placeholder='Số điện thoại để bưu tá liên hệ giao hàng (VD: 0912345678)'
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className='h-10 text-sm rounded-xl'
-                  required
-                />
-              </div>
-
-              {/* email (Tùy chọn/Khuyến khích đối với Physical, Bắt buộc đối với Digital/LeadMagnet) */}
-              <div className='space-y-1.5'>
-                <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                  <span>Địa chỉ Email</span>
-                  <span className='text-[10px] text-muted-foreground'>
-                    {isPhysical ? 'Khuyến khích (để nhận biên nhận)' : 'Bắt buộc'}
-                  </span>
-                </label>
-                <Input
-                  type='email'
-                  placeholder='VD: email@gmail.com'
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className='h-10 text-sm rounded-xl'
-                  required={!isPhysical}
-                />
-                <p className='text-[11px] text-muted-foreground'>
-                  {isPhysical
-                    ? 'Để nhận email xác nhận đơn hàng và biên nhận chuyển khoản VietQR.'
-                    : 'Đường dẫn tải tài nguyên sẽ được gửi tự động về email này sau khi hoàn tất.'}
-                </p>
-              </div>
-
-              {/* shippingAddress (Bắt buộc - 1 ô Text) & customNote (Tùy chọn) */}
-              {isPhysical && (
-                <>
-                  <div className='space-y-1.5'>
-                    <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                      <span>Địa chỉ giao hàng</span>
-                      <span className='text-[10px] text-destructive font-semibold'>Bắt buộc</span>
-                    </label>
-                    <Textarea
-                      placeholder='Số nhà, tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố'
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      className='min-h-[72px] text-sm rounded-xl resize-none'
-                      required
-                    />
-                  </div>
-
-                  <div className='space-y-1.5'>
-                    <label className='text-xs font-medium text-foreground flex items-center justify-between'>
-                      <span>Ghi chú đơn hàng</span>
-                      <span className='text-[10px] text-muted-foreground'>Tùy chọn</span>
-                    </label>
-                    <Input
-                      placeholder='Ghi chú size/màu hoặc yêu cầu khắc tên/lời chúc...'
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      className='h-10 text-sm rounded-xl'
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Security Banner */}
-              <div className='rounded-xl bg-muted/60 p-3 text-[11px] text-muted-foreground flex items-center gap-2 border border-border/40'>
-                <Icons.lock className='h-4 w-4 text-emerald-500 shrink-0' />
-                <span>
-                  Thanh toán an toàn 100% qua Napas 247 VietQR. Tiền về thẳng tài khoản Creator.
-                </span>
-              </div>
-            </form>
+            <CheckoutDrawerStep1
+              product={product}
+              onSubmit={handleStep1Submit}
+              loading={loading}
+              submitButtonText={product.buttonText}
+              initialValues={{
+                fullName: name,
+                email: email,
+                phone: phone,
+                shippingAddress: address,
+                shippingNote: note
+              }}
+            />
           )}
 
           {/* STEP 2: VIETQR */}
@@ -549,74 +496,41 @@ export function CheckoutDrawer({
           )}
         </div>
 
-        {/* Footer Actions */}
-        <DrawerFooter className='border-t border-border/60 pt-3 pb-5 px-5'>
-          {step === 'FORM' && (
-            <div className='flex gap-2.5'>
+        {/* Footer Actions (cho Bước VietQR & Hoàn tất) */}
+        {step !== 'FORM' && (
+          <DrawerFooter className='border-t border-border/60 pt-3 pb-5 px-5'>
+            {step === 'VIETQR' && (
+              <div className='flex gap-2.5'>
+                <Button
+                  variant='outline'
+                  className='flex-1 h-11 rounded-xl text-xs font-medium'
+                  onClick={() => setStep('FORM')}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  variant='default'
+                  className='flex-2 h-11 rounded-xl text-xs font-semibold gap-1.5 shadow-sm'
+                  onClick={() => {
+                    toast.info('Hệ thống đang kiểm tra tự động biến động số dư...');
+                  }}
+                >
+                  <Icons.refresh className='h-3.5 w-3.5 animate-spin' />
+                  Tôi đã chuyển khoản
+                </Button>
+              </div>
+            )}
+
+            {step === 'SUCCESS' && (
               <Button
-                variant='outline'
-                className='flex-1 h-11 rounded-xl text-sm'
+                className='w-full h-11 rounded-xl text-sm font-semibold shadow-sm'
                 onClick={onClose}
               >
-                Hủy
+                Hoàn tất & Đóng
               </Button>
-              <Button
-                type='submit'
-                form='checkout-form'
-                disabled={loading}
-                className='flex-2 h-11 rounded-xl text-sm font-semibold gap-1.5 shadow-sm'
-              >
-                {loading ? (
-                  <>
-                    <Icons.toastLoading className='h-4 w-4 animate-spin' />
-                    Đang xử lý...
-                  </>
-                ) : isFree ? (
-                  <>
-                    <Icons.gift className='h-4 w-4' />
-                    Nhận tài liệu ngay (0đ)
-                  </>
-                ) : (
-                  <>
-                    <Icons.qrcode className='h-4 w-4' />
-                    Tiếp tục quét VietQR ({formatPrice(product.price)})
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {step === 'VIETQR' && (
-            <div className='flex gap-2.5'>
-              <Button
-                variant='outline'
-                className='flex-1 h-11 rounded-xl text-xs font-medium'
-                onClick={() => setStep('FORM')}
-              >
-                Quay lại
-              </Button>
-              <Button
-                variant='default'
-                className='flex-2 h-11 rounded-xl text-xs font-semibold gap-1.5 shadow-sm'
-                onClick={() => {
-                  toast.info('Hệ thống đang kiểm tra tự động biến động số dư...');
-                }}
-              >
-                <Icons.refresh className='h-3.5 w-3.5 animate-spin' />
-                Tôi đã chuyển khoản
-              </Button>
-            </div>
-          )}
-
-          {step === 'SUCCESS' && (
-            <Button
-              className='w-full h-11 rounded-xl text-sm font-semibold shadow-sm'
-              onClick={onClose}
-            >
-              Hoàn tất & Đóng
-            </Button>
-          )}
-        </DrawerFooter>
+            )}
+          </DrawerFooter>
+        )}
       </DrawerContent>
     </Drawer>
   );

@@ -1,5 +1,10 @@
 import { Metadata } from 'next';
-import { getProfile, getProducts, getPaymentConfig } from '@/features/tiemnho/api/service';
+import {
+  getProfile,
+  getProfileByUsername,
+  getProducts,
+  getPaymentConfig
+} from '@/features/tiemnho/api/service';
 import { ResponsiveStorefrontView } from '@/features/tiemnho/components/storefront/responsive-storefront-view';
 
 interface StorefrontPageProps {
@@ -9,7 +14,7 @@ interface StorefrontPageProps {
 export async function generateMetadata({ params }: StorefrontPageProps): Promise<Metadata> {
   const { username } = await params;
   const cleanUsername = decodeURIComponent(username).replace(/^@/, '');
-  const profile = await getProfile();
+  const profile = (await getProfileByUsername(cleanUsername)) || (await getProfile());
 
   if (profile.username !== cleanUsername && cleanUsername !== 'giangdinh') {
     return { title: 'Không tìm thấy gian hàng | Tiệm Nhỏ' };
@@ -32,7 +37,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const cleanUsername = decoded.replace(/^@/, '');
 
   const [profile, products, paymentConfig] = await Promise.all([
-    getProfile(),
+    (async () => (await getProfileByUsername(cleanUsername)) || (await getProfile()))(),
     getProducts({ publishedOnly: true }),
     getPaymentConfig()
   ]);

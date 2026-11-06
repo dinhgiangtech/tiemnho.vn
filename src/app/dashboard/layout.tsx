@@ -5,7 +5,9 @@ import { BottomNavBar } from '@/components/layout/bottom-nav-bar';
 import { InfoSidebar } from '@/components/layout/info-sidebar';
 import { InfobarProvider } from '@/components/ui/infobar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
@@ -19,8 +21,27 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  // Gate the whole /dashboard segment: redirect to sign-in when signed out.
-  await auth.protect();
+  // Gate the whole /dashboard segment: redirect to login when signed out.
+  const session = await getSession();
+  if (!session) {
+    redirect('/login');
+  }
+
+  // Kiểm tra Creator đã hoàn tất Onboarding (có tiệm trong CSDL) chưa
+  const userRecord = await prisma.user.findUnique({
+    where: { id: session.userId }
+  });
+
+  const profile = await prisma.creatorProfile.findFirst({
+    where: {
+      OR: [{ userId: session.userId }, { clerkUserId: session.userId }]
+    }
+  });
+
+  if ((!userRecord || !userRecord.username) && (!profile || !profile.username)) {
+    redirect('/onboarding');
+  }
+
   // Persisting the sidebar state in the cookie.
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get('sidebar_state')?.value === 'true';

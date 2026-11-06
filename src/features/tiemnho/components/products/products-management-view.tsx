@@ -390,48 +390,7 @@ export function ProductsManagementView() {
 
         {/* CỘT PHẢI (Khung giả lập điện thoại - Live Mobile Preview - Chỉ hiển thị trên Desktop >= md) */}
         <div className='hidden md:block lg:col-span-5 xl:col-span-5 lg:sticky lg:top-6'>
-          <div className='rounded-3xl border border-border bg-card/60 p-5 shadow-xs backdrop-blur-md space-y-4'>
-            {/* Preview Toolbar */}
-            <div className='flex items-center justify-between pb-2 border-b border-border/60'>
-              <div className='flex items-center gap-2'>
-                <div className='flex items-center gap-1.5'>
-                  <span className='relative flex h-2 w-2'>
-                    <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75'></span>
-                    <span className='relative inline-flex rounded-full h-2 w-2 bg-emerald-500'></span>
-                  </span>
-                  <span className='text-xs font-bold text-foreground'>Xem trước tiệm</span>
-                </div>
-                <Badge variant='outline' className='text-[9px] px-1.5 py-0'>
-                  Trực tiếp
-                </Badge>
-              </div>
-
-              <div className='flex items-center gap-1.5'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={handleCopyBioLink}
-                  className='h-7 px-2 text-[11px] rounded-lg gap-1 cursor-pointer'
-                  title='Sao chép link tiệm của bạn'
-                >
-                  <Icons.copy className='h-3 w-3' />
-                  Sao chép link
-                </Button>
-                {profile && (
-                  <a
-                    href={`/@${profile.username}`}
-                    target='_blank'
-                    rel='noreferrer'
-                    className='h-7 px-2 text-[11px] rounded-lg inline-flex items-center gap-1 border border-border hover:bg-muted font-medium'
-                    title='Xem tiệm thực tế'
-                  >
-                    <Icons.externalLink className='h-3 w-3' />
-                    Ghé tiệm
-                  </a>
-                )}
-              </div>
-            </div>
-
+          <div className='rounded-3xl border border-border/80 bg-card/40 p-4 shadow-xs backdrop-blur-md flex flex-col items-center'>
             {/* Mobile / Desktop Simulator */}
             {profile && paymentConfig && (
               <LivePreviewContainer

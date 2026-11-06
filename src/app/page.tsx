@@ -5,8 +5,7 @@ import { Icons } from '@/components/icons';
 import { Logo } from '@/components/common/logo';
 import { getProfile, getProducts, getPaymentConfig } from '@/features/tiemnho/api/service';
 import { PhoneMockup } from '@/features/tiemnho/components/mobile-preview/phone-mockup';
-import { auth } from '@clerk/nextjs/server';
-import { UserButton } from '@clerk/nextjs';
+import { getSession } from '@/lib/auth';
 
 export const metadata = {
   title: 'Tiệm Nhỏ (TiemNho.vn) - Nền tảng Bán Hàng & Nhận Tiền Cho Creator Việt Nam',
@@ -15,7 +14,8 @@ export const metadata = {
 };
 
 export default async function LandingPage() {
-  const { userId } = await auth();
+  const session = await getSession();
+  const userId = session?.userId;
   const [profile, products, paymentConfig] = await Promise.all([
     getProfile(),
     getProducts(),
@@ -66,7 +66,11 @@ export default async function LandingPage() {
                     Vào Dashboard
                   </Button>
                 </Link>
-                <UserButton />
+                <Link href='/login'>
+                  <Button variant='outline' size='sm' className='rounded-xl font-semibold'>
+                    Tài khoản
+                  </Button>
+                </Link>
               </div>
             ) : (
               <>
@@ -118,7 +122,7 @@ export default async function LandingPage() {
 
           {/* CTAs */}
           <div className='flex flex-col sm:flex-row items-center justify-center gap-3 pt-4'>
-            <Link href={userId ? '/dashboard/overview' : '/auth/sign-up'}>
+            <Link href={userId ? '/dashboard/products' : '/onboarding'}>
               <Button
                 size='lg'
                 className='w-full sm:w-auto h-12 px-7 rounded-2xl text-sm font-bold shadow-md bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 gap-2 cursor-pointer'

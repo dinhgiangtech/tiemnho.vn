@@ -26,7 +26,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { Icons } from '@/components/icons';
 import { Logo } from '@/components/common/logo';
-import { useClerk } from '@clerk/nextjs';
+import { useQuery } from '@tanstack/react-query';
+import { profileQueryOptions } from '@/features/tiemnho/api/queries';
+import { logoutAction } from '@/app/actions/auth-actions';
 import {
   Store,
   ShoppingBag,
@@ -54,7 +56,12 @@ const NAV_ICON_MAP: Record<
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { signOut } = useClerk();
+  const { data: profile } = useQuery(profileQueryOptions());
+
+  const displayName = profile?.displayName || 'Chủ Tiệm';
+  const username = profile?.username || 'tiemnho';
+  const avatarUrl = profile?.avatarUrl || '/default-avatar.svg';
+  const shopUrl = `/@${username}`;
 
   // Kiểm tra trạng thái active chính xác theo route
   const checkIsActive = (url: string) => {
@@ -139,7 +146,7 @@ export default function AppSidebar() {
       <SidebarFooter className='border-t border-sidebar-border/70 p-3 space-y-2'>
         {/* Nút Ghé tiệm công khai */}
         <a
-          href='/@giangdinh'
+          href={shopUrl}
           target='_blank'
           rel='noreferrer'
           className='group/public flex items-center justify-between w-full px-3 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 transition-colors text-xs font-semibold'
@@ -147,7 +154,7 @@ export default function AppSidebar() {
         >
           <div className='flex items-center gap-2 truncate'>
             <Icons.world className='w-4 h-4 text-neutral-500 shrink-0' />
-            <span className='truncate'>Ghé tiệm (@giangdinh)</span>
+            <span className='truncate'>Ghé tiệm (@{username})</span>
           </div>
           <ArrowUpRight className='w-3.5 h-3.5 text-neutral-400 group-hover/public:translate-x-0.5 group-hover/public:-translate-y-0.5 transition-transform shrink-0' />
         </a>
@@ -165,15 +172,11 @@ export default function AppSidebar() {
                 }
               >
                 <div className='h-8 w-8 rounded-full overflow-hidden shrink-0 border border-border bg-neutral-100'>
-                  <img
-                    src='/default-avatar.svg'
-                    alt='Giang Định'
-                    className='h-full w-full object-cover'
-                  />
+                  <img src={avatarUrl} alt={displayName} className='h-full w-full object-cover' />
                 </div>
                 <div className='flex flex-col min-w-0 text-left flex-1'>
                   <span className='truncate text-xs font-bold text-sidebar-foreground'>
-                    Giang Định
+                    {displayName}
                   </span>
                   <span className='truncate text-[10px] text-emerald-500 font-semibold'>
                     ● VietQR Hoạt động
@@ -192,23 +195,23 @@ export default function AppSidebar() {
                     <div className='flex items-center gap-2.5'>
                       <div className='h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border'>
                         <img
-                          src='/default-avatar.svg'
-                          alt='Giang Định'
+                          src={avatarUrl}
+                          alt={displayName}
                           className='h-full w-full object-cover'
                         />
                       </div>
                       <div className='flex flex-col min-w-0'>
-                        <span className='font-bold text-xs text-foreground'>Giang Định</span>
-                        <span className='text-[11px] text-muted-foreground'>@giangdinh</span>
+                        <span className='font-bold text-xs text-foreground'>{displayName}</span>
+                        <span className='text-[11px] text-muted-foreground'>@{username}</span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => window.open('/@giangdinh', '_blank')}>
+                  <DropdownMenuItem onClick={() => window.open(shopUrl, '_blank')}>
                     <Icons.externalLink className='mr-2 h-4 w-4 text-primary' />
-                    Ghé tiệm (@giangdinh)
+                    Ghé tiệm (@{username})
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/dashboard/settings/storefront')}>
                     <Icons.palette className='mr-2 h-4 w-4' />
@@ -226,7 +229,7 @@ export default function AppSidebar() {
                     Trang chủ Tiệm Nhỏ
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => signOut({ redirectUrl: '/' })}
+                    onClick={() => logoutAction()}
                     className='text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer font-semibold'
                   >
                     <Icons.logout className='mr-2 h-4 w-4' />

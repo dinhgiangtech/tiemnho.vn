@@ -40,7 +40,7 @@ export function PhoneMockup({
   if (deviceMode === 'desktop') {
     return (
       <div className={`relative mx-auto flex justify-center select-none w-full ${className || ''}`}>
-        <div className='relative w-full max-w-[460px] xl:max-w-[500px] h-[690px] rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-card shadow-[0_20px_50px_-10px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col'>
+        <div className='relative w-full max-w-[460px] xl:max-w-[500px] h-[690px] rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-card shadow-[0_20px_50px_-10px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col [transform:translateZ(0)]'>
           {/* Browser Header Bar */}
           <div className='h-9 bg-neutral-100 dark:bg-neutral-800 px-3.5 flex items-center gap-2 border-b border-neutral-200 dark:border-neutral-700 shrink-0'>
             {/* 3 nút macOS */}
@@ -107,36 +107,21 @@ export function PhoneMockup({
   }
 
   // =========================================================================
-  // 2. CHẾ ĐỘ ĐIỆN THOẠI (MINIMAL SLIM PHONE MOCKUP)
+  // 2. CHẾ ĐỘ ĐIỆN THOẠI (COMPACT CUTE PHONE MOCKUP CHUẨN STAN STORE)
   // =========================================================================
   return (
     <div className={`relative mx-auto flex justify-center select-none ${className || ''}`}>
-      {/* Khung điện thoại thanh mảnh tối giản */}
-      <div className='relative w-[320px] sm:w-[340px] xl:w-[350px] h-[690px] rounded-[40px] p-2 bg-neutral-900 border-[2.5px] border-neutral-700/80 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.35)]'>
-        {/* Hai gờ nút bấm vật lý tinh gọn ở cạnh sườn trái */}
-        <div className='absolute -left-[3.5px] top-[100px] h-8 w-[2.5px] rounded-l-xs bg-neutral-600' />
-        <div className='absolute -left-[3.5px] top-[145px] h-8 w-[2.5px] rounded-l-xs bg-neutral-600' />
+      {/* Khung điện thoại nhỏ xinh tỷ lệ chuẩn */}
+      <div className='relative w-[285px] h-[570px] rounded-[42px] border-[3.5px] border-black bg-black shadow-[0_20px_50px_-10px_rgba(0,0,0,0.3)] transition-all duration-300'>
+        {/* Nút vật lý sườn trái */}
+        <div className='absolute -left-[3px] top-[100px] h-6 w-[2.5px] rounded-l-xs bg-black' />
+        <div className='absolute -left-[3px] top-[134px] h-6 w-[2.5px] rounded-l-xs bg-black' />
 
-        {/* Một gờ nút nguồn tinh gọn ở cạnh sườn phải */}
-        <div className='absolute -right-[3.5px] top-[120px] h-12 w-[2.5px] rounded-r-xs bg-neutral-600' />
+        {/* Nút nguồn sườn phải */}
+        <div className='absolute -right-[3px] top-[115px] h-10 w-[2.5px] rounded-r-xs bg-black' />
 
-        {/* Màn hình hiển thị bên trong */}
-        <div className='relative h-full w-full overflow-hidden rounded-[32px] bg-background border border-neutral-200/50 dark:border-neutral-800/80 flex flex-col'>
-          {/* Thanh trạng thái tối giản (Không có Dynamic Island to dày) */}
-          <div className='relative z-30 flex h-7 w-full shrink-0 items-center justify-between px-5 pt-1.5 text-[11px] font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-card'>
-            <span>9:41</span>
-            {/* Chấm camera nhỏ xíu tinh tế thay thế Dynamic Island cồng kềnh */}
-            <div className='w-2 h-2 rounded-full bg-neutral-700 dark:bg-neutral-600 shadow-2xs' />
-            <div className='flex items-center gap-1.5'>
-              <svg className='h-3 w-3 fill-current' viewBox='0 0 24 24'>
-                <path d='M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z' />
-              </svg>
-              <div className='h-2.5 w-5 rounded-xs border border-current p-0.5'>
-                <div className='h-full w-full rounded-2xs bg-current' />
-              </div>
-            </div>
-          </div>
-
+        {/* Màn hình hiển thị tinh gọn bên trong */}
+        <div className='relative h-full w-full overflow-hidden rounded-[38px] bg-white flex flex-col [transform:translateZ(0)]'>
           {/* Interactive Screen Scroll Container */}
           <div className='flex-1 overflow-y-auto overscroll-contain scrollbar-none'>
             {previewView === 'detail' && currentProduct ? (
@@ -155,11 +140,6 @@ export function PhoneMockup({
                 previewMode='mobile'
               />
             )}
-          </div>
-
-          {/* iOS Home Indicator Bar ở đáy */}
-          <div className='relative z-30 flex h-4 w-full shrink-0 items-center justify-center pb-1 bg-white dark:bg-card'>
-            <div className='h-1 w-24 rounded-full bg-neutral-300 dark:bg-neutral-700' />
           </div>
         </div>
       </div>

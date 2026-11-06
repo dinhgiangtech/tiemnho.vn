@@ -1,5 +1,6 @@
 'use server';
 
+import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureDatabaseSeeded } from '@/lib/seed';
 import type {
@@ -215,24 +216,59 @@ function formatPaymentConfig(pc: {
 
 export async function getProfile(): Promise<CreatorProfile> {
   await ensureDatabaseSeeded();
-  let profile = await prisma.creatorProfile.findFirst();
-  if (!profile) {
-    await ensureDatabaseSeeded();
-    profile = await prisma.creatorProfile.findFirst();
-  }
-  if (!profile) {
-    throw new Error('Creator profile could not be found or seeded.');
+
+  let currentUserId: string | null = null;
+  try {
+    const session = await getSession();
+    currentUserId = session?.userId || null;
+  } catch {
+    // Không có context auth (môi trường build hoặc public) -> an toàn bỏ qua
   }
 
-  // Tự động làm sạch dữ liệu cũ trong DB: chuyển ảnh Unsplash sang avatar mặc định Facebook
-  if (profile.avatarUrl && profile.avatarUrl.includes('photo-1534528741775-53994a69daeb')) {
-    await prisma.creatorProfile.update({
-      where: { id: profile.id },
-      data: { avatarUrl: '/default-avatar.svg' }
+  // 1. Nếu User đã đăng nhập -> Tìm hồ sơ của tài khoản này
+  if (currentUserId) {
+    const profile = await prisma.creatorProfile.findFirst({
+      where: {
+        OR: [{ userId: currentUserId }, { clerkUserId: currentUserId }]
+      }
     });
-    profile.avatarUrl = '/default-avatar.svg';
+
+    if (profile) {
+      return formatProfile(profile);
+    }
   }
 
+  // 2. Nếu khách vãng lai hoặc môi trường không có session: lấy profile đầu tiên trong CSDL
+  const fallback = await prisma.creatorProfile.findFirst();
+  if (fallback) {
+    return formatProfile(fallback);
+  }
+
+  // 3. Nếu CSDL hoàn toàn trống (chưa có ai mở tiệm): trả về cấu hình mẫu mặc định
+  return {
+    id: 'creator-preview',
+    username: 'tiemnho',
+    displayName: 'Tiệm Nhỏ Creator',
+    bio: 'Chào mừng bạn ghé Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số chất lượng cao.',
+    avatarUrl: '/default-avatar.svg',
+    coverUrl:
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
+    verified: true,
+    theme: 'obsidian',
+    socials: {}
+  };
+}
+
+export async function getProfileByUsername(username: string): Promise<CreatorProfile | null> {
+  await ensureDatabaseSeeded();
+  const cleanUsername = decodeURIComponent(username).replace(/^@/, '').trim();
+  const profile = await prisma.creatorProfile.findFirst({
+    where: {
+      OR: [{ username: cleanUsername }, { username: cleanUsername.toLowerCase() }]
+    }
+  });
+
+  if (!profile) return null;
   return formatProfile(profile);
 }
 
@@ -362,7 +398,7 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function createProduct(data: CreateProductInput): Promise<Product> {
-  await ensureDatabaseSeeded();
+  const profile = await getProfile();
   const maxOrder = await prisma.product.aggregate({
     _max: { displayOrder: true }
   });
@@ -370,7 +406,7 @@ export async function createProduct(data: CreateProductInput): Promise<Product> 
 
   const created = await prisma.product.create({
     data: {
-      creatorId: 'creator-giangdinh',
+      creatorId: profile.id,
       type: data.type,
       title: data.title,
       subtitle: data.subtitle,

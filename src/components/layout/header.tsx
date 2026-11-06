@@ -10,7 +10,7 @@ import { ThemeSelector } from '../themes/theme-selector';
 import { ThemeModeToggle } from '../themes/theme-mode-toggle';
 import CtaGithub from './cta-github';
 import { NotificationCenter } from '@/features/notifications/components/notification-center';
-import { UserButton } from '@clerk/nextjs';
+import { UserNav } from './user-nav';
 import { Logo } from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -78,7 +78,7 @@ export default function Header() {
           <ThemeSelector />
         </div>
         <NotificationCenter />
-        <UserButton />
+        <UserNav />
       </div>
     </header>
   );

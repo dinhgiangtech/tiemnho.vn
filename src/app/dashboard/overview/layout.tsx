@@ -50,7 +50,7 @@ export default function OverViewLayout({
           <div className='space-y-1'>
             <div className='flex items-center gap-2'>
               <h2 className='text-xl sm:text-2xl font-bold tracking-tight text-foreground'>
-                Xin chào, Giang Định 👋
+                Xin chào, Giang Định
               </h2>
               <Badge variant='default' className='text-[10px] uppercase font-bold tracking-wider'>
                 0% Hoa hồng
