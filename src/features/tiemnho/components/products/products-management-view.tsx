@@ -25,14 +25,14 @@ import {
   defaultCreatorProfile,
   defaultPaymentConfig
 } from '@/constants/mock-tiemnho';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  getProducts,
-  updateProduct,
-  deleteProduct,
-  reorderProducts,
-  getProfile,
-  getPaymentConfig
-} from '../../api/service';
+  tiemNhoKeys,
+  productsQueryOptions,
+  profileQueryOptions,
+  paymentConfigQueryOptions
+} from '../../api/queries';
+import { updateProduct, deleteProduct, reorderProducts } from '../../api/service';
 import { SortableProductItem } from './sortable-product-item';
 import { ProductForm } from '@/components/dashboard/products/ProductForm';
 import { LivePreviewContainer } from '../mobile-preview/live-preview-container';
@@ -45,13 +45,68 @@ import { cn } from '@/lib/utils';
 
 export function ProductsManagementView() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  // TanStack React Query hooks
+  const { data: rawProducts = [], isLoading: loadingProducts } = useQuery(productsQueryOptions());
+  const { data: profile, isLoading: loadingProfile } = useQuery(profileQueryOptions());
+  const { data: paymentConfig, isLoading: loadingPayment } = useQuery(paymentConfigQueryOptions());
+
+  const loading = loadingProducts || loadingProfile || loadingPayment;
+
+  // Sắp xếp sản phẩm theo displayOrder
+  const sortedProducts = React.useMemo(() => {
+    return [...rawProducts].sort((a, b) => a.displayOrder - b.displayOrder);
+  }, [rawProducts]);
+
+  // Local state for optimistic drag & drop
   const [products, setProducts] = React.useState<Product[]>([]);
-  const [profile, setProfile] = React.useState<CreatorProfile | null>(null);
-  const [paymentConfig, setPaymentConfig] = React.useState<PaymentConfig | null>(null);
-  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setProducts(sortedProducts);
+  }, [sortedProducts]);
 
   // State sản phẩm đang chỉnh sửa
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+
+  // Mutations
+  const reorderMutation = useMutation({
+    mutationFn: (ids: string[]) => reorderProducts(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
+      toast.success('Đã cập nhật thứ tự hiển thị');
+    },
+    onError: () => {
+      toast.error('Không thể lưu thứ tự mới vào hệ thống');
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
+    }
+  });
+
+  const togglePublishMutation = useMutation({
+    mutationFn: ({ id, isPublished }: { id: string; isPublished: boolean }) =>
+      updateProduct(id, { isPublished }),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
+      toast.success(
+        updated.isPublished ? 'Đã bật hiển thị trên Storefront' : 'Đã ẩn sản phẩm khỏi Storefront'
+      );
+    },
+    onError: () => {
+      toast.error('Không thể cập nhật trạng thái hiển thị');
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
+      toast.success('Đã xóa sản phẩm thành công');
+    },
+    onError: () => {
+      toast.error('Lỗi khi xóa sản phẩm');
+    }
+  });
 
   // DnD Sensors
   const sensors = useSensors(
@@ -65,30 +120,8 @@ export function ProductsManagementView() {
     })
   );
 
-  const fetchData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const [prods, prof, pay] = await Promise.all([
-        getProducts(),
-        getProfile(),
-        getPaymentConfig()
-      ]);
-      setProducts(prods.sort((a, b) => a.displayOrder - b.displayOrder));
-      setProfile(prof);
-      setPaymentConfig(pay);
-    } catch {
-      toast.error('Lỗi khi tải dữ liệu sản phẩm');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   // Drag and Drop Reordering
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -102,38 +135,20 @@ export function ProductsManagementView() {
       }));
 
       setProducts(reordered);
-      toast.success('Đã cập nhật thứ tự hiển thị!');
-
-      try {
-        await reorderProducts(reordered.map((p) => p.id));
-      } catch {
-        toast.error('Không thể lưu thứ tự mới vào hệ thống');
-        fetchData();
-      }
+      reorderMutation.mutate(reordered.map((p) => p.id));
     }
   };
 
-  const handleTogglePublish = async (product: Product) => {
-    try {
-      const updated = await updateProduct(product.id, { isPublished: !product.isPublished });
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? updated : p)));
-      toast.success(
-        updated.isPublished ? 'Đã bật hiển thị trên Storefront' : 'Đã ẩn sản phẩm khỏi Storefront'
-      );
-    } catch {
-      toast.error('Không thể cập nhật trạng thái hiển thị');
-    }
+  const handleTogglePublish = (product: Product) => {
+    togglePublishMutation.mutate({
+      id: product.id,
+      isPublished: !product.isPublished
+    });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return;
-    try {
-      await deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-      toast.success('Đã xóa sản phẩm thành công');
-    } catch {
-      toast.error('Lỗi khi xóa sản phẩm');
-    }
+    deleteMutation.mutate(id);
   };
 
   const handleCopyBioLink = () => {
@@ -151,7 +166,7 @@ export function ProductsManagementView() {
 
     const handleSuccessEdit = () => {
       setEditingProduct(null);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
     };
 
     return (

@@ -1,11 +1,13 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
+import { useQuery } from '@tanstack/react-query';
+import { ordersQueryOptions } from '@/features/tiemnho/api/queries';
 
-const recentVietQrOrders = [
+const fallbackRecentOrders = [
   {
     name: 'Nguyễn Văn An',
     email: 'vanan.nguyen@gmail.com',
@@ -32,28 +34,38 @@ const recentVietQrOrders = [
     fallback: 'HN',
     amount: '+149.000 đ',
     status: 'PAID'
-  },
-  {
-    name: 'Phạm Minh Khoa',
-    email: 'khoa.pm@outlook.com',
-    product: 'Sổ Tay Lập Kế Hoạch 90 Ngày',
-    code: 'TN10826',
-    fallback: 'MK',
-    amount: '+189.000 đ',
-    status: 'PAID'
-  },
-  {
-    name: 'Võ Thanh Tùng',
-    email: 'tung.vo@startup.vn',
-    product: 'Ebook: 7 Bước Tạo Thu Nhập $1,000',
-    code: 'TN10820',
-    fallback: 'TT',
-    amount: '0 đ (Lead)',
-    status: 'LEAD'
   }
 ];
 
 export function RecentSales() {
+  const { data: realOrders = [] } = useQuery(ordersQueryOptions());
+
+  const displayOrders =
+    realOrders.length > 0
+      ? realOrders.slice(0, 5).map((o) => {
+          const initials =
+            o.customerName
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .slice(-2)
+              .toUpperCase() || 'KH';
+          const formattedAmount =
+            o.amount === 0
+              ? '0 đ (Quà tặng)'
+              : `+${new Intl.NumberFormat('vi-VN').format(o.amount)} đ`;
+          return {
+            name: o.customerName,
+            email: o.customerEmail,
+            product: o.productTitle,
+            code: o.orderCode,
+            fallback: initials,
+            amount: formattedAmount,
+            status: o.status
+          };
+        })
+      : fallbackRecentOrders;
+
   return (
     <Card className='h-full border border-border shadow-xs'>
       <CardHeader>
@@ -75,7 +87,7 @@ export function RecentSales() {
       </CardHeader>
       <CardContent>
         <div className='space-y-4'>
-          {recentVietQrOrders.map((sale, index) => (
+          {displayOrders.map((sale, index) => (
             <div
               key={index}
               className='flex items-center justify-between p-2 rounded-xl hover:bg-muted/50 transition-colors'

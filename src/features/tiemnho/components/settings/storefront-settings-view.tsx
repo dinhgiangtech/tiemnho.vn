@@ -11,7 +11,14 @@ import { uploadClientFile } from '@/lib/upload-client';
 import Link from 'next/link';
 import * as React from 'react';
 import { toast } from 'sonner';
-import { getPaymentConfig, getProducts, getProfile, updateProfile } from '../../api/service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  tiemNhoKeys,
+  profileQueryOptions,
+  productsQueryOptions,
+  paymentConfigQueryOptions
+} from '../../api/queries';
+import { updateProfile } from '../../api/service';
 import { PhoneMockup } from '../mobile-preview/phone-mockup';
 import { ImageCropModal } from './image-crop-modal';
 
@@ -55,11 +62,12 @@ const AVAILABLE_SOCIALS: SocialField[] = [
 ];
 
 export function StorefrontSettingsView() {
-  const [profile, setProfile] = React.useState<CreatorProfile | null>(null);
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [paymentConfig, setPaymentConfig] = React.useState<PaymentConfig | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
+  const queryClient = useQueryClient();
+  const { data: profile, isLoading: loadingProfile } = useQuery(profileQueryOptions());
+  const { data: products = [], isLoading: loadingProducts } = useQuery(productsQueryOptions());
+  const { data: paymentConfig, isLoading: loadingPayment } = useQuery(paymentConfigQueryOptions());
+
+  const loading = loadingProfile || loadingProducts || loadingPayment;
   const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
 
   // State cho Popup Crop ảnh đại diện
@@ -88,49 +96,45 @@ export function StorefrontSettingsView() {
   // Track which socials are active/visible in form (mặc định trống, chỉ thêm khi bấm nút)
   const [activeSocialKeys, setActiveSocialKeys] = React.useState<string[]>([]);
 
-  const fetchData = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const [prof, prods, pay] = await Promise.all([
-        getProfile(),
-        getProducts(),
-        getPaymentConfig()
-      ]);
-      setProfile(prof);
-      setProducts(prods);
-      setPaymentConfig(pay);
-
-      setDisplayName(prof.displayName);
-      setUsername(prof.username);
-      setBio(prof.bio);
-      setAvatarUrl(prof.avatarUrl);
-      setSelectedTheme(prof.theme || 'obsidian');
+  // Sync profile data to local form states when fetched
+  React.useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.displayName);
+      setUsername(profile.username);
+      setBio(profile.bio);
+      setAvatarUrl(profile.avatarUrl);
+      setSelectedTheme(profile.theme || 'obsidian');
 
       const s = {
-        tiktok: prof.socials.tiktok || '',
-        instagram: prof.socials.instagram || '',
-        youtube: prof.socials.youtube || '',
-        facebook: prof.socials.facebook || '',
-        zalo: prof.socials.zalo || '',
-        threads: prof.socials.threads || ''
+        tiktok: profile.socials.tiktok || '',
+        instagram: profile.socials.instagram || '',
+        youtube: profile.socials.youtube || '',
+        facebook: profile.socials.facebook || '',
+        zalo: profile.socials.zalo || '',
+        threads: profile.socials.threads || ''
       };
       setSocialsState(s);
 
-      // Chỉ kích hoạt các MXH thực sự có dữ liệu từ DB (không ép mặc định)
       const existing = (Object.keys(s) as Array<keyof typeof s>).filter((k) =>
         Boolean(s[k]?.trim())
       );
       setActiveSocialKeys(existing);
-    } catch {
-      toast.error('Lỗi khi tải thông tin hồ sơ');
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [profile]);
 
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.profile() });
+      toast.success('Đã lưu thông tin tài khoản & Tiệm thành công!');
+    },
+    onError: () => {
+      toast.error('Lỗi khi lưu thông tin hồ sơ');
+    }
+  });
+
+  const saving = updateProfileMutation.isPending;
 
   // Khi người dùng chọn file ảnh từ máy: đọc DataURL và mở popup Crop
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,37 +183,28 @@ export function StorefrontSettingsView() {
     setSocialsState((prev) => ({ ...prev, [key]: '' }));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim() || !username.trim()) {
       toast.error('Vui lòng nhập tên hiển thị và username');
       return;
     }
 
-    setSaving(true);
-    try {
-      const updated = await updateProfile({
-        displayName: displayName.trim(),
-        username: username.trim().toLowerCase(),
-        bio: bio.trim(),
-        avatarUrl: avatarUrl.trim(),
-        theme: selectedTheme,
-        socials: {
-          tiktok: activeSocialKeys.includes('tiktok') ? socialsState.tiktok?.trim() : '',
-          instagram: activeSocialKeys.includes('instagram') ? socialsState.instagram?.trim() : '',
-          youtube: activeSocialKeys.includes('youtube') ? socialsState.youtube?.trim() : '',
-          facebook: activeSocialKeys.includes('facebook') ? socialsState.facebook?.trim() : '',
-          zalo: activeSocialKeys.includes('zalo') ? socialsState.zalo?.trim() : '',
-          threads: activeSocialKeys.includes('threads') ? socialsState.threads?.trim() : ''
-        }
-      });
-      setProfile(updated);
-      toast.success('Đã lưu thông tin tài khoản & Tiệm thành công!');
-    } catch {
-      toast.error('Lỗi khi lưu thông tin hồ sơ');
-    } finally {
-      setSaving(false);
-    }
+    updateProfileMutation.mutate({
+      displayName: displayName.trim(),
+      username: username.trim().toLowerCase(),
+      bio: bio.trim(),
+      avatarUrl: avatarUrl.trim(),
+      theme: selectedTheme,
+      socials: {
+        tiktok: activeSocialKeys.includes('tiktok') ? socialsState.tiktok?.trim() : '',
+        instagram: activeSocialKeys.includes('instagram') ? socialsState.instagram?.trim() : '',
+        youtube: activeSocialKeys.includes('youtube') ? socialsState.youtube?.trim() : '',
+        facebook: activeSocialKeys.includes('facebook') ? socialsState.facebook?.trim() : '',
+        zalo: activeSocialKeys.includes('zalo') ? socialsState.zalo?.trim() : '',
+        threads: activeSocialKeys.includes('threads') ? socialsState.threads?.trim() : ''
+      }
+    });
   };
 
   // Preview profile based on active form edits

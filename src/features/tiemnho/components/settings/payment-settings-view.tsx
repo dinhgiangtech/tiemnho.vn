@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import { PaymentConfig, VIETNAMESE_BANKS } from '@/constants/mock-tiemnho';
-import { getPaymentConfig, updatePaymentConfig, pingTest } from '../../api/service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { tiemNhoKeys, paymentConfigQueryOptions } from '../../api/queries';
+import { updatePaymentConfig, pingTest } from '../../api/service';
 import {
   Card,
   CardHeader,
@@ -19,10 +21,8 @@ import { QrCode, Building2, CheckCircle2, Copy, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PaymentSettingsView() {
-  const [config, setConfig] = React.useState<PaymentConfig | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
-  const [pinging, setPinging] = React.useState(false);
+  const queryClient = useQueryClient();
+  const { data: config, isLoading: loading } = useQuery(paymentConfigQueryOptions());
 
   // Form states
   const [bankId, setBankId] = React.useState('MB');
@@ -39,29 +39,43 @@ export function PaymentSettingsView() {
     time: string;
   } | null>(null);
 
-  const fetchConfig = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getPaymentConfig();
-      setConfig(data);
-      setBankId(data.bankId);
-      setAccountNumber(data.accountNumber);
-      setAccountName(data.accountName);
-      setProvider(data.provider);
-      setApiKey(data.apiKey);
-      setChecksumKey(data.checksumKey);
-    } catch {
-      toast.error('Lỗi khi tải cấu hình thanh toán');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   React.useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+    if (config) {
+      setBankId(config.bankId);
+      setAccountNumber(config.accountNumber);
+      setAccountName(config.accountName);
+      setProvider(config.provider);
+      setApiKey(config.apiKey);
+      setChecksumKey(config.checksumKey);
+    }
+  }, [config]);
 
-  const handleSaveAndTest = async (e: React.FormEvent) => {
+  const saveAndTestMutation = useMutation({
+    mutationFn: async (payload: Parameters<typeof updatePaymentConfig>[0]) => {
+      const updated = await updatePaymentConfig(payload);
+      const testRes = await pingTest();
+      return { updated, testRes };
+    },
+    onSuccess: ({ testRes }) => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.paymentConfig() });
+      setPingResult({
+        success: true,
+        message: 'Kết nối tài khoản ngân hàng & Webhook thành công!',
+        code: testRes.simulatedOrderCode,
+        amount: testRes.amount,
+        time: testRes.time
+      });
+      toast.success('Lưu & Bắn thử giao dịch VietQR thành công! Sẵn sàng nhận tiền 100%.');
+    },
+    onError: () => {
+      toast.error('Không thể lưu hoặc kết nối giao dịch test');
+    }
+  });
+
+  const saving = saveAndTestMutation.isPending;
+  const pinging = saveAndTestMutation.isPending;
+
+  const handleSaveAndTest = (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountNumber.trim()) {
       toast.error('Vui lòng nhập số tài khoản ngân hàng');
@@ -72,37 +86,16 @@ export function PaymentSettingsView() {
       return;
     }
 
-    setSaving(true);
-    setPinging(true);
-    try {
-      const selectedBank = VIETNAMESE_BANKS.find((b) => b.id === bankId);
-      const updated = await updatePaymentConfig({
-        bankId,
-        bankName: selectedBank ? `${selectedBank.name} (${selectedBank.shortName})` : bankId,
-        accountNumber: accountNumber.trim(),
-        accountName: accountName.trim().toUpperCase(),
-        provider,
-        apiKey: apiKey.trim(),
-        checksumKey: checksumKey.trim() || 'default_checksum'
-      });
-      setConfig(updated);
-
-      // Kích hoạt bắn thử giao dịch ngay (Ping Test)
-      const res = await pingTest();
-      setPingResult({
-        success: true,
-        message: 'Kết nối tài khoản ngân hàng & Webhook thành công!',
-        code: res.simulatedOrderCode,
-        amount: res.amount,
-        time: res.time
-      });
-      toast.success('Lưu & Bắn thử giao dịch VietQR thành công! Sẵn sàng nhận tiền 100%.');
-    } catch {
-      toast.error('Không thể lưu hoặc kết nối giao dịch test');
-    } finally {
-      setSaving(false);
-      setPinging(false);
-    }
+    const selectedBank = VIETNAMESE_BANKS.find((b) => b.id === bankId);
+    saveAndTestMutation.mutate({
+      bankId,
+      bankName: selectedBank ? `${selectedBank.name} (${selectedBank.shortName})` : bankId,
+      accountNumber: accountNumber.trim(),
+      accountName: accountName.trim().toUpperCase(),
+      provider,
+      apiKey: apiKey.trim(),
+      checksumKey: checksumKey.trim() || 'default_checksum'
+    });
   };
 
   const webhookUrl =

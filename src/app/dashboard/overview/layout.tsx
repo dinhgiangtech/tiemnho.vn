@@ -15,6 +15,13 @@ import { Icons } from '@/components/icons';
 import React from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import {
+  profileQueryOptions,
+  paymentConfigQueryOptions,
+  analyticsQueryOptions
+} from '@/features/tiemnho/api/queries';
+import { pingTest } from '@/features/tiemnho/api/service';
 
 export default function OverViewLayout({
   sales,
@@ -27,20 +34,27 @@ export default function OverViewLayout({
   bar_stats: React.ReactNode;
   area_stats: React.ReactNode;
 }) {
-  const [pingLoading, setPingLoading] = React.useState(false);
+  const { data: profile } = useQuery(profileQueryOptions());
+  const { data: paymentConfig } = useQuery(paymentConfigQueryOptions());
+  const { data: analytics } = useQuery(analyticsQueryOptions());
 
-  const handleQuickPing = async () => {
-    setPingLoading(true);
-    try {
-      const { pingTest } = await import('@/features/tiemnho/api/service');
-      const res = await pingTest();
-      toast.success(res.message);
-    } catch {
-      toast.error('Lỗi khi bắn thử Ping Test');
-    } finally {
-      setPingLoading(false);
-    }
+  const pingMutation = useMutation({
+    mutationFn: pingTest,
+    onSuccess: (res) => toast.success(res.message),
+    onError: () => toast.error('Lỗi khi bắn thử Ping Test')
+  });
+
+  const pingLoading = pingMutation.isPending;
+
+  const handleQuickPing = () => {
+    pingMutation.mutate();
   };
+
+  const username = profile?.username || 'giangdinh';
+  const displayName = profile?.displayName || 'Giang Định';
+  const totalRevenue = analytics?.totalRevenue ?? 1464000;
+  const ordersCount = analytics?.totalOrders ?? 18;
+  const leadsCount = analytics?.totalLeads ?? 53;
 
   return (
     <PageContainer>
@@ -50,7 +64,7 @@ export default function OverViewLayout({
           <div className='space-y-1'>
             <div className='flex items-center gap-2'>
               <h2 className='text-xl sm:text-2xl font-bold tracking-tight text-foreground'>
-                Xin chào, Giang Định
+                Xin chào, {displayName}
               </h2>
               <Badge variant='default' className='text-[10px] uppercase font-bold tracking-wider'>
                 0% Hoa hồng
@@ -59,12 +73,12 @@ export default function OverViewLayout({
             <p className='text-xs text-muted-foreground flex items-center gap-1.5'>
               <span>Link tiệm:</span>
               <a
-                href='/@giangdinh'
+                href={`/@${username}`}
                 target='_blank'
                 rel='noreferrer'
                 className='font-mono font-semibold text-primary hover:underline inline-flex items-center gap-1'
               >
-                tiemnho.vn/@giangdinh
+                tiemnho.vn/@{username}
                 <Icons.externalLink className='h-3 w-3' />
               </a>
             </p>
@@ -89,7 +103,7 @@ export default function OverViewLayout({
               </Button>
             </Link>
 
-            <Link href='/dashboard/products'>
+            <Link href='/dashboard/products/create'>
               <Button size='sm' className='h-9 text-xs gap-1.5 rounded-xl font-semibold shadow-xs'>
                 <Icons.add className='h-3.5 w-3.5' />
                 Đăng sản phẩm mới
@@ -107,7 +121,7 @@ export default function OverViewLayout({
                 Doanh thu thực nhận (100%)
               </CardDescription>
               <CardTitle className='text-2xl font-bold tabular-nums text-foreground'>
-                1.464.000 đ
+                {new Intl.NumberFormat('vi-VN').format(totalRevenue)} đ
               </CardTitle>
               <CardAction>
                 <Badge
@@ -125,7 +139,7 @@ export default function OverViewLayout({
                 +24.8% tuần này
               </div>
               <div className='text-muted-foreground text-[11px]'>
-                Tiền về thẳng tài khoản MB Bank
+                Tiền về thẳng tài khoản {paymentConfig?.bankId || 'MB Bank'}
               </div>
             </CardFooter>
           </Card>
@@ -137,7 +151,7 @@ export default function OverViewLayout({
                 Đơn hàng VietQR thành công
               </CardDescription>
               <CardTitle className='text-2xl font-bold tabular-nums text-foreground'>
-                18 đơn
+                {ordersCount} đơn
               </CardTitle>
               <CardAction>
                 <Badge variant='outline' className='text-xs font-medium'>
@@ -163,14 +177,14 @@ export default function OverViewLayout({
                 Khách hàng & Leads tiềm năng
               </CardDescription>
               <CardTitle className='text-2xl font-bold tabular-nums text-foreground'>
-                53 leads
+                {leadsCount} leads
               </CardTitle>
               <CardAction>
                 <Badge
                   variant='outline'
                   className='bg-primary/10 text-primary border-primary/20 text-xs'
                 >
-                  +12 mới
+                  +{leadsCount > 0 ? Math.min(leadsCount, 12) : 0} mới
                 </Badge>
               </CardAction>
             </CardHeader>
@@ -189,7 +203,7 @@ export default function OverViewLayout({
           <Card className='@container/card border-border'>
             <CardHeader className='pb-2'>
               <CardDescription className='text-xs font-medium'>
-                Cổng nhận tiền MB Bank
+                Cổng nhận tiền {paymentConfig?.bankId || 'MB Bank'}
               </CardDescription>
               <CardTitle className='text-2xl font-bold tabular-nums text-foreground'>
                 Hoạt động
@@ -206,7 +220,8 @@ export default function OverViewLayout({
             </CardHeader>
             <CardFooter className='flex-col items-start gap-1 text-xs pt-1'>
               <div className='font-mono text-[11px] text-muted-foreground truncate'>
-                STK: 0988667788 (payOS)
+                STK: {paymentConfig?.accountNumber || '0988667788'} (
+                {paymentConfig?.provider || 'payOS'})
               </div>
               <div className='text-muted-foreground text-[11px]'>
                 Lần kiểm tra gần nhất: Vừa xong

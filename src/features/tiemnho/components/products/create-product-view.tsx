@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Product, ProductType } from '@/constants/mock-tiemnho';
-import { getProductById } from '@/features/tiemnho/api/service';
+import { useQuery } from '@tanstack/react-query';
+import { productByIdQueryOptions } from '@/features/tiemnho/api/queries';
 import { ProductForm } from '@/components/dashboard/products/ProductForm';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/icons';
@@ -75,44 +76,18 @@ export function CreateProductView() {
   const idParam =
     searchParams.get('id') || searchParams.get('edit') || searchParams.get('productId');
 
-  const [loadingProduct, setLoadingProduct] = React.useState<boolean>(!!idParam);
-  const [initialProduct, setInitialProduct] = React.useState<Product | null>(null);
+  const { data: initialProduct = null, isLoading: loadingProduct } = useQuery({
+    ...productByIdQueryOptions(idParam || ''),
+    enabled: !!idParam
+  });
+
   const [selectedType, setSelectedType] = React.useState<ProductType | null>(typeParam || null);
 
-  // Tải dữ liệu sản phẩm nếu URL có id / edit
   React.useEffect(() => {
-    if (!idParam) return;
-
-    let isMounted = true;
-    async function loadEditProduct() {
-      if (!idParam) return;
-      setLoadingProduct(true);
-      try {
-        const prod = await getProductById(idParam);
-        if (isMounted) {
-          if (prod) {
-            setInitialProduct(prod);
-            setSelectedType(prod.type);
-          } else {
-            toast.error('Không tìm thấy thông tin sản phẩm cần chỉnh sửa');
-          }
-        }
-      } catch {
-        if (isMounted) {
-          toast.error('Có lỗi xảy ra khi tải dữ liệu sản phẩm');
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingProduct(false);
-        }
-      }
+    if (initialProduct) {
+      setSelectedType(initialProduct.type);
     }
-
-    loadEditProduct();
-    return () => {
-      isMounted = false;
-    };
-  }, [idParam]);
+  }, [initialProduct]);
 
   const handleSelectType = (type: ProductType) => {
     setSelectedType(type);

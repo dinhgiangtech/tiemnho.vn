@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { Lead } from '@/constants/mock-tiemnho';
-import { getLeads } from '../../api/service';
+import { useQuery } from '@tanstack/react-query';
+import { leadsQueryOptions } from '../../api/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,25 +12,8 @@ import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 
 export function LeadsTable() {
-  const [leads, setLeads] = React.useState<Lead[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { data: leads = [], isLoading: loading } = useQuery(leadsQueryOptions());
   const [search, setSearch] = React.useState('');
-
-  const fetchLeads = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getLeads();
-      setLeads(data);
-    } catch {
-      toast.error('Lỗi khi tải danh sách khách hàng');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
 
   const filteredLeads = React.useMemo(() => {
     if (!search.trim()) return leads;

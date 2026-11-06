@@ -13,13 +13,14 @@ import {
   defaultCreatorProfile,
   defaultPaymentConfig
 } from '@/constants/mock-tiemnho';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  createProduct,
-  updateProduct,
-  getProfile,
-  getPaymentConfig,
-  getProducts
-} from '@/features/tiemnho/api/service';
+  tiemNhoKeys,
+  profileQueryOptions,
+  paymentConfigQueryOptions,
+  productsQueryOptions
+} from '@/features/tiemnho/api/queries';
+import { createProduct, updateProduct } from '@/features/tiemnho/api/service';
 import { PhoneMockup } from '@/features/tiemnho/components/mobile-preview/phone-mockup';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,10 +153,12 @@ export function ProductForm({
   onCancel
 }: ProductFormProps) {
   const router = useRouter();
-  const [profile, setProfile] = React.useState<CreatorProfile>(defaultCreatorProfile);
-  const [paymentConfig, setPaymentConfig] = React.useState<PaymentConfig>(defaultPaymentConfig);
-  const [existingProducts, setExistingProducts] = React.useState<Product[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: profile = defaultCreatorProfile } = useQuery(profileQueryOptions());
+  const { data: paymentConfig = defaultPaymentConfig } = useQuery(paymentConfigQueryOptions());
+  const { data: existingProducts = [] } = useQuery(productsQueryOptions());
+
   const [isUploadingThumb, setIsUploadingThumb] = React.useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = React.useState(false);
   const [previewDevice, setPreviewDevice] = React.useState<'mobile' | 'desktop'>('mobile');
@@ -248,31 +251,6 @@ export function ProductForm({
       }
     }
   }, [initialProduct, initialType, form, setValue]);
-
-  // Load Creator profile & products for preview
-  React.useEffect(() => {
-    let isMounted = true;
-    async function loadData() {
-      try {
-        const [prof, payment, prods] = await Promise.all([
-          getProfile(),
-          getPaymentConfig(),
-          getProducts()
-        ]);
-        if (isMounted) {
-          if (prof) setProfile(prof);
-          if (payment) setPaymentConfig(payment);
-          if (prods) setExistingProducts(prods);
-        }
-      } catch (err) {
-        console.error('Failed to load preview data', err);
-      }
-    }
-    loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Thay đổi loại sản phẩm
   const handleTypeChange = (newType: ProductType) => {
@@ -379,39 +357,22 @@ export function ProductForm({
     }
   };
 
-  // Xử lý lưu form
-  const onSubmit = async (values: ProductFormValues) => {
-    setLoading(true);
-    try {
-      const payload: Partial<Product> = {
-        creatorId: profile.id,
-        type: values.type,
-        title: values.title.trim(),
-        subtitle: values.subtitle?.trim() || undefined,
-        description: values.description?.trim() || '',
-        price: values.type === 'LEAD_MAGNET' ? 0 : values.price,
-        originalPrice:
-          values.hasDiscount && values.originalPrice ? Number(values.originalPrice) : undefined,
-        buttonText: values.buttonText?.trim() || 'Mua ngay',
-        coverImage: values.coverImage || PRESET_COVERS[0],
-        bannerImage: values.featureImage || undefined,
-        deliveryType: values.deliveryType,
-        fileUrl: values.deliveryType === 'REDIRECT_LINK' ? values.redirectUrl : values.fileUrl,
-        fileName: values.fileName,
-        fileSize: values.fileSize,
-        stock: values.type === 'PHYSICAL' ? (values.stock ?? 50) : 999,
-        estimatedFulfillment: values.type === 'PHYSICAL' ? values.estimatedFulfillment : undefined,
-        externalUrl: values.type === 'EXTERNAL_LINK' ? values.destinationUrl : undefined,
-        isPublished: values.isPublished,
-        isFeatured: true
-      };
-
-      let saved: Product;
+  // Mutation lưu sản phẩm với TanStack Query
+  const saveProductMutation = useMutation({
+    mutationFn: async (payload: Partial<Product>) => {
       if (isEditMode && initialProduct) {
-        saved = await updateProduct(initialProduct.id, payload);
+        return await updateProduct(initialProduct.id, payload);
+      } else {
+        return await createProduct(payload as any);
+      }
+    },
+    onSuccess: (saved) => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.products() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.analytics() });
+      if (isEditMode && initialProduct) {
+        queryClient.invalidateQueries({ queryKey: tiemNhoKeys.productDetail(initialProduct.id) });
         toast.success('Cập nhật sản phẩm thành công!');
       } else {
-        saved = await createProduct(payload as any);
         toast.success('Đã tạo và đưa sản phẩm lên gian hàng!');
       }
 
@@ -420,11 +381,40 @@ export function ProductForm({
       } else {
         router.push('/dashboard/products');
       }
-    } catch {
+    },
+    onError: () => {
       toast.error('Có lỗi xảy ra khi lưu sản phẩm.');
-    } finally {
-      setLoading(false);
     }
+  });
+
+  const loading = saveProductMutation.isPending;
+
+  // Xử lý lưu form
+  const onSubmit = (values: ProductFormValues) => {
+    const payload: Partial<Product> = {
+      creatorId: profile.id,
+      type: values.type,
+      title: values.title.trim(),
+      subtitle: values.subtitle?.trim() || undefined,
+      description: values.description?.trim() || '',
+      price: values.type === 'LEAD_MAGNET' ? 0 : values.price,
+      originalPrice:
+        values.hasDiscount && values.originalPrice ? Number(values.originalPrice) : undefined,
+      buttonText: values.buttonText?.trim() || 'Mua ngay',
+      coverImage: values.coverImage || PRESET_COVERS[0],
+      bannerImage: values.featureImage || undefined,
+      deliveryType: values.deliveryType,
+      fileUrl: values.deliveryType === 'REDIRECT_LINK' ? values.redirectUrl : values.fileUrl,
+      fileName: values.fileName,
+      fileSize: values.fileSize,
+      stock: values.type === 'PHYSICAL' ? (values.stock ?? 50) : 999,
+      estimatedFulfillment: values.type === 'PHYSICAL' ? values.estimatedFulfillment : undefined,
+      externalUrl: values.type === 'EXTERNAL_LINK' ? values.destinationUrl : undefined,
+      isPublished: values.isPublished,
+      isFeatured: true
+    };
+
+    saveProductMutation.mutate(payload);
   };
 
   // Real-time Virtual Preview Product

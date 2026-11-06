@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { CreatorProfile, Product, PaymentConfig } from '@/constants/mock-tiemnho';
 import { ResponsiveStorefrontView } from '../storefront/responsive-storefront-view';
-import { Smartphone, Monitor, Copy, Check, ExternalLink, X } from 'lucide-react';
+import { Smartphone, Monitor, Copy, Check, ExternalLink, X, Lock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -173,7 +173,7 @@ export function LivePreviewContainer({
             {/* Thanh địa chỉ URL giả lập */}
             <div className='flex-1 max-w-md mx-4'>
               <div className='w-full h-8 px-4 rounded-xl bg-background border border-border/80 text-xs font-mono text-muted-foreground flex items-center justify-center gap-2 shadow-2xs'>
-                <span className='text-emerald-500 text-[10px]'>🔒</span>
+                <Lock className='w-3 h-3 text-emerald-500 shrink-0' />
                 <span className='truncate font-medium text-foreground'>
                   tiemnho.vn/@{profile.username}
                 </span>

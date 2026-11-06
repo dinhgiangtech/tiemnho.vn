@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import { Order, OrderStatus, ShippingStatus } from '@/constants/mock-tiemnho';
-import { getOrders, updateOrderStatus } from '../../api/service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { tiemNhoKeys, ordersQueryOptions } from '../../api/queries';
+import { updateOrderStatus } from '../../api/service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,31 +24,64 @@ import { Clock, CheckCircle2, Package, Check, Loader2, ChevronDown, Filter } fro
 import { toast } from 'sonner';
 
 export function OrdersTable() {
-  const [orders, setOrders] = React.useState<Order[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const queryClient = useQueryClient();
+  const { data: orders = [], isLoading: loading } = useQuery(ordersQueryOptions());
+
   const [statusFilter, setStatusFilter] = React.useState<string>('ALL');
   const [search, setSearch] = React.useState<string>('');
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
 
   // State cho Modal xác nhận Kích hoạt thủ công
   const [orderToActivate, setOrderToActivate] = React.useState<Order | null>(null);
-  const [isActivating, setIsActivating] = React.useState(false);
 
-  const fetchOrders = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getOrders();
-      setOrders(data);
-    } catch {
-      toast.error('Lỗi khi tải danh sách đơn hàng');
-    } finally {
-      setLoading(false);
+  const updateShippingMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      newShippingStatus
+    }: {
+      orderId: string;
+      newShippingStatus: ShippingStatus;
+    }) => updateOrderStatus(orderId, 'PAID', newShippingStatus),
+    onSuccess: (updated) => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.orders() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.analytics() });
+      if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
+      toast.success(`Đã cập nhật trạng thái giao hàng: ${updated.shippingStatus}`);
+    },
+    onError: () => {
+      toast.error('Không thể cập nhật trạng thái');
     }
-  }, []);
+  });
 
-  React.useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  const manualActivateMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const res = await fetch(`/api/orders/${orderId}/manual-activate`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Kích hoạt đơn hàng thất bại');
+      }
+      return data;
+    },
+    onSuccess: (data, orderId) => {
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.orders() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.analytics() });
+      queryClient.invalidateQueries({ queryKey: tiemNhoKeys.leads() });
+      toast.success(
+        `Đã kích hoạt đơn hàng #${orderToActivate?.orderCode} thành công! Hệ thống đã gửi email giao hàng tới khách.`
+      );
+      if (data.order && selectedOrder?.id === orderId) {
+        setSelectedOrder(data.order);
+      }
+      setOrderToActivate(null);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Có lỗi xảy ra khi kích hoạt đơn hàng');
+    }
+  });
+
+  const isActivating = manualActivateMutation.isPending;
 
   const counts = React.useMemo(() => {
     return {
@@ -84,51 +119,14 @@ export function OrdersTable() {
       });
   }, [orders, statusFilter, search]);
 
-  const handleUpdateShipping = async (orderId: string, newShippingStatus: ShippingStatus) => {
-    try {
-      const updated = await updateOrderStatus(orderId, 'PAID', newShippingStatus);
-      setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
-      if (selectedOrder?.id === orderId) setSelectedOrder(updated);
-      toast.success(`Đã cập nhật trạng thái giao hàng: ${newShippingStatus}`);
-    } catch {
-      toast.error('Không thể cập nhật trạng thái');
-    }
+  const handleUpdateShipping = (orderId: string, newShippingStatus: ShippingStatus) => {
+    updateShippingMutation.mutate({ orderId, newShippingStatus });
   };
 
   // Kích hoạt thủ công đơn hàng qua API endpoint
-  const handleConfirmManualActivate = async () => {
+  const handleConfirmManualActivate = () => {
     if (!orderToActivate) return;
-    setIsActivating(true);
-    try {
-      const res = await fetch(`/api/orders/${orderToActivate.id}/manual-activate`, {
-        method: 'POST'
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Kích hoạt đơn hàng thất bại');
-      }
-
-      toast.success(
-        `Đã kích hoạt đơn hàng #${orderToActivate.orderCode} thành công! Hệ thống đã gửi email giao hàng tới khách.`
-      );
-
-      // Cập nhật lại state đơn hàng
-      if (data.order) {
-        setOrders((prev) => prev.map((o) => (o.id === orderToActivate.id ? data.order : o)));
-        if (selectedOrder?.id === orderToActivate.id) {
-          setSelectedOrder(data.order);
-        }
-      } else {
-        await fetchOrders();
-      }
-
-      setOrderToActivate(null);
-    } catch (error: any) {
-      toast.error(error?.message || 'Có lỗi xảy ra khi kích hoạt đơn hàng');
-    } finally {
-      setIsActivating(false);
-    }
+    manualActivateMutation.mutate(orderToActivate.id);
   };
 
   // Core Requirement: Xuất Excel / CSV để gửi bưu cục
