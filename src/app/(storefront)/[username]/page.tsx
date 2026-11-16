@@ -39,7 +39,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const [profile, products, paymentConfig] = await Promise.all([
     (async () => (await getProfileByUsername(cleanUsername)) || (await getProfile()))(),
     getProducts({ publishedOnly: true }),
-    getPaymentConfig()
+    getPaymentConfig(cleanUsername)
   ]);
 
   return (

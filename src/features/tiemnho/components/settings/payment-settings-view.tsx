@@ -28,7 +28,8 @@ export function PaymentSettingsView() {
   const [bankId, setBankId] = React.useState('MB');
   const [accountNumber, setAccountNumber] = React.useState('');
   const [accountName, setAccountName] = React.useState('');
-  const [provider, setProvider] = React.useState<'payOS' | 'SePay'>('payOS');
+  const [provider, setProvider] = React.useState<'PAYOS' | 'SEPAY' | 'MANUAL_VIETQR'>('PAYOS');
+  const [clientId, setClientId] = React.useState('');
   const [apiKey, setApiKey] = React.useState('');
   const [checksumKey, setChecksumKey] = React.useState('');
   const [pingResult, setPingResult] = React.useState<{
@@ -41,12 +42,16 @@ export function PaymentSettingsView() {
 
   React.useEffect(() => {
     if (config) {
-      setBankId(config.bankId);
-      setAccountNumber(config.accountNumber);
-      setAccountName(config.accountName);
-      setProvider(config.provider);
-      setApiKey(config.apiKey);
-      setChecksumKey(config.checksumKey);
+      setBankId(config.bankId || 'MB');
+      setAccountNumber(config.bankAccountNumber || config.accountNumber || '');
+      setAccountName(config.bankAccountName || config.accountName || '');
+      const rawProv = (config.provider as string)?.toUpperCase();
+      if (rawProv === 'SEPAY') setProvider('SEPAY');
+      else if (rawProv === 'MANUAL_VIETQR') setProvider('MANUAL_VIETQR');
+      else setProvider('PAYOS');
+      setClientId(config.clientId || '');
+      setApiKey(config.apiKey || '');
+      setChecksumKey(config.checksumKey || '');
     }
   }, [config]);
 
@@ -65,7 +70,7 @@ export function PaymentSettingsView() {
         amount: testRes.amount,
         time: testRes.time
       });
-      toast.success('Lưu & Bắn thử giao dịch VietQR thành công! Sẵn sàng nhận tiền 100%.');
+      toast.success('Lưu cấu hình thanh toán thành công!');
     },
     onError: () => {
       toast.error('Không thể lưu hoặc kết nối giao dịch test');
@@ -90,9 +95,13 @@ export function PaymentSettingsView() {
     saveAndTestMutation.mutate({
       bankId,
       bankName: selectedBank ? `${selectedBank.name} (${selectedBank.shortName})` : bankId,
+      bankBin: selectedBank?.bin || '970422',
+      bankAccountNumber: accountNumber.trim(),
+      bankAccountName: accountName.trim().toUpperCase(),
       accountNumber: accountNumber.trim(),
       accountName: accountName.trim().toUpperCase(),
-      provider,
+      clientId: clientId.trim(),
+      provider: provider as any,
       apiKey: apiKey.trim(),
       checksumKey: checksumKey.trim() || 'default_checksum'
     });
@@ -256,74 +265,173 @@ export function PaymentSettingsView() {
               <label className='font-semibold text-foreground text-xs'>
                 Dịch vụ đối soát biến động số dư:
               </label>
-              <div className='flex gap-3'>
-                {(['payOS', 'SePay'] as const).map((p) => (
+              <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                {[
+                  {
+                    id: 'PAYOS' as const,
+                    title: 'payOS',
+                    desc: 'Cổng thanh toán VietQR mã nguồn mở chuẩn NAPAS, tự động 3s'
+                  },
+                  {
+                    id: 'SEPAY' as const,
+                    title: 'SePay',
+                    desc: 'Dịch vụ bắt biến động thông báo số dư ngân hàng'
+                  },
+                  {
+                    id: 'MANUAL_VIETQR' as const,
+                    title: 'VietQR Trực Tiếp',
+                    desc: 'Nhận tiền thẳng vào tài khoản, kiểm tra và duyệt thủ công'
+                  }
+                ].map((p) => (
                   <button
-                    key={p}
+                    key={p.id}
                     type='button'
-                    onClick={() => setProvider(p)}
-                    className={`flex-1 p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      provider === p
+                    onClick={() => setProvider(p.id)}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                      provider === p.id
                         ? 'border-primary bg-primary/5 ring-1.5 ring-primary shadow-xs'
                         : 'border-border hover:border-primary/40 bg-card'
                     }`}
                   >
-                    <div className='font-bold text-xs text-foreground flex items-center gap-1.5'>
-                      <span>{p}</span>
-                      {provider === p && <Icons.check className='h-3.5 w-3.5 text-primary' />}
+                    <div className='font-bold text-xs text-foreground flex items-center justify-between'>
+                      <span>{p.title}</span>
+                      {provider === p.id && <Icons.check className='h-3.5 w-3.5 text-primary' />}
                     </div>
-                    <div className='text-[11px] text-muted-foreground mt-0.5'>
-                      {p === 'payOS'
-                        ? 'Cổng thanh toán VietQR mã nguồn mở chuẩn NAPAS'
-                        : 'Dịch vụ bắt biến động thông báo số dư ngân hàng'}
+                    <div className='text-[11px] text-muted-foreground mt-1 leading-snug'>
+                      {p.desc}
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* 1 Nút bấm: Sao chép địa chỉ nhận thông báo */}
-            <div className='space-y-1.5'>
-              <label className='font-semibold text-foreground text-xs'>
-                Địa chỉ nhận thông báo (Webhook URL)
-              </label>
-              <div className='flex gap-2'>
-                <Input
-                  readOnly
-                  value={webhookUrl}
-                  className='h-10 text-xs font-mono bg-muted/50 rounded-xl'
-                />
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={handleCopyWebhook}
-                  className='h-10 px-3.5 text-xs gap-1.5 rounded-xl shrink-0 border-primary/40 text-primary hover:bg-primary/5 font-semibold'
-                >
-                  <Icons.copy className='h-3.5 w-3.5' />
-                  Sao chép địa chỉ nhận thông báo
-                </Button>
-              </div>
-              <p className='text-[11px] text-muted-foreground'>
-                Dán URL này vào mục cài đặt Webhook trên trang quản trị {provider} của bạn.
-              </p>
-            </div>
+            {/* Các trường cấu hình chi tiết theo Provider */}
+            {provider === 'PAYOS' && (
+              <div className='space-y-3 pt-1'>
+                {/* 1 Nút bấm: Sao chép địa chỉ nhận thông báo */}
+                <div className='space-y-1.5'>
+                  <label className='font-semibold text-foreground text-xs'>
+                    Địa chỉ nhận thông báo (Webhook URL)
+                  </label>
+                  <div className='flex gap-2'>
+                    <Input
+                      readOnly
+                      value={webhookUrl}
+                      className='h-10 text-xs font-mono bg-muted/50 rounded-xl'
+                    />
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={handleCopyWebhook}
+                      className='h-10 px-3.5 text-xs gap-1.5 rounded-xl shrink-0 border-primary/40 text-primary hover:bg-primary/5 font-semibold cursor-pointer'
+                    >
+                      <Icons.copy className='h-3.5 w-3.5' />
+                      Sao chép Webhook URL
+                    </Button>
+                  </div>
+                  <p className='text-[11px] text-muted-foreground'>
+                    Dán URL này vào mục Webhook trên Dashboard của payOS để nhận xác nhận thanh toán
+                    tức thì.
+                  </p>
+                </div>
 
-            {/* 1 Ô dán: Mã kết nối bí mật (API Key) */}
-            <div className='space-y-1.5'>
-              <label className='font-semibold text-foreground text-xs'>
-                Mã kết nối bí mật (API Key từ {provider})
-              </label>
-              <Input
-                type='password'
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder='pos_live_... hoặc mã kết nối API bí mật'
-                className='h-10 text-xs font-mono rounded-xl'
-              />
-              <p className='text-[11px] text-muted-foreground'>
-                Mã này được mã hóa an toàn trên hệ thống để đối soát chữ ký điện tử mỗi giao dịch.
-              </p>
-            </div>
+                {/* Bộ 3 khóa API của payOS */}
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                  <div className='space-y-1.5'>
+                    <label className='font-semibold text-foreground text-xs'>
+                      Client ID (payOS)
+                    </label>
+                    <Input
+                      type='text'
+                      value={clientId}
+                      onChange={(e) => setClientId(e.target.value)}
+                      placeholder='Client ID từ payOS'
+                      className='h-10 text-xs font-mono rounded-xl'
+                    />
+                  </div>
+
+                  <div className='space-y-1.5'>
+                    <label className='font-semibold text-foreground text-xs'>API Key (payOS)</label>
+                    <Input
+                      type='password'
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder='API Key bí mật'
+                      className='h-10 text-xs font-mono rounded-xl'
+                    />
+                  </div>
+
+                  <div className='space-y-1.5'>
+                    <label className='font-semibold text-foreground text-xs'>
+                      Checksum Key (payOS)
+                    </label>
+                    <Input
+                      type='password'
+                      value={checksumKey}
+                      onChange={(e) => setChecksumKey(e.target.value)}
+                      placeholder='Checksum Key'
+                      className='h-10 text-xs font-mono rounded-xl'
+                    />
+                  </div>
+                </div>
+                <p className='text-[11px] text-muted-foreground'>
+                  Bộ 3 khóa này được lưu trữ an toàn trong cơ sở dữ liệu để tạo link VietQR động và
+                  xác thực chữ ký Webhook.
+                </p>
+              </div>
+            )}
+
+            {provider === 'SEPAY' && (
+              <div className='space-y-3 pt-1'>
+                <div className='space-y-1.5'>
+                  <label className='font-semibold text-foreground text-xs'>
+                    Địa chỉ nhận thông báo (Webhook URL)
+                  </label>
+                  <div className='flex gap-2'>
+                    <Input
+                      readOnly
+                      value={webhookUrl}
+                      className='h-10 text-xs font-mono bg-muted/50 rounded-xl'
+                    />
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={handleCopyWebhook}
+                      className='h-10 px-3.5 text-xs gap-1.5 rounded-xl shrink-0 border-primary/40 text-primary hover:bg-primary/5 font-semibold cursor-pointer'
+                    >
+                      <Icons.copy className='h-3.5 w-3.5' />
+                      Sao chép Webhook URL
+                    </Button>
+                  </div>
+                </div>
+
+                <div className='space-y-1.5'>
+                  <label className='font-semibold text-foreground text-xs'>
+                    Mã kết nối bí mật (API Key từ SePay)
+                  </label>
+                  <Input
+                    type='password'
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder='API Token từ SePay'
+                    className='h-10 text-xs font-mono rounded-xl'
+                  />
+                </div>
+              </div>
+            )}
+
+            {provider === 'MANUAL_VIETQR' && (
+              <div className='p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 text-xs text-neutral-600 dark:text-neutral-400 space-y-1'>
+                <p className='font-semibold text-neutral-800 dark:text-neutral-200'>
+                  Chế độ VietQR Trực tiếp không qua cổng trung gian:
+                </p>
+                <p>
+                  Khách mua hàng sẽ quét mã VietQR chuyển tiền thẳng vào số tài khoản{' '}
+                  {accountNumber || 'của bạn'}. Bạn có thể kiểm tra biến động trên app ngân hàng và
+                  kích hoạt đơn hàng trong mục Đơn hàng.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

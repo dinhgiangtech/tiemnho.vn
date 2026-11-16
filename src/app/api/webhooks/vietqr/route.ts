@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fakeTiemNhoDb } from '@/constants/mock-tiemnho';
+import { getOrderById, updateOrderStatus } from '@/features/tiemnho/api/services/order.service';
+import { OrderStatus } from '@/constants/mock-tiemnho';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Không tìm thấy mã đơn hàng TN...' }, { status: 400 });
     }
 
-    const order = await fakeTiemNhoDb.getOrderById(orderCode);
+    const order = await getOrderById(orderCode);
     if (!order) {
       return NextResponse.json({ error: `Đơn hàng ${orderCode} không tồn tại` }, { status: 404 });
     }
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update order status to PAID
-    const updated = await fakeTiemNhoDb.updateOrderStatus(order.id, 'PAID');
+    const updated = await updateOrderStatus(order.id, OrderStatus.PAID);
 
     return NextResponse.json({
       success: true,

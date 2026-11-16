@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Order, OrderStatus, ShippingStatus } from '@/constants/mock-tiemnho';
+import { Order, OrderStatus, ShippingStatus, ProductType } from '@/constants/mock-tiemnho';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tiemNhoKeys, ordersQueryOptions } from '../../api/queries';
 import { updateOrderStatus } from '../../api/service';
@@ -41,7 +41,7 @@ export function OrdersTable() {
     }: {
       orderId: string;
       newShippingStatus: ShippingStatus;
-    }) => updateOrderStatus(orderId, 'PAID', newShippingStatus),
+    }) => updateOrderStatus(orderId, OrderStatus.PAID, newShippingStatus),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: tiemNhoKeys.orders() });
       queryClient.invalidateQueries({ queryKey: tiemNhoKeys.analytics() });
@@ -290,9 +290,9 @@ export function OrdersTable() {
             </thead>
             <tbody className='divide-y divide-border/60'>
               {filteredOrders.map((order) => {
-                const isPaid = order.status === 'PAID';
-                const isPending = order.status === 'PENDING';
-                const isPhysical = order.productType === 'PHYSICAL';
+                const isPaid = order.status === OrderStatus.PAID;
+                const isPending = order.status === OrderStatus.PENDING;
+                const isPhysical = order.productType === ProductType.PHYSICAL;
 
                 return (
                   <tr key={order.id} className='hover:bg-muted/30 transition-colors'>
@@ -327,9 +327,9 @@ export function OrdersTable() {
                         {order.productTitle}
                       </div>
                       <Badge variant='outline' className='text-[9px] px-1 py-0 mt-0.5'>
-                        {order.productType === 'DIGITAL' && 'Sản phẩm số'}
-                        {order.productType === 'PHYSICAL' && 'Hàng đặt trước / Thủ công'}
-                        {order.productType === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
+                        {order.productType === ProductType.DIGITAL && 'Sản phẩm số'}
+                        {order.productType === ProductType.PHYSICAL && 'Hàng đặt trước / Thủ công'}
+                        {order.productType === ProductType.LEAD_MAGNET && 'Quà tặng 0đ'}
                       </Badge>
                     </td>
 
@@ -353,7 +353,7 @@ export function OrdersTable() {
                         >
                           {isPaid && 'Đã thanh toán'}
                           {isPending && 'Chờ thanh toán'}
-                          {order.status === 'CANCELLED' && 'Đã hủy'}
+                          {order.status === OrderStatus.CANCELLED && 'Đã hủy'}
                         </Badge>
 
                         {/* Nút Kích hoạt thủ công cạnh Status */}
@@ -382,7 +382,7 @@ export function OrdersTable() {
                     <td className='py-3 px-4 text-center whitespace-nowrap'>
                       {isPhysical ? (
                         <select
-                          value={order.shippingStatus || 'UNFULFILLED'}
+                          value={order.shippingStatus || ShippingStatus.UNFULFILLED}
                           onChange={(e) =>
                             handleUpdateShipping(order.id, e.target.value as ShippingStatus)
                           }
@@ -441,9 +441,9 @@ export function OrdersTable() {
       {/* Mobile Card View (< md) */}
       <div className='block md:hidden space-y-3.5'>
         {filteredOrders.map((order) => {
-          const isPaid = order.status === 'PAID';
-          const isPending = order.status === 'PENDING';
-          const isPhysical = order.productType === 'PHYSICAL';
+          const isPaid = order.status === OrderStatus.PAID;
+          const isPending = order.status === OrderStatus.PENDING;
+          const isPhysical = order.productType === ProductType.PHYSICAL;
 
           return (
             <div
@@ -478,7 +478,7 @@ export function OrdersTable() {
                 >
                   {isPaid && 'Đã thanh toán'}
                   {isPending && 'Chờ thanh toán'}
-                  {order.status === 'CANCELLED' && 'Đã hủy'}
+                  {order.status === OrderStatus.CANCELLED && 'Đã hủy'}
                 </Badge>
               </div>
 
@@ -495,9 +495,9 @@ export function OrdersTable() {
 
                 <div className='flex items-center gap-2 text-xs text-neutral-500'>
                   <Badge variant='outline' className='text-[10px] px-1.5 py-0'>
-                    {order.productType === 'DIGITAL' && 'Sản phẩm số'}
-                    {order.productType === 'PHYSICAL' && 'Hàng đặt trước'}
-                    {order.productType === 'LEAD_MAGNET' && 'Quà tặng 0đ'}
+                    {order.productType === ProductType.DIGITAL && 'Sản phẩm số'}
+                    {order.productType === ProductType.PHYSICAL && 'Hàng đặt trước'}
+                    {order.productType === ProductType.LEAD_MAGNET && 'Quà tặng 0đ'}
                   </Badge>
                   <span>•</span>
                   <span className='font-medium text-neutral-700 dark:text-neutral-300 truncate'>
@@ -518,7 +518,7 @@ export function OrdersTable() {
                 <div>
                   {isPhysical ? (
                     <select
-                      value={order.shippingStatus || 'UNFULFILLED'}
+                      value={order.shippingStatus || ShippingStatus.UNFULFILLED}
                       onChange={(e) =>
                         handleUpdateShipping(order.id, e.target.value as ShippingStatus)
                       }
@@ -650,12 +650,12 @@ export function OrdersTable() {
               <Badge
                 variant='outline'
                 className={`text-xs ${
-                  selectedOrder.status === 'PAID'
+                  selectedOrder.status === OrderStatus.PAID
                     ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
                     : 'bg-amber-500/10 text-amber-600'
                 }`}
               >
-                {selectedOrder.status === 'PAID' ? 'Đã thanh toán' : 'Chờ thanh toán'}
+                {selectedOrder.status === OrderStatus.PAID ? 'Đã thanh toán' : 'Chờ thanh toán'}
               </Badge>
             </div>
 
@@ -720,7 +720,7 @@ export function OrdersTable() {
             </div>
 
             <div className='pt-2 flex items-center gap-2'>
-              {selectedOrder.status === 'PENDING' && (
+              {selectedOrder.status === OrderStatus.PENDING && (
                 <Button
                   className='flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5'
                   onClick={() => {

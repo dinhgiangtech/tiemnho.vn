@@ -32,13 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     where: { id: session.userId }
   });
 
-  const profile = await prisma.creatorProfile.findFirst({
-    where: {
-      OR: [{ userId: session.userId }, { clerkUserId: session.userId }]
-    }
-  });
-
-  if ((!userRecord || !userRecord.username) && (!profile || !profile.username)) {
+  if (!userRecord || !userRecord.username) {
     redirect('/onboarding');
   }
 

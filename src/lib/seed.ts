@@ -2,17 +2,32 @@ import { prisma } from './prisma';
 
 export async function ensureDatabaseSeeded() {
   try {
-    // 1. Payment Config (default)
+    const existing = await prisma.paymentConfig.findFirst();
+    if (existing) return;
+
+    let user = await prisma.user.findFirst();
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: 'admin@tiemnho.vn',
+          name: 'Đinh Văn Giang',
+          username: 'tiemnho',
+          avatarUrl: '/default-avatar.svg'
+        }
+      });
+    }
+
     await prisma.paymentConfig.upsert({
-      where: { id: 'default-payment' },
+      where: { userId: user.id },
       update: {},
       create: {
-        id: 'default-payment',
+        userId: user.id,
+        bankBin: '970422',
+        bankAccountNumber: '0988667788',
+        bankAccountName: 'DINH VAN GIANG',
         bankId: 'MB',
         bankName: 'Ngân hàng TMCP Quân Đội (MB Bank)',
-        accountNumber: '0988667788',
-        accountName: 'DINH VAN GIANG',
-        provider: 'payOS',
+        provider: 'PAYOS',
         apiKey: 'pos_live_3992019488bfa0',
         checksumKey: 'cs_88302019bcae8841',
         webhookUrl: 'https://tiemnho.vn/api/webhooks/vietqr',

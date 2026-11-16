@@ -1,9 +1,15 @@
-export type {
-  Product,
+export {
   ProductType,
-  Order,
   OrderStatus,
   ShippingStatus,
+  PaymentMethod,
+  PaymentProvider,
+  LeadSourceType
+} from '@/constants/mock-tiemnho';
+
+export type {
+  Product,
+  Order,
   Lead,
   CreatorProfile,
   PaymentConfig,
@@ -20,6 +26,8 @@ export type OrderFilterParams = {
   status?: string;
   type?: string;
   search?: string;
+  userId?: string;
+  creatorId?: string;
 };
 
 export type CreateProductInput = {

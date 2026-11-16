@@ -26,44 +26,47 @@ enum ShippingStatus {
   COMPLETED
 }
 
-model User {
-  id                String   @id @default(cuid())
-  email             String   @unique
-  password          String?
-  name              String?
-  username          String?  @unique
-  avatarUrl         String?  @default("/default-avatar.svg")
-  bio               String?  @default("Chào mừng bạn ghé Tiệm Nhỏ!")
-  phone             String?
-  bankAccountNumber String?
-  bankBin           String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+enum PaymentProvider {
+  PAYOS
+  SEPAY
+  MANUAL_VIETQR
 }
 
-model CreatorProfile {
-  id          String   @id @default(cuid())
-  userId      String?  @unique
-  clerkUserId String?  @unique
-  username    String   @unique @default("tiemnho")
-  displayName String   @default("Tiệm Nhỏ Creator")
-  bio         String   @default("Chào mừng bạn ghé Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số chất lượng cao.")
-  avatarUrl   String   @default("/default-avatar.svg")
-  coverUrl    String?  @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80")
-  verified    Boolean  @default(true)
-  theme       String   @default("obsidian")
-  tiktok      String?  @default("https://tiktok.com/@tiemnho")
-  instagram   String?  @default("https://instagram.com/tiemnho")
-  youtube     String?  @default("https://youtube.com/@tiemnho")
-  threads     String?  @default("https://threads.net/@tiemnho")
-  facebook    String?  @default("https://facebook.com/tiemnho")
-  zalo        String?  @default("0987654321")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model User {
+  id                String          @id @default(cuid())
+  clerkUserId       String?         @unique
+  email             String          @unique
+  password          String?
+  name              String?
+  displayName       String?         @default("Tiệm Nhỏ Creator")
+  username          String?         @unique @default("tiemnho")
+  avatarUrl         String?         @default("/default-avatar.svg")
+  coverUrl          String?         @default("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80")
+  bio               String?         @default("Chào mừng bạn ghé Tiệm Nhỏ! Nơi chia sẻ các tài nguyên số chất lượng cao.")
+  phone             String?
+  verified          Boolean         @default(true)
+  theme             String          @default("obsidian")
+  tiktok            String?         @default("https://tiktok.com/@tiemnho")
+  instagram         String?         @default("https://instagram.com/tiemnho")
+  youtube           String?         @default("https://youtube.com/@tiemnho")
+  threads           String?         @default("https://threads.net/@tiemnho")
+  facebook          String?         @default("https://facebook.com/tiemnho")
+  zalo              String?         @default("0987654321")
+  bankAccountNumber String?         @default("0988667788")
+  bankBin           String?         @default("970422")
+
+  paymentConfig     PaymentConfig?
+  products          Product[]
+  orders            Order[]
+  leads             Lead[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 }
 
 model Product {
   id            String      @id @default(cuid())
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
   creatorId     String      @default("creator-1")
   type          ProductType @default(DIGITAL)
   title         String
@@ -90,6 +93,8 @@ model Product {
 model Order {
   id              String          @id @default(cuid())
   orderCode       String          @unique
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   creatorId       String          @default("creator-1")
   productId       String?
   product         Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
@@ -106,12 +111,17 @@ model Order {
   paymentMethod   String          @default("VIETQR")
   paidAt          DateTime?
   downloadUrl     String?
+  checkoutUrl     String?
+  qrCode          String?         @db.Text
+  paymentLinkId   String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 }
 
 model Lead {
   id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   creatorId     String   @default("creator-1")
   name          String
   email         String
@@ -125,16 +135,39 @@ model Lead {
 }
 
 model PaymentConfig {
-  id             String    @id @default("default-payment")
-  bankId         String    @default("MB")
-  bankName       String    @default("MB Bank - Ngân hàng Quân Đội")
-  accountNumber  String    @default("0987654321")
-  accountName    String    @default("NGUYEN VAN TIEM")
-  provider       String    @default("payOS")
-  apiKey         String    @default("test_api_key_123456")
-  checksumKey    String    @default("test_checksum_key_abcdef")
-  webhookUrl     String    @default("https://tiemnho.vn/api/webhooks/vietqr")
-  isActive       Boolean   @default(true)
-  lastPingTestAt DateTime?
-  updatedAt      DateTime  @updatedAt
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider          PaymentProvider @default(PAYOS)
+  isActive          Boolean         @default(true)
+
+  // Thông tin ngân hàng nhận tiền trực tiếp
+  bankBin           String          @default("970422") // Mã BIN (VD: 970422 - MBBank, 970436 - Vietcombank)
+  bankAccountNumber String          @default("0988667788") // Số tài khoản
+  bankAccountName   String          @default("DINH VAN GIANG") // Tên chủ tài khoản viết hoa không dấu
+  bankId            String?         @default("MB") // Mã ngắn nhận diện ngân hàng
+  bankName          String?         @default("Ngân hàng TMCP Quân Đội (MB Bank)")
+
+  // Bộ 3 khóa API của payOS (Cần lưu trữ an toàn)
+  clientId          String?
+  apiKey            String?
+  checksumKey       String?
+  webhookUrl        String?         // Endpoint nhận webhook của Creator hoặc endpoint chung
+  lastPingTestAt    DateTime?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 }
+
+model OtpVerification {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  payload   String?  @db.Text
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+

@@ -52,7 +52,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
   const [profile, paymentConfig, allProducts] = await Promise.all([
     (async () => (await getProfileByUsername(decodedUsername)) || (await getProfile()))(),
-    getPaymentConfig(),
+    getPaymentConfig(decodedUsername),
     getProducts()
   ]);
 

@@ -16,9 +16,6 @@ async function clearDatabase() {
     const deletedProducts = await prisma.product.deleteMany({});
     console.log(`🗑️ Đã xóa ${deletedProducts.count} sản phẩm (Product)`);
 
-    const deletedProfiles = await prisma.creatorProfile.deleteMany({});
-    console.log(`🗑️ Đã xóa ${deletedProfiles.count} hồ sơ người bán (CreatorProfile)`);
-
     console.log('✨ Đã dọn sạch toàn bộ dữ liệu Đơn hàng, Khách hàng, Sản phẩm và Hồ sơ Creator!');
     console.log('🚀 Hệ thống đã sẵn sàng 100% ở trạng thái sạch để kiểm thử đồng bộ Clerk!');
   } catch (error) {

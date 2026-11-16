@@ -49,7 +49,8 @@ import {
   QrCode,
   Building2,
   Check,
-  PackageCheck
+  PackageCheck,
+  ExternalLink
 } from 'lucide-react';
 
 // =========================================================================
@@ -631,8 +632,20 @@ export function AdaptiveCheckout({
             </div>
           </div>
 
-          {/* Nút phụ dưới cùng: "Tôi đã chuyển khoản xong" */}
+          {/* Nút phụ dưới cùng: Thanh toán payOS / "Tôi đã chuyển khoản xong" */}
           <div className='pt-2 space-y-2'>
+            {currentOrder.checkoutUrl && (
+              <a
+                href={currentOrder.checkoutUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='w-full h-11 text-xs sm:text-sm font-bold rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99]'
+              >
+                <ExternalLink className='w-4 h-4' />
+                <span>Mở cổng thanh toán payOS</span>
+              </a>
+            )}
+
             <Button
               type='button'
               onClick={handleManualCheck}

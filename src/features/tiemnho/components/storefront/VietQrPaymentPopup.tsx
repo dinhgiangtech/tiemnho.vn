@@ -18,7 +18,8 @@ import {
   Sparkles,
   Loader2,
   X,
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -452,12 +453,24 @@ export function VietQrPaymentPopup({
           </div>
 
           {/* 4. Nút Hành Động Phụ & Footer */}
-          <div className='pt-0.5'>
+          <div className='pt-0.5 space-y-2'>
+            {order.checkoutUrl && (
+              <a
+                href={order.checkoutUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='w-full h-10 sm:h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] font-bold text-xs text-white flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm'
+              >
+                <ExternalLink className='w-3.5 h-3.5' />
+                <span>Mở trang thanh toán payOS</span>
+              </a>
+            )}
+
             <button
               type='button'
               onClick={handleManualCheck}
               disabled={checkingManual}
-              className='w-full h-10 sm:h-11 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-[0.99] font-medium text-xs text-neutral-700 dark:text-neutral-300 flex items-center justify-center gap-2 mt-2.5 cursor-pointer transition-all bg-white dark:bg-neutral-900 shadow-2xs disabled:opacity-70'
+              className='w-full h-10 sm:h-11 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-[0.99] font-medium text-xs text-neutral-700 dark:text-neutral-300 flex items-center justify-center gap-2 cursor-pointer transition-all bg-white dark:bg-neutral-900 shadow-2xs disabled:opacity-70'
             >
               {checkingManual ? (
                 <>

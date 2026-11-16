@@ -29,10 +29,12 @@ export const profileQueryOptions = () =>
     queryFn: () => getProfile()
   });
 
-export const paymentConfigQueryOptions = () =>
+export const paymentConfigQueryOptions = (userIdOrUsername?: string) =>
   queryOptions({
-    queryKey: tiemNhoKeys.paymentConfig(),
-    queryFn: () => getPaymentConfig()
+    queryKey: userIdOrUsername
+      ? ([...tiemNhoKeys.paymentConfig(), userIdOrUsername] as const)
+      : tiemNhoKeys.paymentConfig(),
+    queryFn: () => getPaymentConfig(userIdOrUsername)
   });
 
 export const productsQueryOptions = (filters?: ProductFilterParams) =>

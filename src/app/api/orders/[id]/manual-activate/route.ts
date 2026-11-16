@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { ensureDatabaseSeeded } from '@/lib/seed';
-import { fakeTiemNhoDb } from '@/constants/mock-tiemnho';
+import { fakeTiemNhoDb, OrderStatus } from '@/constants/mock-tiemnho';
 import { manualActivateOrder } from '@/features/tiemnho/api/service';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Đồng bộ vào fakeTiemNhoDb cho mock memory nếu có
     try {
-      await fakeTiemNhoDb.updateOrderStatus(id, 'PAID');
+      await fakeTiemNhoDb.updateOrderStatus(id, OrderStatus.PAID);
     } catch {
       // ignore
     }
@@ -37,11 +35,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       order: result.order,
       grant: result.grant
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string; status?: number };
     console.error('Error in manual-activate route:', error);
     return NextResponse.json(
-      { error: error?.message || 'Lỗi khi kích hoạt đơn hàng thủ công' },
-      { status: error?.status || 500 }
+      { error: err?.message || 'Lỗi khi kích hoạt đơn hàng thủ công' },
+      { status: err?.status || 500 }
     );
   }
 }

@@ -1,14 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+export type ExtendedPrismaClient = PrismaClient & {
+  otpVerification: any;
 };
 
-export const prisma =
+const globalForPrisma = globalThis as unknown as {
+  prisma: ExtendedPrismaClient | undefined;
+};
+
+export const prisma: ExtendedPrismaClient =
   globalForPrisma.prisma ??
-  new PrismaClient({
+  (new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error']
-  });
+  }) as ExtendedPrismaClient);
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 

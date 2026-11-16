@@ -3,10 +3,16 @@ import { matchSorter } from 'match-sorter';
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ==========================================
-// 1. DATA TYPES
+// 1. DATA TYPES & ENUMS
 // ==========================================
 
-export type ProductType = 'DIGITAL' | 'LEAD_MAGNET' | 'PHYSICAL' | 'EXTERNAL_LINK';
+export const ProductType = {
+  DIGITAL: 'DIGITAL',
+  LEAD_MAGNET: 'LEAD_MAGNET',
+  PHYSICAL: 'PHYSICAL',
+  EXTERNAL_LINK: 'EXTERNAL_LINK'
+} as const;
+export type ProductType = (typeof ProductType)[keyof typeof ProductType];
 
 export type CreatorProfile = {
   id: string;
@@ -74,12 +80,42 @@ export type Product = {
   updatedAt: string;
 };
 
-export type OrderStatus = 'PENDING' | 'PAID' | 'CANCELLED';
-export type ShippingStatus = 'UNFULFILLED' | 'SHIPPING' | 'COMPLETED';
+export const OrderStatus = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  CANCELLED: 'CANCELLED'
+} as const;
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+
+export const ShippingStatus = {
+  UNFULFILLED: 'UNFULFILLED',
+  SHIPPING: 'SHIPPING',
+  COMPLETED: 'COMPLETED'
+} as const;
+export type ShippingStatus = (typeof ShippingStatus)[keyof typeof ShippingStatus];
+
+export const PaymentMethod = {
+  VIETQR: 'VIETQR'
+} as const;
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const PaymentProvider = {
+  PAYOS: 'PAYOS',
+  SEPAY: 'SEPAY',
+  MANUAL_VIETQR: 'MANUAL_VIETQR'
+} as const;
+export type PaymentProvider = (typeof PaymentProvider)[keyof typeof PaymentProvider];
+
+export const LeadSourceType = {
+  LEAD_MAGNET: 'LEAD_MAGNET',
+  PURCHASE: 'PURCHASE'
+} as const;
+export type LeadSourceType = (typeof LeadSourceType)[keyof typeof LeadSourceType];
 
 export type Order = {
   id: string;
   orderCode: string; // e.g. TN10823
+  userId?: string;
   creatorId: string;
   productId: string;
   productTitle: string;
@@ -92,9 +128,12 @@ export type Order = {
   customerNote?: string;
   status: OrderStatus;
   shippingStatus?: ShippingStatus;
-  paymentMethod: 'VIETQR';
+  paymentMethod: PaymentMethod | 'VIETQR';
   paidAt?: string;
   downloadUrl?: string;
+  checkoutUrl?: string;
+  qrCode?: string;
+  paymentLinkId?: string;
   createdAt: string;
 };
 
@@ -105,18 +144,24 @@ export type Lead = {
   email: string;
   phone: string;
   sourceProduct: string;
-  sourceType: 'LEAD_MAGNET' | 'PURCHASE';
+  sourceType: LeadSourceType | 'LEAD_MAGNET' | 'PURCHASE';
   totalSpent: number;
   ordersCount: number;
   createdAt: string;
 };
 
 export type PaymentConfig = {
+  id?: string;
+  userId?: string;
   bankId: string; // e.g. MB, VCB, TCB
   bankName: string;
   accountNumber: string;
   accountName: string;
-  provider: 'payOS' | 'SePay';
+  bankBin?: string;
+  bankAccountNumber?: string;
+  bankAccountName?: string;
+  clientId?: string;
+  provider: PaymentProvider | 'payOS' | 'SePay' | 'PAYOS' | 'SEPAY' | 'MANUAL_VIETQR';
   apiKey: string;
   checksumKey: string;
   webhookUrl: string;

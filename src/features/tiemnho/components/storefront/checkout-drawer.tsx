@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '@/components/icons';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles, RefreshCw, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Product, PaymentConfig, Order } from '@/constants/mock-tiemnho';
 import { generateVietQrUrl } from '@/constants/mock-tiemnho';
@@ -402,6 +402,17 @@ export function CheckoutDrawer({
 
               {/* Dev Simulation & Manual Reconciliation Trigger */}
               <div className='rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3 text-center space-y-2'>
+                {currentOrder.checkoutUrl && (
+                  <a
+                    href={currentOrder.checkoutUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='w-full text-xs font-semibold h-8.5 rounded-lg gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white cursor-pointer flex items-center justify-center shadow-xs'
+                  >
+                    <ExternalLink className='h-3.5 w-3.5' />
+                    <span>Mở cổng thanh toán payOS</span>
+                  </a>
+                )}
                 <p className='text-[11px] text-muted-foreground'>
                   Nếu bạn đã chuyển khoản xong nhưng chưa thấy tự động chuyển trạng thái, hãy bấm
                   nút đối soát bên dưới:
