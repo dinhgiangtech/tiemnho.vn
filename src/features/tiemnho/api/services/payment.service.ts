@@ -48,17 +48,20 @@ export async function getPaymentConfig(userIdOrUsername?: string): Promise<Payme
     });
 
     if (!config) {
-      // Tự động khởi tạo PaymentConfig mặc định cho Creator này nếu chưa có
+      // Tìm thông tin creator để khởi tạo tên chủ tài khoản thật nếu có
+      const creator = await prisma.user.findUnique({ where: { id: targetUserId } });
+      const defaultName = (creator?.displayName || creator?.name || 'CHỦ TÀI KHOẢN').toUpperCase();
+
       config = await prisma.paymentConfig.create({
         data: {
           userId: targetUserId,
-          bankBin: '970422',
-          bankAccountNumber: '0988667788',
-          bankAccountName: 'DINH VAN GIANG',
+          bankBin: '',
+          bankAccountNumber: '',
+          bankAccountName: defaultName,
           bankId: 'MB',
           bankName: 'Ngân hàng TMCP Quân Đội (MB Bank)',
           provider: PaymentProvider.PAYOS,
-          isActive: true
+          isActive: false
         }
       });
     }
@@ -66,15 +69,31 @@ export async function getPaymentConfig(userIdOrUsername?: string): Promise<Payme
     return formatPaymentConfig(config);
   }
 
-  // Fallback: Tìm bản ghi đầu tiên trong hệ thống
-  let fallbackConfig = await prisma.paymentConfig.findFirst();
+  // Fallback: Tìm bản ghi cấu hình của tài khoản đầu tiên trong hệ thống
+  let fallbackConfig = await prisma.paymentConfig.findFirst({
+    where: { isActive: true }
+  });
+
   if (!fallbackConfig) {
-    await ensureDatabaseSeeded();
     fallbackConfig = await prisma.paymentConfig.findFirst();
   }
 
   if (!fallbackConfig) {
-    throw new Error('Payment config could not be found.');
+    // Trả về cấu hình trống an toàn thay vì crash
+    return {
+      bankId: 'MB',
+      bankName: 'Ngân hàng TMCP Quân Đội (MB Bank)',
+      accountNumber: '',
+      accountName: '',
+      bankBin: '970422',
+      bankAccountNumber: '',
+      bankAccountName: '',
+      provider: PaymentProvider.PAYOS,
+      apiKey: '',
+      checksumKey: '',
+      webhookUrl: '',
+      isActive: false
+    };
   }
 
   return formatPaymentConfig(fallbackConfig);
@@ -125,16 +144,16 @@ export async function updatePaymentConfig(
     where: { userId },
     create: {
       userId,
-      bankBin: updates.bankBin || '970422',
-      bankAccountNumber: updates.bankAccountNumber || updates.accountNumber || '0988667788',
-      bankAccountName: updates.bankAccountName || updates.accountName || 'DINH VAN GIANG',
+      bankBin: updates.bankBin || '',
+      bankAccountNumber: updates.bankAccountNumber || updates.accountNumber || '',
+      bankAccountName: updates.bankAccountName || updates.accountName || '',
       bankId: updates.bankId || 'MB',
       bankName: updates.bankName || 'Ngân hàng TMCP Quân Đội (MB Bank)',
       provider: (updates.provider as PaymentProvider) || PaymentProvider.PAYOS,
-      clientId: updates.clientId,
-      apiKey: updates.apiKey,
-      checksumKey: updates.checksumKey,
-      webhookUrl: updates.webhookUrl,
+      clientId: updates.clientId || null,
+      apiKey: updates.apiKey || null,
+      checksumKey: updates.checksumKey || null,
+      webhookUrl: updates.webhookUrl || null,
       isActive: updates.isActive ?? true
     },
     update: {

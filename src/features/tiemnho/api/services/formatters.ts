@@ -122,6 +122,9 @@ export function formatOrder(o: {
   checkoutUrl?: string | null;
   qrCode?: string | null;
   paymentLinkId?: string | null;
+  accountNumber?: string | null;
+  accountName?: string | null;
+  bin?: string | null;
   createdAt: Date;
 }): Order {
   return {
@@ -146,6 +149,9 @@ export function formatOrder(o: {
     checkoutUrl: o.checkoutUrl ?? undefined,
     qrCode: o.qrCode ?? undefined,
     paymentLinkId: o.paymentLinkId ?? undefined,
+    accountNumber: (o as any).accountNumber ?? undefined,
+    accountName: (o as any).accountName ?? undefined,
+    bin: (o as any).bin ?? undefined,
     createdAt: o.createdAt.toISOString()
   };
 }
@@ -194,8 +200,8 @@ export function formatPaymentConfig(pc: {
   isActive: boolean;
   lastPingTestAt?: Date | null;
 }): PaymentConfig {
-  const accNum = pc.bankAccountNumber || pc.accountNumber || '0988667788';
-  const accName = pc.bankAccountName || pc.accountName || 'DINH VAN GIANG';
+  const accNum = pc.bankAccountNumber || pc.accountNumber || '';
+  const accName = pc.bankAccountName || pc.accountName || '';
   const bId = pc.bankId || 'MB';
   const bName = pc.bankName || 'Ngân hàng TMCP Quân Đội (MB Bank)';
   const bBin = pc.bankBin || '970422';

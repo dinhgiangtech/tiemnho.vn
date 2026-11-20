@@ -479,6 +479,9 @@ export function ProductForm({
     }
   };
 
+  const hasCoverImage = Boolean(watchedValues.coverImage);
+  const coverButtonText = hasCoverImage ? 'Đổi ảnh' : 'Tải ảnh';
+
   return (
     <div className='w-full max-w-[1600px] mx-auto space-y-6 pb-24'>
       {/* Main 2-Column Grid (Bố cục 65% Biểu mẫu - 35% Khung xem trước cố định) */}
@@ -529,7 +532,7 @@ export function ProductForm({
                     onClick={() => fileInputRef.current?.click()}
                     className='relative group w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary transition-all flex items-center justify-center cursor-pointer shrink-0 shadow-2xs'
                   >
-                    {watchedValues.coverImage ? (
+                    {hasCoverImage ? (
                       <img
                         src={watchedValues.coverImage}
                         alt='Thumbnail'
@@ -543,7 +546,7 @@ export function ProductForm({
                     )}
                     <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1'>
                       <Upload className='w-4 h-4' />
-                      <span>{watchedValues.coverImage ? 'Đổi ảnh' : 'Tải ảnh'}</span>
+                      <span>{coverButtonText}</span>
                     </div>
                   </div>
 

@@ -81,6 +81,9 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
   let payosCheckoutUrl: string | undefined;
   let payosQrCode: string | undefined;
   let payosPaymentLinkId: string | undefined;
+  let payosAccountNumber: string | undefined;
+  let payosAccountName: string | undefined;
+  let payosBin: string | undefined;
 
   if (!isFree) {
     try {
@@ -94,11 +97,13 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
         customerPhone: data.customerPhone,
         creatorId: product.creatorId
       });
-
       if (payosResult.success) {
         payosCheckoutUrl = payosResult.checkoutUrl;
         payosQrCode = payosResult.qrCode;
         payosPaymentLinkId = payosResult.paymentLinkId;
+        payosAccountNumber = payosResult.accountNumber;
+        payosAccountName = payosResult.accountName;
+        payosBin = payosResult.bin;
       }
     } catch (err) {
       console.warn(
@@ -133,8 +138,11 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
       downloadUrl: isFree && product.fileUrl ? product.fileUrl : undefined,
       checkoutUrl: payosCheckoutUrl,
       qrCode: payosQrCode,
-      paymentLinkId: payosPaymentLinkId
-    }
+      paymentLinkId: payosPaymentLinkId,
+      accountNumber: payosAccountNumber,
+      accountName: payosAccountName,
+      bin: payosBin
+    } as any
   });
 
   // Increment sold count if free
@@ -201,28 +209,39 @@ export async function updateOrderStatus(
 
   const shouldMarkPaid = status === OrderStatus.PAID && current.status !== OrderStatus.PAID;
 
-  const updated = await prisma.order.update({
-    where: { id: current.id },
-    data: {
-      status,
-      ...(shippingStatus && { shippingStatus }),
-      ...(shouldMarkPaid && { paidAt: new Date() })
-    }
-  });
-
+  let productFileUrl: string | undefined = undefined;
   if (shouldMarkPaid && current.productId) {
-    await prisma.product
+    const product = await prisma.product
       .update({
         where: { id: current.productId },
         data: { soldCount: { increment: 1 } }
       })
       .catch(() => null);
+
+    if (product?.fileUrl) {
+      productFileUrl = product.fileUrl;
+    }
   }
+
+  const updated = await prisma.order.update({
+    where: { id: current.id },
+    data: {
+      status,
+      ...(shippingStatus && { shippingStatus }),
+      ...(shouldMarkPaid && {
+        paidAt: new Date(),
+        ...(productFileUrl && !current.downloadUrl && { downloadUrl: productFileUrl })
+      })
+    }
+  });
 
   // Tự động kích hoạt gửi email bàn giao qua Resend
   if (shouldMarkPaid) {
     try {
-      await sendOrderFulfillmentEmail(formatOrder(updated));
+      const formattedUpdated = formatOrder(updated);
+      await sendOrderFulfillmentEmail(formattedUpdated, {
+        downloadUrl: formattedUpdated.downloadUrl || productFileUrl
+      });
     } catch (err) {
       console.warn('[Resend] Lỗi gửi email tự động khi cập nhật trạng thái đơn hàng:', err);
     }

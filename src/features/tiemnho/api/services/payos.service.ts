@@ -40,9 +40,9 @@ export async function getPayOSClient(creatorId?: string): Promise<{
   try {
     const config = await getPaymentConfig(creatorId);
 
-    const clientId = config?.clientId || process.env.PAYOS_CLIENT_ID;
-    const apiKey = config?.apiKey || process.env.PAYOS_API_KEY;
-    const checksumKey = config?.checksumKey || process.env.PAYOS_CHECKSUM_KEY;
+    const clientId = config?.clientId;
+    const apiKey = config?.apiKey;
+    const checksumKey = config?.checksumKey;
 
     if (!clientId || !apiKey || !checksumKey) {
       return { client: null, config };

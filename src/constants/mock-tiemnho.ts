@@ -134,6 +134,9 @@ export type Order = {
   checkoutUrl?: string;
   qrCode?: string;
   paymentLinkId?: string;
+  accountNumber?: string;
+  accountName?: string;
+  bin?: string;
   createdAt: string;
 };
 

@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Icons } from '@/components/icons';
 
 export interface VietQrPaymentPopupProps {
   isOpen: boolean;
@@ -83,6 +85,8 @@ export function VietQrPaymentPopup({
         const res = await fetch(`/api/orders/${order.id}/status`);
         if (res.ok) {
           const data = await res.json();
+          console.log(data);
+
           if (data.status === 'PAID') {
             clearInterval(interval);
             const updated = {
@@ -116,8 +120,18 @@ export function VietQrPaymentPopup({
     return new Intl.NumberFormat('vi-VN').format(p) + ' đ';
   };
 
-  // Tra cứu thông tin ngân hàng
+  // Tra cứu thông tin ngân hàng hiển thị (ưu tiên thông tin từ PayOS trả về theo đơn hàng)
+  const effectiveAccountNumber = order?.accountNumber || paymentConfig.accountNumber;
+  const effectiveAccountName = order?.accountName || paymentConfig.accountName;
+  const effectiveBin = order?.bin || paymentConfig.bankBin;
+
   const bankInfo = React.useMemo(() => {
+    // 1. Nếu có mã BIN (ví dụ '970422' của MB)
+    if (effectiveBin) {
+      const foundByBin = VIETNAMESE_BANKS.find((b) => b.bin === effectiveBin);
+      if (foundByBin) return foundByBin;
+    }
+
     const rawBankId = (paymentConfig.bankId || '').trim().toLowerCase();
     const rawBankName = (paymentConfig.bankName || '').trim().toLowerCase();
     return VIETNAMESE_BANKS.find(
@@ -129,19 +143,27 @@ export function VietQrPaymentPopup({
         rawBankName.includes(b.code.toLowerCase()) ||
         rawBankName.includes(b.id.toLowerCase())
     );
-  }, [paymentConfig.bankId, paymentConfig.bankName]);
+  }, [effectiveBin, paymentConfig.bankId, paymentConfig.bankName]);
 
   const bankShortName = bankInfo?.shortName || paymentConfig.bankId || 'Ngân hàng';
 
-  const qrImageUrl = order
-    ? generateVietQrUrl({
-        bankId: paymentConfig.bankId,
-        accountNumber: paymentConfig.accountNumber,
-        accountName: paymentConfig.accountName,
-        amount: order.amount,
-        orderCode: order.orderCode
-      })
-    : '';
+  const qrImageUrl = React.useMemo(() => {
+    if (!order) return '';
+
+    // Ưu tiên 1: Lấy trực tiếp chuỗi QR chuẩn của PayOS nếu có
+    if (order.qrCode) {
+      return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(order.qrCode)}`;
+    }
+
+    // Ưu tiên 2: Tạo qua VietQR QuickLink
+    return generateVietQrUrl({
+      bankId: paymentConfig.bankId,
+      accountNumber: paymentConfig.accountNumber,
+      accountName: paymentConfig.accountName,
+      amount: order.amount,
+      orderCode: order.orderCode
+    });
+  }, [order, paymentConfig]);
 
   // Sao chép 1 chạm có thông báo & phản hồi trực quan
   const handleCopy = (text: string, field: 'STK' | 'CODE' | 'AMOUNT') => {
@@ -221,17 +243,17 @@ export function VietQrPaymentPopup({
   // GIAO DIỆN NỘI DUNG POPUP THANH TOÁN VIETQR (CLEAN MINIMALIST)
   // =========================================================================
   const popupBody = (
-    <div className='w-full text-neutral-900 dark:text-neutral-100 font-sans text-left'>
+    <div className='w-full text-foreground font-sans text-left'>
       {/* 1. Header Tinh Gọn */}
-      <div className='flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-neutral-800 gap-2'>
-        <h3 className='text-base font-bold text-neutral-900 dark:text-white leading-tight'>
+      <div className='flex items-center justify-between pb-2.5 border-b border-border gap-2'>
+        <h3 className='text-base font-bold text-foreground leading-tight'>
           {isPaid ? 'Đã thanh toán' : 'Thanh toán VietQR'}
         </h3>
 
         {/* Cụm bên phải: Đồng hồ đếm ngược + Nút đóng [X] */}
         <div className='flex items-center gap-1.5 shrink-0'>
           {!isPaid && (
-            <div className='text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/40 px-2 py-1 rounded-md flex items-center gap-1'>
+            <div className='text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md flex items-center gap-1'>
               <Clock className='w-3 h-3 text-amber-600 animate-pulse' />
               <span>{formattedCountdown}</span>
             </div>
@@ -240,7 +262,7 @@ export function VietQrPaymentPopup({
           <button
             type='button'
             onClick={onClose}
-            className='w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 flex items-center justify-center text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer shrink-0'
+            className='w-7 h-7 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0'
             title='Đóng'
           >
             <X className='w-4 h-4' />
@@ -253,38 +275,39 @@ export function VietQrPaymentPopup({
       {/* ===================================================================== */}
       {isPaid ? (
         <div className='py-4 space-y-4 text-center'>
-          <div className='w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm ring-6 ring-emerald-50'>
-            <CheckCircle2 className='w-8 h-8' strokeWidth={2.2} />
+          {/* Badge Icon thành công viền nổi chuẩn base */}
+          <div className='w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto ring-8 ring-emerald-500/5 shadow-xs'>
+            <CheckCircle2 className='w-9 h-9 stroke-[2.2]' />
           </div>
 
-          <div className='space-y-1'>
-            <h4 className='text-base sm:text-lg font-black text-neutral-900 dark:text-white'>
+          {/* Tiêu đề & Thông báo đơn hàng */}
+          <div className='space-y-1.5'>
+            <h4 className='text-lg font-bold text-foreground tracking-tight'>
               Thanh toán thành công!
             </h4>
-            <p className='text-xs text-neutral-600 dark:text-neutral-300 max-w-xs mx-auto leading-relaxed'>
+            <p className='text-xs text-muted-foreground max-w-[280px] mx-auto leading-relaxed'>
               VietQR đã khớp lệnh thanh toán cho đơn hàng{' '}
-              <strong className='font-mono text-neutral-900 dark:text-white'>
-                #{order.orderCode}
-              </strong>
-              .
+              <strong className='font-mono font-bold text-foreground'>#{order.orderCode}</strong>.
             </p>
           </div>
 
-          <div className='bg-neutral-50 dark:bg-neutral-900 p-3.5 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 text-left space-y-2'>
+          {/* Thẻ Bento Card chứa nội dung nhận tài liệu / giao hàng */}
+          <div className='bg-card p-4 rounded-2xl border border-border text-left space-y-3 shadow-xs'>
             {isPhysical ? (
-              <div className='space-y-1.5 text-xs'>
-                <div className='font-bold text-neutral-900 dark:text-white flex items-center gap-1.5'>
-                  <PackageCheck className='w-4 h-4 text-emerald-600' />
+              <div className='space-y-2 text-xs'>
+                <div className='font-bold text-foreground flex items-center gap-2'>
+                  <PackageCheck className='w-4 h-4 text-emerald-600 shrink-0' />
                   <span>Đơn hàng đã được chuyển tới Creator</span>
                 </div>
-                <p className='text-[11px] text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800 p-2 rounded-xl border border-neutral-100 dark:border-neutral-700'>
-                  Địa chỉ giao: <strong>{order.shippingAddress}</strong>
-                </p>
+                <div className='text-[12px] text-muted-foreground bg-muted/50 p-2.5 rounded-xl border border-border leading-relaxed'>
+                  Địa chỉ giao nhận:{' '}
+                  <strong className='text-foreground'>{order.shippingAddress}</strong>
+                </div>
               </div>
             ) : (
-              <div className='space-y-2 text-xs'>
-                <div className='font-bold text-neutral-900 dark:text-white flex items-center gap-1.5'>
-                  <Sparkles className='w-4 h-4 text-[#FE2C55]' />
+              <div className='space-y-2.5 text-xs'>
+                <div className='font-bold text-foreground flex items-center gap-2'>
+                  <Sparkles className='w-4 h-4 text-primary shrink-0' />
                   <span>Tài liệu đã sẵn sàng để tải về:</span>
                 </div>
 
@@ -293,28 +316,31 @@ export function VietQrPaymentPopup({
                     href={order.downloadUrl || product.fileUrl}
                     target='_blank'
                     rel='noopener noreferrer'
-                    className='w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer'
+                    className='w-full py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer'
                   >
-                    <Download className='w-4 h-4' />
-                    <span>Tải tài liệu ngay ({product.fileName || 'File đính kèm'})</span>
+                    <Download className='w-4 h-4 shrink-0' />
+                    <span className='truncate'>
+                      Tải tài liệu ngay ({product.fileName || 'File đính kèm'})
+                    </span>
                   </a>
                 ) : (
-                  <div className='p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[11px] font-medium border border-emerald-200 dark:border-emerald-800'>
+                  <div className='p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-[12px] font-medium border border-emerald-500/20 leading-relaxed'>
                     Đường link tải tài liệu đã được gửi về email:{' '}
-                    <strong>{order.customerEmail}</strong>.
+                    <strong className='font-semibold'>{order.customerEmail}</strong>.
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <button
+          {/* Nút Đóng cửa sổ chuẩn Button theme token */}
+          <Button
             type='button'
             onClick={onClose}
-            className='w-full h-10 rounded-xl bg-neutral-900 hover:bg-black text-white font-semibold text-xs transition-colors cursor-pointer'
+            className='w-full h-11 text-xs font-bold rounded-xl shadow-xs'
           >
             Đóng cửa sổ
-          </button>
+          </Button>
         </div>
       ) : (
         /* =================================================================== */
@@ -355,11 +381,11 @@ export function VietQrPaymentPopup({
 
           {/* 3. Gom Khối Thông Tin Chuyển Khoản Vào 1 Thẻ Duy Nhất */}
           <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/60 p-3 sm:p-3.5 space-y-2 text-xs mt-2.5'>
-            {/* Dòng 1: Ngân hàng MB Bank • Tên chủ TK */}
+            {/* Dòng 1: Ngân hàng • Tên chủ TK */}
             <div className='flex items-center justify-between text-neutral-600 dark:text-neutral-400 gap-1.5 leading-tight'>
               <span className='shrink-0 text-neutral-500'>Ngân hàng:</span>
               <span className='font-semibold text-neutral-900 dark:text-white truncate text-right'>
-                {bankShortName} • {paymentConfig.accountName}
+                {bankShortName} • {effectiveAccountName}
               </span>
             </div>
 
@@ -368,12 +394,12 @@ export function VietQrPaymentPopup({
               <div className='min-w-0 flex items-center gap-1.5'>
                 <span className='text-neutral-500 shrink-0'>STK:</span>
                 <span className='font-mono font-bold text-neutral-900 dark:text-white tracking-wide truncate'>
-                  {paymentConfig.accountNumber}
+                  {effectiveAccountNumber}
                 </span>
               </div>
               <button
                 type='button'
-                onClick={() => handleCopy(paymentConfig.accountNumber, 'STK')}
+                onClick={() => handleCopy(effectiveAccountNumber, 'STK')}
                 className='h-7 px-2 rounded-lg bg-white hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 text-[11px] font-semibold text-neutral-700 dark:text-neutral-200 inline-flex items-center gap-1 transition-all cursor-pointer shrink-0 shadow-2xs'
               >
                 {copiedField === 'STK' ? (

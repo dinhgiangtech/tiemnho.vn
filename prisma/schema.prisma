@@ -114,6 +114,9 @@ model Order {
   checkoutUrl     String?
   qrCode          String?         @db.Text
   paymentLinkId   String?
+  accountNumber   String?
+  accountName     String?
+  bin             String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 }

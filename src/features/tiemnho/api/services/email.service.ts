@@ -504,7 +504,14 @@ export async function sendOrderFulfillmentEmail(
     return { success: false, error: 'Đơn hàng không có địa chỉ email người nhận' };
   }
 
-  const effectiveDownloadUrl = options?.downloadUrl || order.downloadUrl || '#';
+  const rawUrl = options?.downloadUrl || order.downloadUrl || '#';
+  let effectiveDownloadUrl = rawUrl;
+
+  // Nếu là đường dẫn cục bộ (ví dụ: /uploads/products/xyz.pdf), chuyển thành URL tuyệt đối
+  if (effectiveDownloadUrl.startsWith('/')) {
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    effectiveDownloadUrl = `${appUrl}${effectiveDownloadUrl}`;
+  }
 
   if (order.productType === ProductType.DIGITAL) {
     return sendDigitalDeliveryEmail({
