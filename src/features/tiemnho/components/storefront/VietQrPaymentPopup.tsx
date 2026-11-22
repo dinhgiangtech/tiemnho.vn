@@ -51,6 +51,7 @@ export function VietQrPaymentPopup({
   const [checkingManual, setCheckingManual] = React.useState(false);
   const [downloadingQr, setDownloadingQr] = React.useState(false);
   const [paidOrder, setPaidOrder] = React.useState<Order | null>(null);
+  const [transferNotified, setTransferNotified] = React.useState(false);
 
   // Đặt lại đếm ngược khi popup mở
   React.useEffect(() => {
@@ -60,6 +61,7 @@ export function VietQrPaymentPopup({
       setCheckingManual(false);
       setDownloadingQr(false);
       setPaidOrder(null);
+      setTransferNotified(false);
     }
   }, [isOpen, order?.id]);
 
@@ -155,14 +157,13 @@ export function VietQrPaymentPopup({
       return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(order.qrCode)}`;
     }
 
-    // Ưu tiên 2: Tạo qua VietQR QuickLink
-    return generateVietQrUrl({
-      bankId: paymentConfig.bankId,
-      accountNumber: paymentConfig.accountNumber,
-      accountName: paymentConfig.accountName,
-      amount: order.amount,
-      orderCode: order.orderCode
-    });
+    // Ưu tiên 2: Tạo qua chuẩn ảnh VietQR QuickLink (Napas247)
+    const bin = paymentConfig.bankBin || '970422';
+    const acc = paymentConfig.bankAccountNumber || paymentConfig.accountNumber || '';
+    const name = encodeURIComponent(
+      paymentConfig.bankAccountName || paymentConfig.accountName || ''
+    );
+    return `https://img.vietqr.io/image/${bin}-${acc}-compact2.png?amount=${order.amount}&addInfo=${order.orderCode}&accountName=${name}`;
   }, [order, paymentConfig]);
 
   // Sao chép 1 chạm có thông báo & phản hồi trực quan
@@ -208,26 +209,48 @@ export function VietQrPaymentPopup({
     }
   };
 
-  // Kiểm tra thủ công khi người dùng bấm "Tôi đã chuyển khoản xong"
+  // Kiểm tra thủ công hoặc thông báo chuyển khoản khi người dùng bấm "Tôi đã chuyển khoản xong"
   const handleManualCheck = async () => {
     if (!order) return;
     setCheckingManual(true);
     try {
-      const res = await fetch(`/api/orders/${order.id}/status`, { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        const updated = {
-          ...order,
-          status: 'PAID' as const,
-          paidAt: data.paidAt || new Date().toISOString(),
-          downloadUrl: data.downloadUrl || order.downloadUrl
-        };
-        setPaidOrder(updated);
-        toast.success('Xác nhận thanh toán thành công!');
-        if (onPaymentSuccess) {
-          onPaymentSuccess(updated);
+      // 1. Nếu là đơn thủ công (MANUAL_VIETQR), bắn API notify sang Telegram Creator
+      if (order.paymentMethod === 'MANUAL_VIETQR') {
+        try {
+          const notifyRes = await fetch(`/api/orders/${order.orderCode}/notify-transfer`, {
+            method: 'POST'
+          });
+          if (notifyRes.ok) {
+            setTransferNotified(true);
+            toast.success('Đã gửi thông báo chuyển khoản tới Creator!');
+          }
+        } catch (notifyErr) {
+          console.warn('[notify-transfer failed]:', notifyErr);
         }
+      }
+
+      // 2. Tiếp tục kiểm tra trạng thái đơn hàng (polling GET check)
+      if (order.paymentMethod === 'MANUAL_VIETQR') {
+        setTransferNotified(true);
       } else {
+        const res = await fetch(`/api/orders/${order.id}/status`, { method: 'GET' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'PAID') {
+            const updated = {
+              ...order,
+              status: 'PAID' as const,
+              paidAt: data.paidAt || new Date().toISOString(),
+              downloadUrl: data.downloadUrl || order.downloadUrl
+            };
+            setPaidOrder(updated);
+            toast.success('Xác nhận thanh toán thành công!');
+            if (onPaymentSuccess) {
+              onPaymentSuccess(updated);
+            }
+            return;
+          }
+        }
         toast.info('Hệ thống đang kiểm tra biến động số dư qua VietQR...');
       }
     } catch {
@@ -480,7 +503,20 @@ export function VietQrPaymentPopup({
 
           {/* 4. Nút Hành Động Phụ & Footer */}
           <div className='pt-0.5 space-y-2'>
-            {order.checkoutUrl && (
+            {order.paymentMethod === 'MANUAL_VIETQR' && transferNotified && (
+              <div className='p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1 animate-in fade-in-0 duration-200'>
+                <div className='flex items-center justify-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400'>
+                  <Loader2 className='w-3.5 h-3.5 animate-spin' />
+                  <span>Đã ghi nhận thông tin chuyển khoản</span>
+                </div>
+                <p className='text-[11px] text-muted-foreground leading-relaxed'>
+                  Creator đang kiểm tra giao dịch và sẽ gửi tài liệu ngay qua Email:{' '}
+                  <strong className='text-foreground'>{order.customerEmail}</strong>
+                </p>
+              </div>
+            )}
+
+            {order.checkoutUrl && order.paymentMethod !== 'MANUAL_VIETQR' && (
               <a
                 href={order.checkoutUrl}
                 target='_blank'
@@ -496,17 +532,21 @@ export function VietQrPaymentPopup({
               type='button'
               onClick={handleManualCheck}
               disabled={checkingManual}
-              className='w-full h-10 sm:h-11 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-[0.99] font-medium text-xs text-neutral-700 dark:text-neutral-300 flex items-center justify-center gap-2 cursor-pointer transition-all bg-white dark:bg-neutral-900 shadow-2xs disabled:opacity-70'
+              className='w-full h-10 sm:h-11 rounded-xl border border-border hover:bg-muted active:scale-[0.99] font-bold text-xs text-foreground flex items-center justify-center gap-2 cursor-pointer transition-all bg-card shadow-2xs disabled:opacity-70'
             >
               {checkingManual ? (
                 <>
                   <Loader2 className='w-3.5 h-3.5 animate-spin' />
-                  <span>Đang kiểm tra biến động số dư...</span>
+                  <span>Đang gửi thông báo tới Creator...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className='w-3.5 h-3.5 text-neutral-500' />
-                  <span>Tôi đã chuyển khoản xong</span>
+                  <CheckCircle2 className='w-3.5 h-3.5 text-emerald-600' />
+                  <span>
+                    {order.paymentMethod === 'MANUAL_VIETQR'
+                      ? 'Tôi đã chuyển khoản'
+                      : 'Tôi đã chuyển khoản xong'}
+                  </span>
                 </>
               )}
             </button>

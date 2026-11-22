@@ -61,7 +61,8 @@ export async function getPaymentConfig(userIdOrUsername?: string): Promise<Payme
           bankId: 'MB',
           bankName: 'Ngân hàng TMCP Quân Đội (MB Bank)',
           provider: PaymentProvider.PAYOS,
-          isActive: false
+          isActive: false,
+          isPayosEnabled: false
         }
       });
     }
@@ -69,14 +70,16 @@ export async function getPaymentConfig(userIdOrUsername?: string): Promise<Payme
     return formatPaymentConfig(config);
   }
 
-  // Fallback: Tìm bản ghi cấu hình của tài khoản đầu tiên trong hệ thống
-  let fallbackConfig = await prisma.paymentConfig.findFirst({
-    where: { isActive: true }
-  });
-
-  if (!fallbackConfig) {
-    fallbackConfig = await prisma.paymentConfig.findFirst();
+  // Fallback: Lấy user đầu tiên trong hệ thống để tìm đúng paymentConfig của user đó
+  const defaultUser = await prisma.user.findFirst();
+  if (defaultUser) {
+    const userConfig = await prisma.paymentConfig.findUnique({
+      where: { userId: defaultUser.id }
+    });
+    if (userConfig) return formatPaymentConfig(userConfig);
   }
+
+  let fallbackConfig = await prisma.paymentConfig.findFirst();
 
   if (!fallbackConfig) {
     // Trả về cấu hình trống an toàn thay vì crash
@@ -107,10 +110,17 @@ export async function updatePaymentConfig(
   targetUserId?: string
 ): Promise<PaymentConfig> {
   const session = await getSession();
-  const userId = targetUserId || session?.userId;
+  let userId = targetUserId || session?.userId;
 
   if (!userId) {
-    // Fallback: cập nhật bản ghi đầu tiên nếu không có session
+    const defaultUser = await prisma.user.findFirst();
+    if (defaultUser) {
+      userId = defaultUser.id;
+    }
+  }
+
+  if (!userId) {
+    // Fallback: cập nhật bản ghi đầu tiên nếu hoàn toàn không có user nào
     const current = await prisma.paymentConfig.findFirst();
     if (!current) throw new Error('Không tìm thấy cấu hình thanh toán');
 
@@ -132,6 +142,7 @@ export async function updatePaymentConfig(
         ...(updates.checksumKey !== undefined && { checksumKey: updates.checksumKey }),
         ...(updates.webhookUrl !== undefined && { webhookUrl: updates.webhookUrl }),
         ...(updates.isActive !== undefined && { isActive: updates.isActive }),
+        ...(updates.isPayosEnabled !== undefined && { isPayosEnabled: updates.isPayosEnabled }),
         ...(updates.lastPingTestAt !== undefined && {
           lastPingTestAt: new Date(updates.lastPingTestAt)
         })
@@ -154,7 +165,8 @@ export async function updatePaymentConfig(
       apiKey: updates.apiKey || null,
       checksumKey: updates.checksumKey || null,
       webhookUrl: updates.webhookUrl || null,
-      isActive: updates.isActive ?? true
+      isActive: updates.isActive ?? false,
+      isPayosEnabled: updates.isPayosEnabled ?? false
     },
     update: {
       ...(updates.bankBin !== undefined && { bankBin: updates.bankBin }),
@@ -172,6 +184,7 @@ export async function updatePaymentConfig(
       ...(updates.checksumKey !== undefined && { checksumKey: updates.checksumKey }),
       ...(updates.webhookUrl !== undefined && { webhookUrl: updates.webhookUrl }),
       ...(updates.isActive !== undefined && { isActive: updates.isActive }),
+      ...(updates.isPayosEnabled !== undefined && { isPayosEnabled: updates.isPayosEnabled }),
       ...(updates.lastPingTestAt !== undefined && {
         lastPingTestAt: new Date(updates.lastPingTestAt)
       })

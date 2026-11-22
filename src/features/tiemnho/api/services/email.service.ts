@@ -2,6 +2,7 @@
 
 import { resend, DEFAULT_FROM_EMAIL } from '@/lib/resend';
 import { ProductType, type Order } from '@/constants/mock-tiemnho';
+import { getAppBaseUrl } from '@/lib/utils';
 
 export interface EmailResult {
   success: boolean;
@@ -504,12 +505,20 @@ export async function sendOrderFulfillmentEmail(
     return { success: false, error: 'Đơn hàng không có địa chỉ email người nhận' };
   }
 
-  const rawUrl = options?.downloadUrl || order.downloadUrl || '#';
+  const rawUrl =
+    options?.downloadUrl ||
+    order.downloadUrl ||
+    (order as unknown as { product?: { fileUrl?: string } })?.product?.fileUrl ||
+    '#';
   let effectiveDownloadUrl = rawUrl;
 
-  // Nếu là đường dẫn cục bộ (ví dụ: /uploads/products/xyz.pdf), chuyển thành URL tuyệt đối
-  if (effectiveDownloadUrl.startsWith('/')) {
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  const appUrl = getAppBaseUrl();
+
+  // Nếu vẫn là '#', fallback về trang chủ hoặc thông báo
+  if (effectiveDownloadUrl === '#' || !effectiveDownloadUrl) {
+    effectiveDownloadUrl = `${appUrl}/`;
+  } else if (effectiveDownloadUrl.startsWith('/')) {
+    // Nếu là đường dẫn cục bộ (ví dụ: /uploads/products/xyz.pdf), chuyển thành URL tuyệt đối
     effectiveDownloadUrl = `${appUrl}${effectiveDownloadUrl}`;
   }
 

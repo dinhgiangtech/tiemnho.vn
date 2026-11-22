@@ -23,6 +23,8 @@ export function formatProfile(p: {
   threads?: string | null;
   facebook?: string | null;
   zalo?: string | null;
+  telegramChatId?: string | null;
+  telegramLinkToken?: string | null;
 }): CreatorProfile {
   // Tự động chuyển đổi các avatar mẫu Unsplash cũ sang avatar mặc định chuẩn Facebook
   const isOldDefaultAvatar =
@@ -41,6 +43,8 @@ export function formatProfile(p: {
     coverUrl: p.coverUrl ?? undefined,
     verified: p.verified ?? true,
     theme: (p.theme as CreatorProfile['theme']) || 'obsidian',
+    telegramChatId: p.telegramChatId ?? undefined,
+    telegramLinkToken: p.telegramLinkToken ?? undefined,
     socials: {
       tiktok: p.tiktok ?? undefined,
       instagram: p.instagram ?? undefined,
@@ -143,7 +147,7 @@ export function formatOrder(o: {
     customerNote: o.customerNote ?? undefined,
     status: o.status,
     shippingStatus: o.shippingStatus ?? undefined,
-    paymentMethod: PaymentMethod.VIETQR,
+    paymentMethod: (o.paymentMethod as any) || PaymentMethod.PAYOS,
     paidAt: o.paidAt ? o.paidAt.toISOString() : undefined,
     downloadUrl: o.downloadUrl ?? undefined,
     checkoutUrl: o.checkoutUrl ?? undefined,
@@ -198,6 +202,7 @@ export function formatPaymentConfig(pc: {
   checksumKey?: string | null;
   webhookUrl?: string | null;
   isActive: boolean;
+  isPayosEnabled?: boolean;
   lastPingTestAt?: Date | null;
 }): PaymentConfig {
   const accNum = pc.bankAccountNumber || pc.accountNumber || '';
@@ -222,6 +227,7 @@ export function formatPaymentConfig(pc: {
     checksumKey: pc.checksumKey || '',
     webhookUrl: pc.webhookUrl || '',
     isActive: pc.isActive,
+    isPayosEnabled: (pc as any).isPayosEnabled ?? false,
     lastPingTestAt: pc.lastPingTestAt ? pc.lastPingTestAt.toISOString() : undefined
   };
 }

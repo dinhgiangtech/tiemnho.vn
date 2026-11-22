@@ -1,0 +1,113 @@
+[data-theme='tiki-blue'] {
+  /* ========================================================
+   * TIKI BLUE THEME - E-Commerce Modern, Clean, High Trust
+   * ======================================================== */
+
+  /* Background (Nền trang tổng thể - xám lạnh nhẹ giúp nổi bật card: #F5F5FA) */
+  --background: oklch(0.9716 0.0066 286.28);
+  /* Text Primary (Chữ tiêu đề, nội dung chính - độ tương phản cao: #27272A) */
+  --foreground: oklch(0.2739 0.0055 286.03);
+
+  /* Surface / Card (Nền card sản phẩm, modal, header: #FFFFFF) */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2739 0.0055 286.03);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2739 0.0055 286.03);
+
+  /* Primary (Màu xanh thẫm uy tín, đậm nét: #0D5CB6) */
+  --primary: oklch(0.4847 0.1591 256.27);
+  /* Chữ trên nền nút Primary: Trắng tinh khiết chuẩn WCAG AA (#FFFFFF) */
+  --primary-foreground: oklch(1 0 0);
+
+  /* Secondary / Primary Soft (Nền tag, badge uy tín: #E6F0FA) */
+  --secondary: oklch(0.9506 0.0172 248.01);
+  /* Chữ trên nền badge uy tín / item chọn: Xanh thẫm #08458A */
+  --secondary-foreground: oklch(0.3975 0.1287 256.02);
+
+  /* Muted / Neutral Gray */
+  --muted: oklch(0.9656 0.005 286.28);
+  /* Text Secondary (Chữ mô tả phụ, thông tin meta: #808089) */
+  --muted-foreground: oklch(0.6028 0.0135 285.99);
+
+  /* Accent (Trạng thái hover/active nhẹ) */
+  --accent: oklch(0.9506 0.0172 248.01);
+  --accent-foreground: oklch(0.3975 0.1287 256.02);
+
+  /* Price / Accent / Destructive (#FF424E) */
+  --destructive: oklch(0.6632 0.2237 22.7);
+  --destructive-foreground: oklch(1 0 0);
+
+  /* Border / Divider (Đường kẻ mảnh phân tách: #EBEBF0) */
+  --border: oklch(0.9415 0.0067 286.27);
+  --input: oklch(0.9415 0.0067 286.27);
+  --ring: oklch(0.4847 0.1591 256.27);
+
+  /* Charts & Accents */
+  --chart-1: oklch(0.4847 0.1591 256.27); /* Tiki Deep Blue #0D5CB6 */
+  --chart-2: oklch(0.649 0.1717 151.75); /* Success / Trust Green #00AB56 */
+  --chart-3: oklch(0.6632 0.2237 22.7); /* Sale Price Red #FF424E */
+  --chart-4: oklch(0.75 0.15 85); /* Warm Amber / Star rating */
+  --chart-5: oklch(0.3975 0.1287 256.02); /* Deep Navy #08458A */
+
+  /* Sidebar styling */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.2739 0.0055 286.03);
+  --sidebar-primary: oklch(0.4847 0.1591 256.27);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9506 0.0172 248.01);
+  --sidebar-accent-foreground: oklch(0.3975 0.1287 256.02);
+  --sidebar-border: oklch(0.9415 0.0067 286.27);
+  --sidebar-ring: oklch(0.4847 0.1591 256.27);
+
+  /* Font & Geometry (Bo góc mềm mại 12px ~ 0.75rem - 16px ~ 1rem) */
+  --font-mono: var(--font-source-code-pro), ui-monospace, monospace;
+  --radius: 0.75rem;
+
+  /* Elevation & Clean Shadow */
+  --shadow-x: 0px;
+  --shadow-y: 2px;
+  --shadow-blur: 8px;
+  --shadow-spread: 0px;
+  --shadow-opacity: 0.04;
+  --shadow-color: hsl(0 0% 0%);
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.04);
+  --shadow-xs: 0px 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0px 2px 4px 0px hsl(0 0% 0% / 0.04);
+  --shadow: 0px 3px 6px 0px hsl(0 0% 0% / 0.05);
+  --shadow-md: 0px 4px 10px 0px hsl(0 0% 0% / 0.05);
+  --shadow-lg: 0px 8px 18px 0px hsl(0 0% 0% / 0.07);
+  --shadow-xl: 0px 12px 24px 0px hsl(0 0% 0% / 0.08);
+  --shadow-2xl: 0px 20px 36px 0px hsl(0 0% 0% / 0.12);
+  --tracking-normal: -0.01em;
+  --spacing: 0.25rem;
+}
+
+[data-theme='tiki-blue'].dark {
+  --background: oklch(0.14 0.01 260);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.18 0.01 260);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.18 0.01 260);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.6601 0.1865 251.62);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.24 0.04 255);
+  --secondary-foreground: oklch(0.9 0.05 240);
+  --muted: oklch(0.22 0.01 260);
+  --muted-foreground: oklch(0.7 0.01 260);
+  --accent: oklch(0.24 0.04 255);
+  --accent-foreground: oklch(0.9 0.05 240);
+  --destructive: oklch(0.6632 0.2237 22.7);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.26 0.01 260);
+  --input: oklch(0.26 0.01 260);
+  --ring: oklch(0.6601 0.1865 251.62);
+  --sidebar: oklch(0.14 0.01 260);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.6601 0.1865 251.62);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.24 0.04 255);
+  --sidebar-accent-foreground: oklch(0.9 0.05 240);
+  --sidebar-border: oklch(0.26 0.01 260);
+  --sidebar-ring: oklch(0.6601 0.1865 251.62);
+}

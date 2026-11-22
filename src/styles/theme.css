@@ -10,6 +10,7 @@
 @import './themes/astro-vista.css';
 @import './themes/whatsapp.css';
 @import './themes/tiktok.css';
+@import './themes/tiki-blue.css';
 
 body {
   @apply overscroll-none;

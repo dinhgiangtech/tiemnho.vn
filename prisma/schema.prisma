@@ -32,11 +32,19 @@ enum PaymentProvider {
   MANUAL_VIETQR
 }
 
+enum UserRole {
+  CREATOR
+  ADMIN
+  SUPPORT
+}
+
 model User {
   id                String          @id @default(cuid())
   clerkUserId       String?         @unique
   email             String          @unique
   password          String?
+  role              UserRole        @default(CREATOR)
+  isActive          Boolean         @default(true)
   name              String?
   displayName       String?         @default("Tiệm Nhỏ Creator")
   username          String?         @unique @default("tiemnho")
@@ -54,6 +62,8 @@ model User {
   zalo              String?         @default("0987654321")
   bankAccountNumber String?         @default("0988667788")
   bankBin           String?         @default("970422")
+  telegramChatId    String?
+  telegramLinkToken String?         @unique
 
   paymentConfig     PaymentConfig?
   products          Product[]
@@ -108,7 +118,7 @@ model Order {
   customerNote    String?
   status          OrderStatus     @default(PENDING)
   shippingStatus  ShippingStatus? @default(UNFULFILLED)
-  paymentMethod   String          @default("VIETQR")
+  paymentMethod   String          @default("PAYOS")
   paidAt          DateTime?
   downloadUrl     String?
   checkoutUrl     String?
@@ -143,7 +153,8 @@ model PaymentConfig {
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   provider          PaymentProvider @default(PAYOS)
-  isActive          Boolean         @default(true)
+  isActive          Boolean         @default(false)
+  isPayosEnabled    Boolean         @default(false)
 
   // Thông tin ngân hàng nhận tiền trực tiếp
   bankBin           String          @default("970422") // Mã BIN (VD: 970422 - MBBank, 970436 - Vietcombank)

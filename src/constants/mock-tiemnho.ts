@@ -23,6 +23,8 @@ export type CreatorProfile = {
   coverUrl?: string;
   verified: boolean;
   theme: 'obsidian' | 'minimal' | 'latte' | 'emerald' | 'rose' | 'tiktok';
+  telegramChatId?: string;
+  telegramLinkToken?: string;
   socials: {
     tiktok?: string;
     instagram?: string;
@@ -95,6 +97,8 @@ export const ShippingStatus = {
 export type ShippingStatus = (typeof ShippingStatus)[keyof typeof ShippingStatus];
 
 export const PaymentMethod = {
+  PAYOS: 'PAYOS',
+  MANUAL_VIETQR: 'MANUAL_VIETQR',
   VIETQR: 'VIETQR'
 } as const;
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
@@ -128,7 +132,7 @@ export type Order = {
   customerNote?: string;
   status: OrderStatus;
   shippingStatus?: ShippingStatus;
-  paymentMethod: PaymentMethod | 'VIETQR';
+  paymentMethod: PaymentMethod | 'PAYOS' | 'MANUAL_VIETQR' | 'VIETQR';
   paidAt?: string;
   downloadUrl?: string;
   checkoutUrl?: string;
@@ -169,6 +173,7 @@ export type PaymentConfig = {
   checksumKey: string;
   webhookUrl: string;
   isActive: boolean;
+  isPayosEnabled?: boolean;
   lastPingTestAt?: string;
 };
 

@@ -53,31 +53,27 @@ export const Logo: React.FC<LogoProps> = ({
       {/* 1. Quai túi uốn cong hình vòm cao */}
       <path
         d='M34 26V20C34 11.16 41.16 4 50 4C58.84 4 66 11.16 66 20V26'
-        stroke='#161823'
-        className='stroke-[#161823] dark:stroke-neutral-100'
+        stroke='currentColor'
+        className='stroke-primary'
         strokeWidth='8'
         strokeLinecap='round'
       />
 
-      {/* 2. Thân túi mua sắm hình thang màu đen */}
-      <path
-        d='M14 26H86L94 100H6L14 26Z'
-        fill='#161823'
-        className='fill-[#161823] dark:fill-neutral-100'
-      />
+      {/* 2. Thân túi mua sắm hình thang */}
+      <path d='M14 26H86L94 100H6L14 26Z' fill='currentColor' className='fill-primary' />
 
       {/* 3. Hai khoen móc chữ U đục lỗ bo tròn miệng túi */}
       <path
         d='M30 26V36C30 38.2 31.8 40 34 40C36.2 40 38 38.2 38 36V26'
         stroke='white'
-        className='stroke-white dark:stroke-zinc-900'
+        className='stroke-white'
         strokeWidth='8'
         strokeLinecap='round'
       />
       <path
         d='M62 26V36C62 38.2 63.8 40 66 40C68.2 40 70 38.2 70 36V26'
         stroke='white'
-        className='stroke-white dark:stroke-zinc-900'
+        className='stroke-white'
         strokeWidth='8'
         strokeLinecap='round'
       />
@@ -99,7 +95,7 @@ export const Logo: React.FC<LogoProps> = ({
           tiệm nhỏ
         </span>
         <span
-          className={`inline-block ${currentSize.dotSize} rounded-full bg-[#FE2C55] ml-[3px] shrink-0 self-baseline`}
+          className={`inline-block ${currentSize.dotSize} rounded-full bg-primary ml-[3px] shrink-0 self-baseline`}
         />
       </div>
     </div>

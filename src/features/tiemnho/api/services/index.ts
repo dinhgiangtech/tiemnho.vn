@@ -7,3 +7,4 @@ export * from './lead.service';
 export * from './analytics.service';
 export * from './email.service';
 export * from './payos.service';
+export * from './telegram.service';

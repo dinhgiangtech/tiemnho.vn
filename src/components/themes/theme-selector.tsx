@@ -49,7 +49,15 @@ export function ThemeSelector() {
                 <SelectLabel>themes</SelectLabel>
                 {THEMES.map((theme) => (
                   <SelectItem key={theme.name} value={theme.value}>
-                    {theme.name}
+                    <div className='flex items-center gap-2'>
+                      {theme.color && (
+                        <span
+                          className='h-2.5 w-2.5 rounded-full shrink-0 border border-black/10 dark:border-white/20'
+                          style={{ backgroundColor: theme.color }}
+                        />
+                      )}
+                      <span>{theme.name}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectGroup>

@@ -3,6 +3,7 @@
 import { PayOS } from '@payos/node';
 import type { Webhook, WebhookData } from '@payos/node';
 import { getPaymentConfig } from './payment.service';
+import { getAppBaseUrl } from '@/lib/utils';
 
 export interface CreatePayOSLinkParams {
   orderCodeNumber: number;
@@ -91,7 +92,7 @@ export async function createPayOSPaymentLink(
     };
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tiemnho.vn';
+  const baseUrl = getAppBaseUrl();
   const effectiveReturnUrl = returnUrl || `${baseUrl}/orders/${orderCodeString}/success`;
   const effectiveCancelUrl = cancelUrl || `${baseUrl}/orders/${orderCodeString}/cancel`;
 

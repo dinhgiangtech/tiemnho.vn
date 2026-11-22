@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { getAppBaseUrl } from '@/lib/utils';
 import { ensureDatabaseSeeded } from '@/lib/seed';
 import {
   ProductType,
@@ -14,6 +15,7 @@ import type { OrderFilterParams, CreateOrderInput } from '../types';
 import { formatOrder } from './formatters';
 import { sendOrderFulfillmentEmail } from './email.service';
 import { createPayOSPaymentLink } from './payos.service';
+import { getPaymentConfig } from './payment.service';
 
 export async function getOrders(filters?: OrderFilterParams): Promise<Order[]> {
   await ensureDatabaseSeeded();
@@ -78,6 +80,7 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
   const orderCodeNumber = Math.floor(100000 + Math.random() * 900000);
   const orderCode = `TN${orderCodeNumber}`;
 
+  let paymentMethod = 'PAYOS';
   let payosCheckoutUrl: string | undefined;
   let payosQrCode: string | undefined;
   let payosPaymentLinkId: string | undefined;
@@ -87,29 +90,47 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
 
   if (!isFree) {
     try {
-      const payosResult = await createPayOSPaymentLink({
-        orderCodeNumber,
-        orderCodeString: orderCode,
-        amount: product.price,
-        productTitle: product.title,
-        customerName: data.customerName,
-        customerEmail: data.customerEmail,
-        customerPhone: data.customerPhone,
-        creatorId: product.creatorId
-      });
-      if (payosResult.success) {
-        payosCheckoutUrl = payosResult.checkoutUrl;
-        payosQrCode = payosResult.qrCode;
-        payosPaymentLinkId = payosResult.paymentLinkId;
-        payosAccountNumber = payosResult.accountNumber;
-        payosAccountName = payosResult.accountName;
-        payosBin = payosResult.bin;
+      // Kiểm tra Creator có bật công tắc PayOS và cấu hình hợp lệ không
+      const creatorConfig = await getPaymentConfig(product.creatorId);
+      const isPayosEnabled = creatorConfig?.isPayosEnabled ?? false;
+      const hasPayOSConfig =
+        isPayosEnabled &&
+        Boolean(creatorConfig?.clientId && creatorConfig?.apiKey && creatorConfig?.checksumKey);
+
+      if (hasPayOSConfig) {
+        const payosResult = await createPayOSPaymentLink({
+          orderCodeNumber,
+          orderCodeString: orderCode,
+          amount: product.price,
+          productTitle: product.title,
+          customerName: data.customerName,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          creatorId: product.creatorId
+        });
+
+        if (payosResult.success) {
+          paymentMethod = 'PAYOS';
+          payosCheckoutUrl = payosResult.checkoutUrl;
+          payosQrCode = payosResult.qrCode;
+          payosPaymentLinkId = payosResult.paymentLinkId;
+          payosAccountNumber = payosResult.accountNumber;
+          payosAccountName = payosResult.accountName;
+          payosBin = payosResult.bin;
+        } else {
+          // Fallback nếu gọi payOS thất bại
+          paymentMethod = 'MANUAL_VIETQR';
+        }
+      } else {
+        // Creator chưa cấu hình PayOS -> Tự động chuyển fallback sang MANUAL_VIETQR
+        paymentMethod = 'MANUAL_VIETQR';
       }
     } catch (err) {
       console.warn(
-        '[PayOS] Lỗi khi tạo link thanh toán tự động, chuyển sang VietQR dự phòng:',
+        '[Payment Hybrid] Lỗi tạo link PayOS, tự động fallback sang MANUAL_VIETQR:',
         err
       );
+      paymentMethod = 'MANUAL_VIETQR';
     }
   }
 
@@ -133,7 +154,7 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
       status: isFree ? OrderStatus.PAID : OrderStatus.PENDING,
       shippingStatus:
         product.type === ProductType.PHYSICAL ? ShippingStatus.UNFULFILLED : undefined,
-      paymentMethod: PaymentMethod.VIETQR,
+      paymentMethod,
       paidAt: isFree ? new Date() : undefined,
       downloadUrl: isFree && product.fileUrl ? product.fileUrl : undefined,
       checkoutUrl: payosCheckoutUrl,
@@ -257,11 +278,26 @@ export async function manualActivateOrder(
   order: Order;
   grant?: { token: string; expiresAt: Date; maxDownloads: number };
 }> {
+  return settleOrderAndFulfill(id, 'MANUAL_CREATOR', requesterCreatorId);
+}
+
+/**
+ * Hàm gạch nợ lõi dùng chung (settleOrderAndFulfill)
+ * Hỗ trợ các nguồn duyệt: "MANUAL_CREATOR" | "MANUAL_TELEGRAM" | "PAYOS_WEBHOOK" | "SEPAY_WEBHOOK"
+ */
+export async function settleOrderAndFulfill(
+  idOrOrderCode: string,
+  gateway: string = 'MANUAL_TELEGRAM',
+  requesterCreatorId?: string
+): Promise<{
+  order: Order;
+  grant?: { token: string; expiresAt: Date; maxDownloads: number };
+}> {
   await ensureDatabaseSeeded();
 
   const current = await prisma.order.findFirst({
     where: {
-      OR: [{ id }, { orderCode: id }]
+      OR: [{ id: idOrOrderCode }, { orderCode: idOrOrderCode }]
     },
     include: {
       product: true
@@ -269,10 +305,17 @@ export async function manualActivateOrder(
   });
 
   if (!current) {
-    throw new Error(`Đơn hàng ${id} không tồn tại`);
+    throw new Error(`Đơn hàng ${idOrOrderCode} không tồn tại`);
   }
 
-  // 1. Kiểm tra quyền sở hữu (nếu có requesterCreatorId / requesterUserId)
+  // Idempotent check: Nếu đơn đã thanh toán rồi thì trả về kết quả hiện tại
+  if (current.status === OrderStatus.PAID) {
+    return {
+      order: formatOrder(current)
+    };
+  }
+
+  // 1. Kiểm tra quyền sở hữu nếu là Creator thao tác thủ công
   if (requesterCreatorId) {
     const isOwner =
       (current.userId && current.userId === requesterCreatorId) ||
@@ -287,7 +330,7 @@ export async function manualActivateOrder(
 
   // 2. Chuẩn bị token và grant nếu là sản phẩm số (DownloadGrant: token bảo mật, hạn dùng 72h, max 5 downloads)
   let downloadGrant: { token: string; expiresAt: Date; maxDownloads: number } | undefined;
-  let resolvedDownloadUrl = current.downloadUrl;
+  let resolvedDownloadUrl = current.downloadUrl || current.product?.fileUrl;
 
   if (current.productType === ProductType.DIGITAL) {
     const grantToken = `gr_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -298,9 +341,9 @@ export async function manualActivateOrder(
       maxDownloads: 5
     };
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tiemnho.vn';
+    const baseUrl = getAppBaseUrl();
     const productFile =
-      current.product?.fileUrl || current.downloadUrl || 'https://tiemnho.vn/files/sample';
+      current.product?.fileUrl || current.downloadUrl || `${baseUrl}/files/sample`;
     resolvedDownloadUrl = `${baseUrl}/download/${grantToken}?file=${encodeURIComponent(productFile)}`;
   }
 
@@ -364,7 +407,7 @@ export async function manualActivateOrder(
 
   // 5. Ghi log kiểm toán thanh toán (PaymentLog)
   console.warn(
-    `[PaymentLog] gateway="MANUAL_CREATOR" status="SUCCESS" orderCode="${current.orderCode}" amount=${current.amount} creatorId="${current.creatorId}" at=${now.toISOString()}`
+    `[PaymentLog] gateway="${gateway}" status="SUCCESS" orderCode="${current.orderCode}" amount=${current.amount} creatorId="${current.creatorId}" at=${now.toISOString()}`
   );
 
   return {

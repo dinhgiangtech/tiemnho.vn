@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrderById, updateOrderStatus } from '@/features/tiemnho/api/services/order.service';
+import {
+  getOrderById,
+  updateOrderStatus,
+  settleOrderAndFulfill
+} from '@/features/tiemnho/api/services/order.service';
 import { verifyPayOSWebhookData } from '@/features/tiemnho/api/services/payos.service';
 import { OrderStatus } from '@/constants/mock-tiemnho';
 
@@ -89,7 +93,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 7. Cập nhật trạng thái đơn hàng sang PAID & kích hoạt trả hàng tự động (gửi email, tăng soldCount)
-    const updatedOrder = await updateOrderStatus(targetOrder.id, OrderStatus.PAID);
+    const { order: updatedOrder } = await settleOrderAndFulfill(
+      targetOrder.orderCode,
+      'PAYOS_WEBHOOK'
+    );
 
     console.log(
       `[PayOS Webhook Thành Công] Đơn #${targetOrder.orderCode} (${transferAmount.toLocaleString('vi-VN')}đ) đã chuyển sang PAID.`
