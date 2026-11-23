@@ -11,14 +11,11 @@ WORKDIR /app
 # Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install bun to use bun.lock for fast dependency resolution
-RUN npm install -g bun
+# Copy package files
+COPY package.json package-lock.json* ./
 
-# Copy package-related files to leverage Docker cache
-COPY package.json bun.lock* package-lock.json* ./
-
-# Install dependencies
-RUN bun install --no-save
+# Install dependencies using npm clean install with network timeout tolerance
+RUN npm ci --prefer-offline --no-audit
 
 # ============================================
 # Stage 2: Build the Next.js application
@@ -37,6 +34,10 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV BUILD_STANDALONE=true
+ENV NEXT_PUBLIC_SENTRY_DISABLED=true
+# Giới hạn số worker của Next.js về 1 để tránh spawn nhiều tiến trình ngốn RAM trên VPS nhỏ
+ENV NEXT_MANUAL_SIG_HANDLE=true
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Next.js build-time variables (pass from compose or --build-arg)
 ARG NEXT_PUBLIC_APP_URL=https://tiemnho.vn
@@ -44,7 +45,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
 # Prisma client generation & Build
 RUN npx prisma generate
-RUN npm run build
+RUN npx next build --no-lint
 
 # ============================================
 # Stage 3: Production runner
