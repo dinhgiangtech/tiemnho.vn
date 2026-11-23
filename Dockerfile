@@ -1,69 +1,73 @@
 # ============================================
-# Stage 1: Install dependencies
+# Stage 1: Dependencies
 # ============================================
-
-FROM oven/bun:1-slim AS dependencies
-
+FROM node:22-slim AS deps
 WORKDIR /app
 
 # Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-COPY package.json bun.lock* bunfig.toml* ./
+# Copy package files & Prisma schema
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
 
-# Dùng cache mount và chạy bun native (nhanh gấp 5 lần so với chạy bun trên node image)
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --no-save
+# Install dependencies (fallback npm install nếu chưa có package-lock)
+RUN \
+  if [ -f package-lock.json ]; then npm ci; \
+  else npm install --legacy-peer-deps; \
+  fi
+
+# Generate Prisma Client ngay trong deps
+RUN npx prisma generate
 
 # ============================================
-# Stage 2: Build the Next.js application
+# Stage 2: Builder
 # ============================================
-
 FROM node:22-slim AS builder
-
 WORKDIR /app
 
-# Install openssl for Prisma build
+# Install openssl for build
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
 COPY . .
 
-ENV NODE_ENV=production
+# Environment variables for build stage
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 ENV BUILD_STANDALONE=true
 ENV NEXT_PUBLIC_SENTRY_DISABLED=true
-ENV NEXT_MANUAL_SIG_HANDLE=true
+ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/tiemnho_db?schema=public"
+ENV SESSION_SECRET="build-time-fallback-dummy-session-secret-min-32-chars-long"
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
-# Next.js build-time variables (pass from compose or --build-arg)
+# Next.js build-time variables
 ARG NEXT_PUBLIC_APP_URL=https://tiemnho.vn
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
-# Prisma client generation & Build
-RUN npx prisma generate
+# Build Next.js application
 RUN npx next build --no-lint
 
 # ============================================
-# Stage 3: Production runner
+# Stage 3: Runner
 # ============================================
-
 FROM node:22-slim AS runner
-
 WORKDIR /app
 
-# Install openssl for runtime Prisma queries
+# Install openssl runtime for Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy public assets & static files
+# Copy built artifacts and static files
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/prisma ./prisma
 
 # Persistent upload dir
 RUN mkdir -p uploads && chown -R node:node uploads
