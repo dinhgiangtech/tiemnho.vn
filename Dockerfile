@@ -17,8 +17,8 @@ RUN npm install -g bun
 # Copy package-related files (dự án dùng bun.lock)
 COPY package.json bun.lock* bunfig.toml* ./
 
-# Install dependencies using bun với cờ tắt lifecycle scripts bị đơ
-RUN bun install --frozen-lockfile
+# Install dependencies using bun (tự động cập nhật lockfile nếu có thay đổi package)
+RUN bun install --no-save
 
 # ============================================
 # Stage 2: Build the Next.js application
