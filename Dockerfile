@@ -11,11 +11,14 @@ WORKDIR /app
 # Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Install bun official binary
+RUN npm install -g bun
 
-# Install dependencies using npm clean install with network timeout tolerance
-RUN npm ci --prefer-offline --no-audit
+# Copy package-related files (dự án dùng bun.lock)
+COPY package.json bun.lock* bunfig.toml* ./
+
+# Install dependencies using bun với cờ tắt lifecycle scripts bị đơ
+RUN bun install --frozen-lockfile
 
 # ============================================
 # Stage 2: Build the Next.js application
