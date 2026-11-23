@@ -48,7 +48,7 @@ RUN npx next build --no-lint
 # Stage 3: Production runner
 # ============================================
 
-FROM node:${NODE_VERSION} AS runner
+FROM node:22-slim AS runner
 
 WORKDIR /app
 
