@@ -62,9 +62,15 @@ Dán nội dung cấu hình Production mẫu bên dưới (thay đổi theo thô
 
 ```env
 # =================================================================
-# Database kết nối nội bộ giữa container App và PostgreSQL
+# Database & Container Configuration
 # =================================================================
-DATABASE_URL="postgresql://tiemnho:tiemnho_secret_password@postgres:5432/tiemnho_db?schema=public"
+POSTGRES_USER="tiemnho"
+POSTGRES_PASSWORD="tiemnho_secret_password"
+POSTGRES_DB="tiemnho_db"
+
+# Port ngoài VPS (có thể đổi nếu trùng)
+APP_PORT=3088
+DB_PORT=5488
 
 # =================================================================
 # Khóa bí mật Session (tự tạo một chuỗi ngẫu nhiên dài >= 32 ký tự)
@@ -161,7 +167,7 @@ server {
     server_name tiemnho.vn www.tiemnho.vn;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3088;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
