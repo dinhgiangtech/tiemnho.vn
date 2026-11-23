@@ -2,29 +2,24 @@
 # Stage 1: Install dependencies
 # ============================================
 
-ARG NODE_VERSION=22-slim
-
-FROM node:${NODE_VERSION} AS dependencies
+FROM oven/bun:1-slim AS dependencies
 
 WORKDIR /app
 
 # Install openssl for Prisma
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install bun official binary
-RUN npm install -g bun
-
-# Copy package-related files (dự án dùng bun.lock)
 COPY package.json bun.lock* bunfig.toml* ./
 
-# Install dependencies using bun (tự động cập nhật lockfile nếu có thay đổi package)
-RUN bun install --no-save
+# Dùng cache mount và chạy bun native (nhanh gấp 5 lần so với chạy bun trên node image)
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --no-save
 
 # ============================================
 # Stage 2: Build the Next.js application
 # ============================================
 
-FROM node:${NODE_VERSION} AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
@@ -38,7 +33,6 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV BUILD_STANDALONE=true
 ENV NEXT_PUBLIC_SENTRY_DISABLED=true
-# Giới hạn số worker của Next.js về 1 để tránh spawn nhiều tiến trình ngốn RAM trên VPS nhỏ
 ENV NEXT_MANUAL_SIG_HANDLE=true
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
