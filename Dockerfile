@@ -47,7 +47,7 @@ ARG NEXT_PUBLIC_APP_URL=https://tiemnho.vn
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
 # Build Next.js application
-RUN npx next build --no-lint
+RUN npm run build
 
 # ============================================
 # Stage 3: Runner
