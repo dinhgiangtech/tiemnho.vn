@@ -69,6 +69,7 @@ model User {
   products          Product[]
   orders            Order[]
   leads             Lead[]
+  paymentLogs       PaymentLog[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }
@@ -129,6 +130,8 @@ model Order {
   bin             String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
+  paymentLogs     PaymentLog[]
 }
 
 model Lead {
@@ -183,5 +186,34 @@ model OtpVerification {
   createdAt DateTime @default(now())
 
   @@index([email])
+}
+
+model PaymentLog {
+  id              String   @id @default(cuid())
+  creatorId       String?  // ID của Creator nhận tiền (để lọc log theo từng tiệm)
+  orderId         String?  // Liên kết với đơn hàng (nếu khớp được mã đơn)
+  orderCode       String?  // Mã đơn dạng chuỗi (VD: "TN384721") để tra cứu nhanh
+
+  // Phân loại sự kiện:
+  // "LINK_CREATED" | "FALLBACK_TRIGGERED" | "BUYER_CONFIRMED" | 
+  // "WEBHOOK_SUCCESS" | "WEBHOOK_MISMATCH" | "WEBHOOK_DUPLICATE" | "ORDER_NOT_FOUND" | "INVALID_SIGNATURE" |
+  // "MANUAL_APPROVED" | "EMAIL_SENT" | "EMAIL_FAILED" | "CONFIG_CHANGED"
+  eventType       String   
+
+  gateway         String?  // "PAYOS" | "MANUAL_VIETQR" | "MANUAL_TELEGRAM" | "MANUAL_CREATOR" | "RESEND" | "FREE_LEAD"
+  transactionId   String?  // Mã tham chiếu ngân hàng (referenceCode từ payOS) hoặc Resend Message ID
+  transferAmount  Int      @default(0) // Số tiền giao dịch thực tế
+  transferContent String?  // Nội dung chuyển khoản thực tế khách ghi
+  status          String   // "INFO" | "SUCCESS" | "WARNING" | "ERROR"
+  message         String?  // Mô tả ngắn gọn bằng tiếng Việt dễ hiểu
+  rawPayload      Json?    // Lưu toàn bộ JSON gốc từ Webhook / payOS / Resend để kiểm toán
+  createdAt       DateTime @default(now())
+
+  creator         User?    @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  order           Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([creatorId, createdAt])
+  @@index([orderCode])
+  @@index([transactionId])
 }
 

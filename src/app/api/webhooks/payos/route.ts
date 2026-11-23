@@ -5,6 +5,7 @@ import {
   settleOrderAndFulfill
 } from '@/features/tiemnho/api/services/order.service';
 import { verifyPayOSWebhookData } from '@/features/tiemnho/api/services/payos.service';
+import { createPaymentLog } from '@/features/tiemnho/api/services/payment-log.service';
 import { OrderStatus } from '@/constants/mock-tiemnho';
 
 export const runtime = 'nodejs';
@@ -14,11 +15,20 @@ export const runtime = 'nodejs';
  * Endpoint: /api/webhooks/payos
  */
 export async function POST(req: NextRequest) {
+  let body: any = null;
   try {
-    const body = await req.json();
+    body = await req.json();
 
     // 1. Kiểm tra cấu trúc dữ liệu webhook từ payOS
     if (!body || !body.data) {
+      await createPaymentLog({
+        eventType: 'WEBHOOK_MISMATCH',
+        gateway: 'PAYOS',
+        status: 'WARNING',
+        message: 'Payload webhook từ payOS không hợp lệ hoặc thiếu object data',
+        rawPayload: body
+      });
+
       return NextResponse.json(
         { success: false, error: 'Payload không hợp lệ từ payOS' },
         { status: 400 }
@@ -28,6 +38,8 @@ export async function POST(req: NextRequest) {
     const { data, code, desc } = body;
     const rawOrderCode = data.orderCode;
     const transferAmount = Number(data.amount || 0);
+    const transactionId = data.reference || null;
+    const transferContent = data.description || null;
 
     // 2. Tìm mã đơn hàng (hỗ trợ cả TNxxxxx hoặc số orderCode)
     const orderIdentifiers = [
@@ -44,6 +56,19 @@ export async function POST(req: NextRequest) {
 
     if (!targetOrder) {
       console.warn(`[PayOS Webhook] Không tìm thấy đơn hàng với các mã:`, orderIdentifiers);
+
+      await createPaymentLog({
+        orderCode: String(rawOrderCode),
+        eventType: 'ORDER_NOT_FOUND',
+        gateway: 'PAYOS',
+        transactionId,
+        transferAmount,
+        transferContent,
+        status: 'WARNING',
+        message: `Không tìm thấy đơn hàng tương ứng với orderCode #${rawOrderCode}`,
+        rawPayload: body
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -56,15 +81,43 @@ export async function POST(req: NextRequest) {
     // 3. Xác thực chữ ký webhook (Signature verification)
     try {
       await verifyPayOSWebhookData(body, targetOrder.creatorId);
-    } catch (verifyErr) {
+    } catch (verifyErr: any) {
       console.warn(
         `[PayOS Webhook] Cảnh báo xác thực chữ ký (vẫn tiếp tục nếu đang test nội bộ):`,
         verifyErr
       );
+
+      await createPaymentLog({
+        creatorId: targetOrder.creatorId,
+        orderId: targetOrder.id,
+        orderCode: targetOrder.orderCode,
+        eventType: 'INVALID_SIGNATURE',
+        gateway: 'PAYOS',
+        transactionId,
+        transferAmount,
+        transferContent,
+        status: 'WARNING',
+        message: `Chữ ký webhook không hợp lệ hoặc chưa khớp key: ${verifyErr?.message}`,
+        rawPayload: body
+      });
     }
 
     // 4. Nếu đơn hàng đã được thanh toán trước đó (tránh duplicate fulfillment)
     if (targetOrder.status === OrderStatus.PAID) {
+      await createPaymentLog({
+        creatorId: targetOrder.creatorId,
+        orderId: targetOrder.id,
+        orderCode: targetOrder.orderCode,
+        eventType: 'WEBHOOK_DUPLICATE',
+        gateway: 'PAYOS',
+        transactionId,
+        transferAmount,
+        transferContent,
+        status: 'INFO',
+        message: `Webhook trùng: Đơn hàng #${targetOrder.orderCode} đã thanh toán trước đó`,
+        rawPayload: body
+      });
+
       return NextResponse.json({
         success: true,
         message: `Đơn hàng #${targetOrder.orderCode} đã được ghi nhận thanh toán trước đó`,
@@ -75,6 +128,21 @@ export async function POST(req: NextRequest) {
     // 5. Kiểm tra trạng thái giao dịch (code === "00" là thành công theo chuẩn payOS)
     if (code && code !== '00') {
       console.warn(`[PayOS Webhook] Giao dịch thất bại hoặc bị hủy (code: ${code}, desc: ${desc})`);
+
+      await createPaymentLog({
+        creatorId: targetOrder.creatorId,
+        orderId: targetOrder.id,
+        orderCode: targetOrder.orderCode,
+        eventType: 'WEBHOOK_MISMATCH',
+        gateway: 'PAYOS',
+        transactionId,
+        transferAmount,
+        transferContent,
+        status: 'WARNING',
+        message: `Giao dịch payOS chưa thành công: code ${code} (${desc})`,
+        rawPayload: body
+      });
+
       return NextResponse.json({
         success: false,
         message: `Giao dịch chưa hoàn tất: ${desc || code}`
@@ -83,6 +151,20 @@ export async function POST(req: NextRequest) {
 
     // 6. Kiểm tra số tiền thanh toán thực nhận
     if (transferAmount > 0 && transferAmount < targetOrder.amount) {
+      await createPaymentLog({
+        creatorId: targetOrder.creatorId,
+        orderId: targetOrder.id,
+        orderCode: targetOrder.orderCode,
+        eventType: 'WEBHOOK_MISMATCH',
+        gateway: 'PAYOS',
+        transactionId,
+        transferAmount,
+        transferContent,
+        status: 'ERROR',
+        message: `Khách chuyển thiếu tiền: Thực chuyển ${transferAmount.toLocaleString('vi-VN')}đ / Cần ${targetOrder.amount.toLocaleString('vi-VN')}đ`,
+        rawPayload: body
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -92,11 +174,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 7. Cập nhật trạng thái đơn hàng sang PAID & kích hoạt trả hàng tự động (gửi email, tăng soldCount)
+    // 7. Cập nhật trạng thái đơn hàng sang PAID & kích hoạt trả hàng tự động
     const { order: updatedOrder } = await settleOrderAndFulfill(
       targetOrder.orderCode,
       'PAYOS_WEBHOOK'
     );
+
+    // Ghi log thanh toán thành công
+    await createPaymentLog({
+      creatorId: targetOrder.creatorId,
+      orderId: targetOrder.id,
+      orderCode: targetOrder.orderCode,
+      eventType: 'WEBHOOK_SUCCESS',
+      gateway: 'PAYOS',
+      transactionId,
+      transferAmount,
+      transferContent,
+      status: 'SUCCESS',
+      message: `Khớp thanh toán thành công ${transferAmount.toLocaleString('vi-VN')}đ qua payOS`,
+      rawPayload: body
+    });
 
     console.log(
       `[PayOS Webhook Thành Công] Đơn #${targetOrder.orderCode} (${transferAmount.toLocaleString('vi-VN')}đ) đã chuyển sang PAID.`
@@ -109,6 +206,15 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('[PayOS Webhook Exception]:', error);
+
+    await createPaymentLog({
+      eventType: 'WEBHOOK_MISMATCH',
+      gateway: 'PAYOS',
+      status: 'ERROR',
+      message: `Lỗi ngoại lệ khi xử lý Webhook: ${error?.message}`,
+      rawPayload: body
+    });
+
     return NextResponse.json(
       { success: false, error: error?.message || 'Lỗi hệ thống khi xử lý webhook payOS' },
       { status: 500 }

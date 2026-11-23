@@ -1,6 +1,7 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { sendOrderAlertToCreator } from '@/features/tiemnho/api/services/telegram.service';
 import { getOrderById } from '@/features/tiemnho/api/services/order.service';
+import { createPaymentLog } from '@/features/tiemnho/api/services/payment-log.service';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +23,18 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         { status: 404 }
       );
     }
+
+    // Ghi log Buyer Confirmed
+    await createPaymentLog({
+      creatorId: order.creatorId,
+      orderId: order.id,
+      orderCode: order.orderCode,
+      eventType: 'BUYER_CONFIRMED',
+      gateway: 'MANUAL_VIETQR',
+      transferAmount: Math.round(order.amount),
+      status: 'INFO',
+      message: `Khách hàng ${order.customerName} bấm xác nhận đã chuyển khoản đơn #${order.orderCode}`
+    });
 
     // Ban thong bao ve Telegram Creator kem nut duyet 1-cham
     const sent = await sendOrderAlertToCreator(order.orderCode);

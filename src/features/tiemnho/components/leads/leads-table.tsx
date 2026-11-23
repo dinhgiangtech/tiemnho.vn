@@ -10,10 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
+import { TablePagination } from '@/components/ui/table-pagination';
 
 export function LeadsTable() {
   const { data: leads = [], isLoading: loading } = useQuery(leadsQueryOptions());
   const [search, setSearch] = React.useState('');
+
+  // Phân trang danh sách khách hàng
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
 
   const filteredLeads = React.useMemo(() => {
     if (!search.trim()) return leads;
@@ -26,6 +31,16 @@ export function LeadsTable() {
         l.sourceProduct.toLowerCase().includes(q)
     );
   }, [leads, search]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.ceil(filteredLeads.length / pageSize) || 1;
+  const paginatedLeads = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredLeads.slice(startIndex, startIndex + pageSize);
+  }, [filteredLeads, currentPage, pageSize]);
 
   const handleExportCsv = () => {
     if (leads.length === 0) {
@@ -114,7 +129,7 @@ export function LeadsTable() {
               </tr>
             </thead>
             <tbody className='divide-y divide-border/60'>
-              {filteredLeads.map((lead) => {
+              {paginatedLeads.map((lead) => {
                 const isBuyer = lead.sourceType === 'PURCHASE';
                 return (
                   <tr key={lead.id} className='hover:bg-muted/30 transition-colors'>
@@ -164,11 +179,24 @@ export function LeadsTable() {
             </tbody>
           </table>
         </div>
+
+        {/* Phân trang Desktop */}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredLeads.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </Card>
 
       {/* Mobile Card View (< md) */}
       <div className='block md:hidden space-y-3.5'>
-        {filteredLeads.map((lead) => {
+        {paginatedLeads.map((lead) => {
           const isBuyer = lead.sourceType === 'PURCHASE';
           return (
             <div
@@ -237,6 +265,19 @@ export function LeadsTable() {
           <div className='bg-white dark:bg-card border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-400'>
             Chưa có liên hệ nào được ghi nhận. Khi có khách tải quà 0đ hoặc mua hàng, dữ liệu sẽ tự
             động xuất hiện tại đây.
+          </div>
+        )}
+
+        {/* Phân trang Mobile */}
+        {filteredLeads.length > 0 && (
+          <div className='bg-white dark:bg-card border border-neutral-200/80 dark:border-neutral-800 rounded-2xl overflow-hidden'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filteredLeads.length}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

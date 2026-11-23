@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Clock, CheckCircle2, Package, Check, Loader2, ChevronDown, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+import { TablePagination } from '@/components/ui/table-pagination';
 
 export function OrdersTable() {
   const queryClient = useQueryClient();
@@ -30,6 +31,10 @@ export function OrdersTable() {
   const [statusFilter, setStatusFilter] = React.useState<string>('ALL');
   const [search, setSearch] = React.useState<string>('');
   const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
+
+  // Phân trang đơn hàng
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(10);
 
   // State cho Modal xác nhận Kích hoạt thủ công
   const [orderToActivate, setOrderToActivate] = React.useState<Order | null>(null);
@@ -118,6 +123,17 @@ export function OrdersTable() {
         );
       });
   }, [orders, statusFilter, search]);
+
+  // Reset trang về 1 khi đổi bộ lọc hoặc từ khóa tìm kiếm
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, search]);
+
+  const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
+  const paginatedOrders = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredOrders.slice(startIndex, startIndex + pageSize);
+  }, [filteredOrders, currentPage, pageSize]);
 
   const handleUpdateShipping = (orderId: string, newShippingStatus: ShippingStatus) => {
     updateShippingMutation.mutate({ orderId, newShippingStatus });
@@ -289,7 +305,7 @@ export function OrdersTable() {
               </tr>
             </thead>
             <tbody className='divide-y divide-border/60'>
-              {filteredOrders.map((order) => {
+              {paginatedOrders.map((order) => {
                 const isPaid = order.status === OrderStatus.PAID;
                 const isPending = order.status === OrderStatus.PENDING;
                 const isPhysical = order.productType === ProductType.PHYSICAL;
@@ -436,11 +452,24 @@ export function OrdersTable() {
             </tbody>
           </table>
         </div>
+
+        {/* Phân trang Desktop */}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredOrders.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </Card>
 
       {/* Mobile Card View (< md) */}
       <div className='block md:hidden space-y-3.5'>
-        {filteredOrders.map((order) => {
+        {paginatedOrders.map((order) => {
           const isPaid = order.status === OrderStatus.PAID;
           const isPending = order.status === OrderStatus.PENDING;
           const isPhysical = order.productType === ProductType.PHYSICAL;
@@ -562,6 +591,19 @@ export function OrdersTable() {
         {filteredOrders.length === 0 && !loading && (
           <div className='bg-white dark:bg-card border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-8 text-center text-sm text-neutral-400'>
             Không tìm thấy đơn hàng nào phù hợp bộ lọc.
+          </div>
+        )}
+
+        {/* Phân trang Mobile */}
+        {filteredOrders.length > 0 && (
+          <div className='bg-white dark:bg-card border border-neutral-200/80 dark:border-neutral-800 rounded-2xl overflow-hidden'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filteredOrders.length}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

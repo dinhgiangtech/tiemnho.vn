@@ -51,6 +51,9 @@ export function UserNav() {
           <DropdownMenuItem onClick={() => router.push('/dashboard/settings/payment')}>
             Cấu hình VietQR
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push('/admin/overview')}>
+            Khu vực Quản trị (Admin)
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>

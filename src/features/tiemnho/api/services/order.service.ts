@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getAppBaseUrl } from '@/lib/utils';
+import { createPaymentLog } from './payment-log.service';
 import { ensureDatabaseSeeded } from '@/lib/seed';
 import {
   ProductType,
@@ -117,20 +118,54 @@ export async function createOrder(data: CreateOrderInput): Promise<Order> {
           payosAccountNumber = payosResult.accountNumber;
           payosAccountName = payosResult.accountName;
           payosBin = payosResult.bin;
+
+          // Ghi log tạo link payOS thành công
+          await createPaymentLog({
+            creatorId: product.creatorId,
+            orderCode,
+            eventType: 'LINK_CREATED',
+            gateway: 'PAYOS',
+            transactionId: payosResult.paymentLinkId,
+            transferAmount: product.price,
+            status: 'INFO',
+            message: `Tạo link thanh toán payOS thành công cho đơn #${orderCode}`,
+            rawPayload: { checkoutUrl: payosCheckoutUrl, paymentLinkId: payosPaymentLinkId }
+          });
         } else {
           // Fallback nếu gọi payOS thất bại
           paymentMethod = 'MANUAL_VIETQR';
+
+          await createPaymentLog({
+            creatorId: product.creatorId,
+            orderCode,
+            eventType: 'FALLBACK_TRIGGERED',
+            gateway: 'MANUAL_VIETQR',
+            transferAmount: product.price,
+            status: 'WARNING',
+            message: `payOS trả về lỗi (${payosResult.error}), kích hoạt fallback sang VietQR tĩnh`,
+            rawPayload: payosResult
+          });
         }
       } else {
         // Creator chưa cấu hình PayOS -> Tự động chuyển fallback sang MANUAL_VIETQR
         paymentMethod = 'MANUAL_VIETQR';
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn(
         '[Payment Hybrid] Lỗi tạo link PayOS, tự động fallback sang MANUAL_VIETQR:',
         err
       );
       paymentMethod = 'MANUAL_VIETQR';
+
+      await createPaymentLog({
+        creatorId: product.creatorId,
+        orderCode,
+        eventType: 'FALLBACK_TRIGGERED',
+        gateway: 'MANUAL_VIETQR',
+        transferAmount: product.price,
+        status: 'WARNING',
+        message: `Lỗi ngoại lệ payOS (${err?.message}), tự động fallback sang VietQR tĩnh`
+      });
     }
   }
 
@@ -397,18 +432,51 @@ export async function settleOrderAndFulfill(
   // 4. Kích hoạt gửi email tự động qua Resend
   const formatted = formatOrder(updatedOrder);
   try {
-    await sendOrderFulfillmentEmail(formatted, {
+    const emailRes = await sendOrderFulfillmentEmail(formatted, {
       downloadUrl: resolvedDownloadUrl || undefined,
       expiresHours: 72
     });
-  } catch (err) {
+
+    await createPaymentLog({
+      creatorId: current.creatorId,
+      orderId: current.id,
+      orderCode: current.orderCode,
+      eventType: emailRes.success ? 'EMAIL_SENT' : 'EMAIL_FAILED',
+      gateway: 'RESEND',
+      transactionId: emailRes.id,
+      status: emailRes.success ? 'SUCCESS' : 'WARNING',
+      message: emailRes.success
+        ? `Đã gửi email đơn hàng và link tải tài liệu tới ${current.customerEmail}`
+        : `Gửi email thất bại: ${emailRes.error}`,
+      rawPayload: emailRes
+    });
+  } catch (err: any) {
     console.warn('[Resend] Lỗi gửi email kích hoạt:', err);
+    await createPaymentLog({
+      creatorId: current.creatorId,
+      orderId: current.id,
+      orderCode: current.orderCode,
+      eventType: 'EMAIL_FAILED',
+      gateway: 'RESEND',
+      status: 'ERROR',
+      message: `Ngoại lệ khi gọi Resend: ${err?.message}`
+    });
   }
 
-  // 5. Ghi log kiểm toán thanh toán (PaymentLog)
-  console.warn(
-    `[PaymentLog] gateway="${gateway}" status="SUCCESS" orderCode="${current.orderCode}" amount=${current.amount} creatorId="${current.creatorId}" at=${now.toISOString()}`
-  );
+  // 5. Ghi log hoàn tất thanh toán (PaymentLog)
+  const isManual = gateway.includes('MANUAL') || gateway.includes('TELEGRAM');
+  await createPaymentLog({
+    creatorId: current.creatorId,
+    orderId: current.id,
+    orderCode: current.orderCode,
+    eventType: isManual ? 'MANUAL_APPROVED' : 'WEBHOOK_SUCCESS',
+    gateway,
+    transferAmount: Math.round(current.amount),
+    status: 'SUCCESS',
+    message: isManual
+      ? `Chủ tiệm duyệt thủ công đơn #${current.orderCode} qua ${gateway}`
+      : `Đơn hàng #${current.orderCode} đã thanh toán thành công qua ${gateway}`
+  });
 
   return {
     order: formatOrder(updatedOrder),

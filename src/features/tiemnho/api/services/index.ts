@@ -8,3 +8,4 @@ export * from './analytics.service';
 export * from './email.service';
 export * from './payos.service';
 export * from './telegram.service';
+export * from './payment-log.service';
