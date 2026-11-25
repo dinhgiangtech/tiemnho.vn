@@ -19,7 +19,8 @@ import {
   Loader2,
   X,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -335,17 +336,25 @@ export function VietQrPaymentPopup({
                 </div>
 
                 {order.downloadUrl || product.fileUrl ? (
-                  <a
-                    href={order.downloadUrl || product.fileUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='w-full py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer'
-                  >
-                    <Download className='w-4 h-4 shrink-0' />
-                    <span className='truncate'>
-                      Tải tài liệu ngay ({product.fileName || 'File đính kèm'})
-                    </span>
-                  </a>
+                  <div className='space-y-2'>
+                    <a
+                      href={order.downloadUrl || product.fileUrl}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='w-full py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer'
+                    >
+                      <Download className='w-4 h-4 shrink-0' />
+                      <span>Tải tài liệu ngay</span>
+                    </a>
+                    {product.fileName && (
+                      <div className='flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground px-2'>
+                        <FileText className='w-3.5 h-3.5 shrink-0 text-emerald-600' />
+                        <span className='truncate max-w-[260px]' title={product.fileName}>
+                          {product.fileName}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className='p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-[12px] font-medium border border-emerald-500/20 leading-relaxed'>
                     Đường link tải tài liệu đã được gửi về email:{' '}

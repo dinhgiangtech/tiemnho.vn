@@ -88,16 +88,18 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
                 {summaryText}
               </p>
             ) : null}
-            <div className='flex items-baseline gap-1.5 mt-1'>
-              <span className='text-xs sm:text-sm font-bold text-[#FE2C55]'>
-                {formatPrice(product.price)}
-              </span>
-              {product.originalPrice && (
-                <span className='text-[10px] text-neutral-400 line-through'>
-                  {formatPrice(product.originalPrice)}
+            {!isLink && (
+              <div className='flex items-baseline gap-1.5 mt-1'>
+                <span className='text-xs sm:text-sm font-bold text-[#FE2C55]'>
+                  {formatPrice(product.price)}
                 </span>
-              )}
-            </div>
+                {product.originalPrice && (
+                  <span className='text-[10px] text-neutral-400 line-through'>
+                    {formatPrice(product.originalPrice)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -108,15 +110,16 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
             e.stopPropagation();
             onClick(product);
           }}
-          className={`w-full py-2 rounded-xl font-medium text-xs text-white shadow-2xs active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`w-full py-2 rounded-xl font-medium text-xs shadow-2xs active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             isLead
-              ? 'bg-[#161823] hover:bg-neutral-800'
+              ? 'bg-[#161823] hover:bg-neutral-800 text-white'
               : isLink
                 ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-900'
                 : 'bg-primary hover:bg-primary/90 text-primary-foreground'
           }`}
         >
           <span>{getCtaLabel(product)}</span>
+          {isLink && <ArrowSquareOut size={14} weight='bold' className='shrink-0' />}
         </button>
       </div>
     );
@@ -157,14 +160,18 @@ export function ProductCard({ product, onClick, layout = 'mobile' }: ProductCard
               {summaryText}
             </p>
           ) : null}
-          <div className='flex items-baseline gap-2 pt-1'>
-            <span className='text-base font-bold text-[#FE2C55]'>{formatPrice(product.price)}</span>
-            {product.originalPrice && product.originalPrice > product.price && (
-              <span className='text-xs text-neutral-400 line-through'>
-                {formatPrice(product.originalPrice)}
+          {!isLink && (
+            <div className='flex items-baseline gap-2 pt-1'>
+              <span className='text-base font-bold text-[#FE2C55]'>
+                {formatPrice(product.price)}
               </span>
-            )}
-          </div>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <span className='text-xs text-neutral-400 line-through'>
+                  {formatPrice(product.originalPrice)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

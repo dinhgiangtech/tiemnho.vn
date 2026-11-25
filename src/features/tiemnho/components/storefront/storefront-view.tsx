@@ -442,25 +442,27 @@ export function StorefrontView({
                     </h3>
 
                     {/* Giá & Giảm giá */}
-                    <div className='flex items-baseline gap-1 mt-1.5 flex-wrap'>
-                      <span
-                        className={cn(
-                          'font-black text-xs sm:text-sm',
-                          isLead
-                            ? 'text-emerald-400'
-                            : isTikTokTheme
-                              ? 'text-[#fe2c55]'
-                              : 'text-foreground'
-                        )}
-                      >
-                        {formatPrice(product.price)}
-                      </span>
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className='text-[10px] text-zinc-500 line-through'>
-                          {formatPrice(product.originalPrice)}
+                    {!isLink && (
+                      <div className='flex items-baseline gap-1 mt-1.5 flex-wrap'>
+                        <span
+                          className={cn(
+                            'font-black text-xs sm:text-sm',
+                            isLead
+                              ? 'text-emerald-400'
+                              : isTikTokTheme
+                                ? 'text-[#fe2c55]'
+                                : 'text-foreground'
+                          )}
+                        >
+                          {formatPrice(product.price)}
                         </span>
-                      )}
-                    </div>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <span className='text-[10px] text-zinc-500 line-through'>
+                            {formatPrice(product.originalPrice)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Nút Giỏ Hàng Mua Ngay Nhanh Chuẩn TikTok */}

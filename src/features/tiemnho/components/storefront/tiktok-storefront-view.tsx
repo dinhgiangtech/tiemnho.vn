@@ -304,16 +304,18 @@ export function TikTokStorefrontView({
                   <p className='text-[10px] text-[#73747B] line-clamp-1 mt-0.5'>
                     {product.description}
                   </p>
-                  <div className='flex items-baseline gap-1.5 mt-1'>
-                    <span className='font-bold text-xs text-[#FE2C55]'>
-                      {formatPrice(product.price)}
-                    </span>
-                    {product.originalPrice && product.originalPrice > product.price && (
-                      <span className='text-[10px] text-[#73747B] line-through'>
-                        {formatPrice(product.originalPrice)}
+                  {!isLink && (
+                    <div className='flex items-baseline gap-1.5 mt-1'>
+                      <span className='font-bold text-xs text-[#FE2C55]'>
+                        {formatPrice(product.price)}
                       </span>
-                    )}
-                  </div>
+                      {product.originalPrice && product.originalPrice > product.price && (
+                        <span className='text-[10px] text-[#73747B] line-through'>
+                          {formatPrice(product.originalPrice)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

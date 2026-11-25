@@ -68,7 +68,7 @@ const PRODUCT_TYPES: { type: ProductType; title: string; desc: string; icon: any
 export const productFormSchema = z
   .object({
     type: z.enum(['DIGITAL', 'LEAD_MAGNET', 'PHYSICAL', 'EXTERNAL_LINK']),
-    title: z.string().min(1, 'Tiêu đề sản phẩm là bắt buộc').max(60, 'Tiêu đề tối đa 60 ký tự'),
+    title: z.string().min(1, 'Tiêu đề là bắt buộc').max(60, 'Tiêu đề tối đa 60 ký tự'),
     subtitle: z.string().max(100, 'Dòng tóm tắt tối đa 100 ký tự').optional(),
     coverImage: z.string().optional(),
     featureImage: z.string().optional(),
@@ -121,8 +121,17 @@ export const productFormSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['destinationUrl'],
-        message: 'Vui lòng nhập đường link chuyển hướng đích'
+        message: 'Vui lòng nhập đường dẫn đích (URL) hợp lệ'
       });
+    } else if (data.type === 'EXTERNAL_LINK' && data.destinationUrl) {
+      const url = data.destinationUrl.trim();
+      if (!/^https?:\/\//i.test(url)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['destinationUrl'],
+          message: 'Đường dẫn đích phải bắt đầu bằng http:// hoặc https://'
+        });
+      }
     }
   });
 
@@ -179,14 +188,24 @@ export function ProductForm({
       featureImage: initialProduct?.bannerImage || '',
       description: initialProduct?.description || '',
       price: initialProduct
-        ? initialProduct.type === 'LEAD_MAGNET'
+        ? initialProduct.type === 'LEAD_MAGNET' || initialProduct.type === 'EXTERNAL_LINK'
           ? 0
           : initialProduct.price
-        : 149000,
+        : initialType === 'LEAD_MAGNET' || initialType === 'EXTERNAL_LINK'
+          ? 0
+          : 149000,
       hasDiscount: !!initialProduct?.originalPrice,
       originalPrice: initialProduct?.originalPrice ?? null,
       isPublished: initialProduct ? initialProduct.isPublished : true,
-      buttonText: initialProduct?.buttonText || 'Mua ngay',
+      buttonText:
+        initialProduct?.buttonText ||
+        (initialProduct?.type === 'EXTERNAL_LINK' || initialType === 'EXTERNAL_LINK'
+          ? 'Mở liên kết'
+          : initialProduct?.type === 'LEAD_MAGNET' || initialType === 'LEAD_MAGNET'
+            ? 'Nhận ngay'
+            : initialProduct?.type === 'PHYSICAL' || initialType === 'PHYSICAL'
+              ? 'Đặt trước'
+              : 'Mua ngay'),
 
       deliveryType: initialProduct?.deliveryType || 'UPLOAD_FILE',
       fileUrl: initialProduct?.fileUrl || '',
@@ -222,11 +241,22 @@ export function ProductForm({
         coverImage: initialProduct.coverImage || '',
         featureImage: initialProduct.bannerImage || '',
         description: initialProduct.description || '',
-        price: initialProduct.type === 'LEAD_MAGNET' ? 0 : (initialProduct.price ?? 0),
+        price:
+          initialProduct.type === 'LEAD_MAGNET' || initialProduct.type === 'EXTERNAL_LINK'
+            ? 0
+            : (initialProduct.price ?? 0),
         hasDiscount: !!initialProduct.originalPrice,
         originalPrice: initialProduct.originalPrice ?? null,
         isPublished: initialProduct.isPublished ?? true,
-        buttonText: initialProduct.buttonText || 'Mua ngay',
+        buttonText:
+          initialProduct.buttonText ||
+          (initialProduct.type === 'EXTERNAL_LINK'
+            ? 'Mở liên kết'
+            : initialProduct.type === 'LEAD_MAGNET'
+              ? 'Nhận ngay'
+              : initialProduct.type === 'PHYSICAL'
+                ? 'Đặt trước'
+                : 'Mua ngay'),
 
         deliveryType: initialProduct.deliveryType || 'UPLOAD_FILE',
         fileUrl: initialProduct.fileUrl || '',
@@ -247,6 +277,7 @@ export function ProductForm({
       } else if (initialType === 'PHYSICAL') {
         setValue('buttonText', 'Đặt trước');
       } else if (initialType === 'EXTERNAL_LINK') {
+        setValue('price', 0);
         setValue('buttonText', 'Mở liên kết');
       }
     }
@@ -391,25 +422,30 @@ export function ProductForm({
 
   // Xử lý lưu form
   const onSubmit = (values: ProductFormValues) => {
+    const isLinkType = values.type === 'EXTERNAL_LINK';
+    const isLeadType = values.type === 'LEAD_MAGNET';
+
     const payload: Partial<Product> = {
       creatorId: profile.id,
       type: values.type,
       title: values.title.trim(),
       subtitle: values.subtitle?.trim() || undefined,
-      description: values.description?.trim() || '',
-      price: values.type === 'LEAD_MAGNET' ? 0 : values.price,
+      description: isLinkType ? '' : values.description?.trim() || '',
+      price: isLeadType || isLinkType ? 0 : values.price,
       originalPrice:
-        values.hasDiscount && values.originalPrice ? Number(values.originalPrice) : undefined,
-      buttonText: values.buttonText?.trim() || 'Mua ngay',
+        !isLinkType && values.hasDiscount && values.originalPrice
+          ? Number(values.originalPrice)
+          : undefined,
+      buttonText: values.buttonText?.trim() || (isLinkType ? 'Mở liên kết' : 'Mua ngay'),
       coverImage: values.coverImage || PRESET_COVERS[0],
-      bannerImage: values.featureImage || undefined,
+      bannerImage: isLinkType ? undefined : values.featureImage || undefined,
       deliveryType: values.deliveryType,
       fileUrl: values.deliveryType === 'REDIRECT_LINK' ? values.redirectUrl : values.fileUrl,
       fileName: values.fileName,
       fileSize: values.fileSize,
       stock: values.type === 'PHYSICAL' ? (values.stock ?? 50) : 999,
       estimatedFulfillment: values.type === 'PHYSICAL' ? values.estimatedFulfillment : undefined,
-      externalUrl: values.type === 'EXTERNAL_LINK' ? values.destinationUrl : undefined,
+      externalUrl: isLinkType ? values.destinationUrl : undefined,
       isPublished: values.isPublished,
       isFeatured: true
     };
@@ -419,31 +455,36 @@ export function ProductForm({
 
   // Real-time Virtual Preview Product
   const previewProduct: Product = React.useMemo(() => {
-    const defaultBtn =
-      watchedValues.type === 'LEAD_MAGNET'
-        ? 'Nhận ngay'
-        : watchedValues.type === 'PHYSICAL'
-          ? 'Đặt trước'
-          : watchedValues.type === 'EXTERNAL_LINK'
-            ? 'Mở liên kết'
-            : 'Mua ngay';
+    const isLinkType = watchedValues.type === 'EXTERNAL_LINK';
+    const isLeadType = watchedValues.type === 'LEAD_MAGNET';
+
+    const defaultBtn = isLeadType
+      ? 'Nhận ngay'
+      : watchedValues.type === 'PHYSICAL'
+        ? 'Đặt trước'
+        : isLinkType
+          ? 'Mở liên kết'
+          : 'Mua ngay';
 
     return {
       id: initialProduct?.id || 'preview-draft',
       creatorId: profile.id,
       type: watchedValues.type,
-      title: watchedValues.title?.trim() || 'Tên sản phẩm của bạn',
+      title:
+        watchedValues.title?.trim() ||
+        (isLinkType ? 'Tiêu đề nút liên kết của bạn' : 'Tên sản phẩm của bạn'),
       subtitle: watchedValues.subtitle?.trim() || '',
-      description:
-        watchedValues.description?.trim() ||
-        'Mô tả chi tiết giá trị tài nguyên số hoặc sản phẩm cá nhân của bạn.',
-      price: watchedValues.type === 'LEAD_MAGNET' ? 0 : (watchedValues.price ?? 0),
+      description: isLinkType
+        ? ''
+        : watchedValues.description?.trim() ||
+          'Mô tả chi tiết giá trị tài nguyên số hoặc sản phẩm cá nhân của bạn.',
+      price: isLeadType || isLinkType ? 0 : (watchedValues.price ?? 0),
       originalPrice:
-        watchedValues.hasDiscount && watchedValues.originalPrice
+        !isLinkType && watchedValues.hasDiscount && watchedValues.originalPrice
           ? Number(watchedValues.originalPrice)
           : undefined,
       coverImage: watchedValues.coverImage || PRESET_COVERS[0],
-      bannerImage: watchedValues.featureImage,
+      bannerImage: isLinkType ? undefined : watchedValues.featureImage,
       fileUrl:
         watchedValues.deliveryType === 'REDIRECT_LINK'
           ? watchedValues.redirectUrl
@@ -452,7 +493,7 @@ export function ProductForm({
       fileSize: watchedValues.fileSize,
       deliveryType: watchedValues.deliveryType,
       estimatedFulfillment: watchedValues.estimatedFulfillment,
-      externalUrl: watchedValues.destinationUrl,
+      externalUrl: isLinkType ? watchedValues.destinationUrl : undefined,
       buttonText: watchedValues.buttonText?.trim() || defaultBtn,
       isPublished: watchedValues.isPublished,
       isFeatured: true,
@@ -577,15 +618,22 @@ export function ProductForm({
                 )}
               </div>
 
-              {/* 1.2 Tiêu đề sản phẩm * */}
+              {/* 1.2 Tiêu đề sản phẩm / Tiêu đề nút liên kết * */}
               <div className='space-y-2'>
                 <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
-                  Tiêu đề sản phẩm <span className='text-[#FE2C55]'>*</span>
+                  {watchedValues.type === 'EXTERNAL_LINK'
+                    ? 'Tiêu đề nút liên kết'
+                    : 'Tiêu đề sản phẩm'}{' '}
+                  <span className='text-[#FE2C55]'>*</span>
                 </label>
                 <Input
                   {...register('title')}
                   maxLength={60}
-                  placeholder='VD: Bộ 100 Hook Viral & Kịch Bản Triệu View TikTok'
+                  placeholder={
+                    watchedValues.type === 'EXTERNAL_LINK'
+                      ? 'VD: Kênh YouTube của mình / Mua đồ trên Shopee / Nhóm Zalo cộng đồng'
+                      : 'VD: Bộ 100 Hook Viral & Kịch Bản Triệu View TikTok'
+                  }
                   className='h-11 text-sm md:text-base font-medium rounded-xl'
                 />
                 {errors.title && (
@@ -601,105 +649,113 @@ export function ProductForm({
                 <Input
                   {...register('subtitle')}
                   maxLength={100}
-                  placeholder='VD: Nhận ngay bộ 13 kịch bản triệu view hoặc Never run out of ideas'
+                  placeholder={
+                    watchedValues.type === 'EXTERNAL_LINK'
+                      ? 'VD: Cập nhật video mới mỗi tuần hoặc Săn mã giảm giá độc quyền'
+                      : 'VD: Nhận ngay bộ 13 kịch bản triệu view hoặc Never run out of ideas'
+                  }
                   className='h-11 text-sm rounded-xl'
                 />
               </div>
 
-              {/* 1.4 Hàng giá bán gồm hai cột song song */}
-              <div className='grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1'>
-                {/* Cột 1: Giá bán thực tế (VNĐ) * */}
-                <div className='space-y-2'>
-                  <div className='flex items-center justify-between'>
-                    <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
-                      Giá bán thực tế (VNĐ) <span className='text-[#FE2C55]'>*</span>
-                    </label>
-                    {watchedValues.type === 'LEAD_MAGNET' && (
-                      <Badge
-                        variant='outline'
-                        className='text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                      >
-                        Khóa 0đ
-                      </Badge>
+              {/* 1.4 Hàng giá bán gồm hai cột song song (ẨN HOÀN TOÀN KHI LÀ EXTERNAL_LINK) */}
+              {watchedValues.type !== 'EXTERNAL_LINK' && (
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1'>
+                  {/* Cột 1: Giá bán thực tế (VNĐ) * */}
+                  <div className='space-y-2'>
+                    <div className='flex items-center justify-between'>
+                      <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                        Giá bán thực tế (VNĐ) <span className='text-[#FE2C55]'>*</span>
+                      </label>
+                      {watchedValues.type === 'LEAD_MAGNET' && (
+                        <Badge
+                          variant='outline'
+                          className='text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                        >
+                          Khóa 0đ
+                        </Badge>
+                      )}
+                    </div>
+                    <div className='relative'>
+                      <Input
+                        type='text'
+                        inputMode='numeric'
+                        disabled={watchedValues.type === 'LEAD_MAGNET'}
+                        value={
+                          watchedValues.type === 'LEAD_MAGNET'
+                            ? '0'
+                            : watchedValues.price
+                              ? formatCurrencyDisplay(watchedValues.price)
+                              : ''
+                        }
+                        onChange={(e) => {
+                          const parsed = parseCurrencyInput(e.target.value);
+                          setValue('price', parsed, { shouldValidate: true });
+                        }}
+                        placeholder='149.000'
+                        className={cn(
+                          'h-11 text-sm md:text-base font-semibold rounded-xl pr-12 font-mono',
+                          watchedValues.type === 'LEAD_MAGNET' &&
+                            'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-80'
+                        )}
+                      />
+                      <span className='absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400'>
+                        VNĐ
+                      </span>
+                    </div>
+                    {errors.price && (
+                      <p className='text-xs text-destructive font-medium'>{errors.price.message}</p>
                     )}
                   </div>
-                  <div className='relative'>
-                    <Input
-                      type='text'
-                      inputMode='numeric'
-                      disabled={watchedValues.type === 'LEAD_MAGNET'}
-                      value={
-                        watchedValues.type === 'LEAD_MAGNET'
-                          ? '0'
-                          : watchedValues.price
-                            ? formatCurrencyDisplay(watchedValues.price)
-                            : ''
-                      }
-                      onChange={(e) => {
-                        const parsed = parseCurrencyInput(e.target.value);
-                        setValue('price', parsed, { shouldValidate: true });
-                      }}
-                      placeholder='149.000'
-                      className={cn(
-                        'h-11 text-sm md:text-base font-semibold rounded-xl pr-12 font-mono',
-                        watchedValues.type === 'LEAD_MAGNET' &&
-                          'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-80'
-                      )}
-                    />
-                    <span className='absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400'>
-                      VNĐ
-                    </span>
-                  </div>
-                  {errors.price && (
-                    <p className='text-xs text-destructive font-medium'>{errors.price.message}</p>
-                  )}
-                </div>
 
-                {/* Cột 2: Giá gốc niêm yết (kèm nút gạt Switch) */}
-                <div className='space-y-2'>
-                  <div className='flex items-center justify-between'>
-                    <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
-                      Giá gốc niêm yết
-                    </label>
-                    <Controller
-                      control={control}
-                      name='hasDiscount'
-                      render={({ field }) => (
-                        <Switch
-                          checked={field.value}
-                          disabled={watchedValues.type === 'LEAD_MAGNET'}
-                          onCheckedChange={field.onChange}
-                        />
-                      )}
-                    />
-                  </div>
-                  <div className='relative'>
-                    <Input
-                      type='text'
-                      inputMode='numeric'
-                      disabled={!watchedValues.hasDiscount || watchedValues.type === 'LEAD_MAGNET'}
-                      value={
-                        watchedValues.originalPrice
-                          ? formatCurrencyDisplay(watchedValues.originalPrice)
-                          : ''
-                      }
-                      onChange={(e) => {
-                        const parsed = parseCurrencyInput(e.target.value);
-                        setValue('originalPrice', parsed);
-                      }}
-                      placeholder='350.000'
-                      className={cn(
-                        'h-11 text-sm md:text-base font-semibold rounded-xl pr-12 font-mono',
-                        (!watchedValues.hasDiscount || watchedValues.type === 'LEAD_MAGNET') &&
-                          'bg-neutral-100 dark:bg-neutral-800 cursor-not-allowed opacity-60'
-                      )}
-                    />
-                    <span className='absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400'>
-                      VNĐ
-                    </span>
+                  {/* Cột 2: Giá gốc niêm yết (kèm nút gạt Switch) */}
+                  <div className='space-y-2'>
+                    <div className='flex items-center justify-between'>
+                      <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                        Giá gốc niêm yết
+                      </label>
+                      <Controller
+                        control={control}
+                        name='hasDiscount'
+                        render={({ field }) => (
+                          <Switch
+                            checked={field.value}
+                            disabled={watchedValues.type === 'LEAD_MAGNET'}
+                            onCheckedChange={field.onChange}
+                          />
+                        )}
+                      />
+                    </div>
+                    <div className='relative'>
+                      <Input
+                        type='text'
+                        inputMode='numeric'
+                        disabled={
+                          !watchedValues.hasDiscount || watchedValues.type === 'LEAD_MAGNET'
+                        }
+                        value={
+                          watchedValues.originalPrice
+                            ? formatCurrencyDisplay(watchedValues.originalPrice)
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const parsed = parseCurrencyInput(e.target.value);
+                          setValue('originalPrice', parsed);
+                        }}
+                        placeholder='350.000'
+                        className={cn(
+                          'h-11 text-sm md:text-base font-semibold rounded-xl pr-12 font-mono',
+                          (!watchedValues.hasDiscount || watchedValues.type === 'LEAD_MAGNET') &&
+                            'bg-neutral-100 dark:bg-neutral-800 cursor-not-allowed opacity-60'
+                        )}
+                      />
+                      <span className='absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400'>
+                        VNĐ
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* 1.5 Chữ trên nút bấm * */}
               <div className='space-y-2 pt-1'>
@@ -709,12 +765,15 @@ export function ProductForm({
                 <Input
                   {...register('buttonText')}
                   maxLength={30}
-                  placeholder='Mua ngay'
+                  placeholder={watchedValues.type === 'EXTERNAL_LINK' ? 'Mở liên kết' : 'Mua ngay'}
                   className='h-11 text-sm rounded-xl'
                 />
-                {/* Các ô chọn nhanh: Mua ngay, Tải ngay, Đặt trước */}
+                {/* Các ô chọn nhanh: Mua ngay, Tải ngay, Đặt trước hoặc gợi ý cho External link */}
                 <div className='flex items-center gap-2 flex-wrap pt-1'>
-                  {['Mua ngay', 'Tải ngay', 'Đặt trước', 'Nhận tài liệu'].map((label) => (
+                  {(watchedValues.type === 'EXTERNAL_LINK'
+                    ? ['Mở liên kết', 'Truy cập ngay', 'Xem trên Shopee', 'Tham gia nhóm']
+                    : ['Mua ngay', 'Tải ngay', 'Đặt trước', 'Nhận tài liệu']
+                  ).map((label) => (
                     <button
                       key={label}
                       type='button'
@@ -734,68 +793,77 @@ export function ProductForm({
             </div>
 
             {/* ----------------------------------------------------- */}
-            {/* THẺ 2: BÀI VIẾT MÔ TẢ CHI TIẾT                        */}
+            {/* THẺ 2: BÀI VIẾT MÔ TẢ CHI TIẾT (ẨN KHI LÀ EXTERNAL_LINK) */}
+            {/* ----------------------------------------------------- */}
+            {watchedValues.type !== 'EXTERNAL_LINK' && (
+              <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card p-6 md:p-8 shadow-xs space-y-6 mb-6'>
+                <h2 className='text-base font-bold text-neutral-900 dark:text-white tracking-tight pb-3 border-b border-neutral-100 dark:border-neutral-800/80'>
+                  Bài viết mô tả chi tiết
+                </h2>
+
+                {/* 2.1 Ảnh bìa nổi bật */}
+                <div className='space-y-2'>
+                  <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
+                    Ảnh bìa nổi bật
+                  </label>
+
+                  <input
+                    type='file'
+                    ref={bannerInputRef}
+                    onChange={handleBannerUpload}
+                    accept='image/*'
+                    className='hidden'
+                  />
+                  <div
+                    onClick={() => bannerInputRef.current?.click()}
+                    className='relative group w-full aspect-video sm:h-44 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary transition-all flex items-center justify-center cursor-pointer shadow-2xs'
+                  >
+                    {watchedValues.featureImage ? (
+                      <img
+                        src={watchedValues.featureImage}
+                        alt='Ảnh bìa 16:9'
+                        className='w-full h-full object-cover transition-transform group-hover:scale-105 duration-200'
+                      />
+                    ) : (
+                      <div className='flex flex-col items-center justify-center text-neutral-400 group-hover:text-primary transition-colors p-4 text-center'>
+                        <ImageIcon className='w-8 h-8 mb-1.5' />
+                        <span className='text-xs font-semibold'>Tải ảnh bìa (16:9)</span>
+                      </div>
+                    )}
+                    <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5'>
+                      <Upload className='w-4 h-4' />
+                      <span>
+                        {watchedValues.featureImage ? 'Thay ảnh bìa khác' : 'Tải ảnh bìa'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2.2 Mô tả chi tiết sản phẩm * */}
+                <div className='space-y-2'>
+                  <ProductDescriptionEditor
+                    value={watchedValues.description || ''}
+                    onChange={(val) =>
+                      setValue('description', val, { shouldValidate: true, shouldDirty: true })
+                    }
+                    productTitle={watchedValues.title}
+                    error={errors.description?.message}
+                    required={true}
+                    label='Mô tả chi tiết sản phẩm'
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ----------------------------------------------------- */}
+            {/* THẺ 3: TÀI NGUYÊN GIAO CHO KHÁCH HOẶC LINK ĐÍCH       */}
             {/* ----------------------------------------------------- */}
             <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card p-6 md:p-8 shadow-xs space-y-6 mb-6'>
               <h2 className='text-base font-bold text-neutral-900 dark:text-white tracking-tight pb-3 border-b border-neutral-100 dark:border-neutral-800/80'>
-                Bài viết mô tả chi tiết
+                {watchedValues.type === 'EXTERNAL_LINK'
+                  ? 'Thiết lập liên kết ngoài'
+                  : 'Tài nguyên giao cho khách hàng'}
               </h2>
-
-              {/* 2.1 Ảnh bìa nổi bật */}
-              <div className='space-y-2'>
-                <label className='text-sm font-bold text-neutral-900 dark:text-white block'>
-                  Ảnh bìa nổi bật
-                </label>
-
-                <input
-                  type='file'
-                  ref={bannerInputRef}
-                  onChange={handleBannerUpload}
-                  accept='image/*'
-                  className='hidden'
-                />
-                <div
-                  onClick={() => bannerInputRef.current?.click()}
-                  className='relative group w-full aspect-video sm:h-44 rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary transition-all flex items-center justify-center cursor-pointer shadow-2xs'
-                >
-                  {watchedValues.featureImage ? (
-                    <img
-                      src={watchedValues.featureImage}
-                      alt='Ảnh bìa 16:9'
-                      className='w-full h-full object-cover transition-transform group-hover:scale-105 duration-200'
-                    />
-                  ) : (
-                    <div className='flex flex-col items-center justify-center text-neutral-400 group-hover:text-primary transition-colors p-4 text-center'>
-                      <ImageIcon className='w-8 h-8 mb-1.5' />
-                      <span className='text-xs font-semibold'>Tải ảnh bìa (16:9)</span>
-                    </div>
-                  )}
-                  <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5'>
-                    <Upload className='w-4 h-4' />
-                    <span>{watchedValues.featureImage ? 'Thay ảnh bìa khác' : 'Tải ảnh bìa'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2.2 Mô tả chi tiết sản phẩm * */}
-              <div className='space-y-2'>
-                <ProductDescriptionEditor
-                  value={watchedValues.description || ''}
-                  onChange={(val) =>
-                    setValue('description', val, { shouldValidate: true, shouldDirty: true })
-                  }
-                  productTitle={watchedValues.title}
-                  error={errors.description?.message}
-                  required={true}
-                  label='Mô tả chi tiết sản phẩm'
-                />
-              </div>
-            </div>
-
-            {/* ----------------------------------------------------- */}
-            {/* THẺ 3: TÀI NGUYÊN GIAO CHO KHÁCH                      */}
-            {/* ----------------------------------------------------- */}
-            <div className='rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-card p-6 md:p-8 shadow-xs space-y-6 mb-6'>
               {/* Chuyển đổi giữa hai thẻ theo yêu cầu */}
               {watchedValues.type === 'DIGITAL' || watchedValues.type === 'LEAD_MAGNET' ? (
                 <div className='space-y-4'>
@@ -925,13 +993,17 @@ export function ProductForm({
                 /* EXTERNAL_LINK */
                 <div className='space-y-2 rounded-xl bg-neutral-50/70 dark:bg-neutral-900/40 border border-neutral-200/80 dark:border-neutral-800 p-4'>
                   <label className='font-bold text-neutral-900 dark:text-white text-xs block'>
-                    Đường link chuyển hướng đích <span className='text-[#FE2C55]'>*</span>
+                    Đường dẫn đích (URL) <span className='text-[#FE2C55]'>*</span>
                   </label>
                   <Input
                     {...register('destinationUrl')}
-                    placeholder='https://shopee.vn/... hoặc https://tiktok.com/@...'
+                    placeholder='https://shopee.vn/... hoặc https://tiktok.com/@... hoặc https://zalo.me/...'
                     className='h-11 text-xs sm:text-sm rounded-xl font-mono bg-white dark:bg-card'
                   />
+                  <p className='text-[11px] text-neutral-500'>
+                    Nhập đường link trang web bạn muốn khách hàng chuyển hướng đến khi bấm nút (phải
+                    bắt đầu bằng https://).
+                  </p>
                   {errors.destinationUrl && (
                     <p className='text-[11px] text-destructive font-medium'>
                       {errors.destinationUrl.message}
