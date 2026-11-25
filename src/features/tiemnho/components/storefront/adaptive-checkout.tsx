@@ -50,7 +50,8 @@ import {
   Building2,
   Check,
   PackageCheck,
-  ExternalLink
+  ExternalLink,
+  FileText
 } from 'lucide-react';
 
 // =========================================================================
@@ -715,15 +716,25 @@ export function AdaptiveCheckout({
                 </div>
 
                 {currentOrder.downloadUrl || product.fileUrl ? (
-                  <a
-                    href={currentOrder.downloadUrl || product.fileUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer'
-                  >
-                    <Download className='h-4 w-4' />
-                    <span>Tải tài liệu ngay ({product.fileName || 'File đính kèm'})</span>
-                  </a>
+                  <div className='space-y-2'>
+                    <a
+                      href={currentOrder.downloadUrl || product.fileUrl}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer'
+                    >
+                      <Download className='h-4 w-4 shrink-0' />
+                      <span>Tải tài liệu ngay</span>
+                    </a>
+                    {product.fileName && (
+                      <div className='flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 px-2'>
+                        <FileText className='h-3.5 w-3.5 shrink-0 text-emerald-600' />
+                        <span className='truncate max-w-[260px]' title={product.fileName}>
+                          {product.fileName}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className='p-3 rounded-xl bg-emerald-50 text-emerald-800 text-[11px] font-medium border border-emerald-200'>
                     Link truy cập đã được gửi dự phòng vào email:{' '}

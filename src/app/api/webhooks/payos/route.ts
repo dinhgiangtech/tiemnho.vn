@@ -221,3 +221,14 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+/**
+ * Endpoint GET để kiểm tra trạng thái webhook (hoặc khi payOS ping verify endpoint)
+ */
+export async function GET() {
+  return NextResponse.json({
+    status: 'online',
+    service: 'payOS Webhook listener',
+    timestamp: new Date().toISOString()
+  });
+}

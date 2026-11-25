@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Download,
   ExternalLink,
+  FileText,
   QrCode,
   Share2,
   ShieldCheck
@@ -429,21 +430,25 @@ export function ProductDetailView({
 
           {/* Nút tải tài nguyên nếu là sản phẩm số */}
           {(confirmedOrder?.downloadUrl || product.fileUrl) && (
-            <div className='pt-1'>
-              <Button
-                render={
-                  <a
-                    href={confirmedOrder?.downloadUrl || product.fileUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  />
-                }
-                size='lg'
-                className='w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 cursor-pointer shadow-sm'
+            <div className='pt-1 space-y-2'>
+              <a
+                href={confirmedOrder?.downloadUrl || product.fileUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-all'
               >
-                <Download className='w-4 h-4' />
-                <span>Tải tài liệu ngay ({product.fileName || 'File đính kèm'})</span>
-              </Button>
+                <Download className='w-4 h-4 shrink-0' />
+                <span>Tải tài liệu ngay</span>
+              </a>
+
+              {product.fileName && (
+                <div className='flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground px-2'>
+                  <FileText className='w-3.5 h-3.5 shrink-0 text-emerald-600' />
+                  <span className='truncate max-w-[260px]' title={product.fileName}>
+                    {product.fileName}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
