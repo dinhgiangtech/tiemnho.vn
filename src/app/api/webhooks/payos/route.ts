@@ -41,6 +41,30 @@ export async function POST(req: NextRequest) {
     const transactionId = data.reference || null;
     const transferContent = data.description || null;
 
+    // 1.5. Nhận diện gói tin Test / Confirm Webhook từ payOS (orderCode: 123 hoặc VQRIO123)
+    if (
+      rawOrderCode === 123 ||
+      String(rawOrderCode) === '123' ||
+      data.description === 'VQRIO123' ||
+      data.description?.includes('VQRIO123')
+    ) {
+      console.log('[PayOS Webhook] Xác thực URL webhook thành công từ payOS (sample test payload)');
+
+      await createPaymentLog({
+        orderCode: 'TEST_123',
+        eventType: 'WEBHOOK_SUCCESS',
+        gateway: 'PAYOS',
+        status: 'SUCCESS',
+        message: 'payOS kiểm tra và xác nhận Webhook URL hoạt động thành công',
+        rawPayload: body
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Webhook URL verified successfully by payOS'
+      });
+    }
+
     // 2. Tìm mã đơn hàng (hỗ trợ cả TNxxxxx hoặc số orderCode)
     const orderIdentifiers = [
       `TN${rawOrderCode}`,
@@ -69,12 +93,13 @@ export async function POST(req: NextRequest) {
         rawPayload: body
       });
 
+      // QUAN TRỌNG: Trả về HTTP 200 cho payOS để tránh payOS báo lỗi hoặc retry liên tục
       return NextResponse.json(
         {
-          success: false,
-          error: `Không tìm thấy đơn hàng tương ứng với orderCode #${rawOrderCode}`
+          success: true,
+          message: `Đã nhận webhook nhưng không tìm thấy đơn hàng với mã #${rawOrderCode}`
         },
-        { status: 404 }
+        { status: 200 }
       );
     }
 
@@ -231,4 +256,8 @@ export async function GET() {
     service: 'payOS Webhook listener',
     timestamp: new Date().toISOString()
   });
+}
+
+export async function HEAD() {
+  return new Response(null, { status: 200 });
 }
