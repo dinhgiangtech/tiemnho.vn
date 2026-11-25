@@ -8,9 +8,56 @@ import { PhoneMockup } from '@/features/tiemnho/components/mobile-preview/phone-
 import { getSession } from '@/lib/auth';
 
 export const metadata = {
-  title: 'Tiệm Nhỏ (TiemNho.vn) - Nền tảng Bán Hàng & Nhận Tiền Cho Creator Việt Nam',
+  title: 'Tiệm Nhỏ - Nền tảng Bán Hàng & Nhận Tiền Cho Creator Việt Nam',
   description:
-    'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng, tiền về thẳng 100% tài khoản ngân hàng của bạn.'
+    'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng, tiền về thẳng 100% tài khoản ngân hàng của bạn.',
+  alternates: {
+    canonical: '/'
+  },
+  openGraph: {
+    title: 'Tiệm Nhỏ - Nền tảng Bán Hàng & Nhận Tiền Cho Creator Việt Nam',
+    description:
+      'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng.',
+    url: 'https://tiemnho.shop',
+    siteName: 'Tiệm Nhỏ',
+    images: [{ url: '/logo-store.png', width: 512, height: 512, alt: 'Tiệm Nhỏ' }],
+    type: 'website'
+  }
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': 'https://tiemnho.shop/#website',
+      url: 'https://tiemnho.shop',
+      name: 'Tiệm Nhỏ',
+      description: 'Nền tảng Bán Hàng & Link-in-Bio Cho Creator Việt Nam',
+      inLanguage: 'vi-VN'
+    },
+    {
+      '@type': 'Organization',
+      '@id': 'https://tiemnho.shop/#organization',
+      name: 'Tiệm Nhỏ',
+      url: 'https://tiemnho.shop',
+      logo: 'https://tiemnho.shop/logo-store.png'
+    },
+    {
+      '@type': 'SoftwareApplication',
+      '@id': 'https://tiemnho.shop/#software',
+      name: 'Tiệm Nhỏ',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'All',
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'VND'
+      },
+      description:
+        'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng.'
+    }
+  ]
 };
 
 export default async function LandingPage() {
@@ -24,6 +71,10 @@ export default async function LandingPage() {
 
   return (
     <div className='min-h-screen bg-background text-foreground flex flex-col selection:bg-primary selection:text-primary-foreground'>
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Top Navbar */}
       <header className='sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-md'>
         <div className='max-w-6xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6'>

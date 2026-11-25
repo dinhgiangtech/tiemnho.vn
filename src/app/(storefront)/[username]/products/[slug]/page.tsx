@@ -35,13 +35,41 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     return { title: 'Sản phẩm không tồn tại | Tiệm Nhỏ' };
   }
 
+  const title = `${product.title} - ${profile.displayName} | Tiệm Nhỏ`;
+  const description =
+    product.subtitle ||
+    product.description?.slice(0, 160) ||
+    `Sản phẩm ${product.title} của ${profile.displayName} trên Tiệm Nhỏ.`;
+  const canonicalUrl = `/@${profile.username}/products/${product.id}`;
+  const cover = product.coverImage || profile.avatarUrl || '/logo-store.png';
+
   return {
-    title: `${product.title} - ${profile.displayName} | Tiệm Nhỏ`,
-    description: product.subtitle || product.description?.slice(0, 160) || profile.bio,
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl
+    },
     openGraph: {
-      title: `${product.title} - @${profile.username}`,
-      description: product.subtitle || product.description?.slice(0, 160),
-      images: [{ url: product.coverImage || profile.avatarUrl || '/default-avatar.svg' }]
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'Tiệm Nhỏ',
+      type: 'article',
+      locale: 'vi_VN',
+      images: [
+        {
+          url: cover,
+          width: 800,
+          height: 450,
+          alt: product.title
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [cover]
     }
   };
 }
@@ -69,8 +97,34 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.title,
+    description: product.subtitle || product.description?.slice(0, 200),
+    image: product.coverImage ? [product.coverImage] : undefined,
+    brand: {
+      '@type': 'Brand',
+      name: profile.displayName
+    },
+    offers: {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'VND',
+      availability:
+        product.type === 'PHYSICAL' && product.stock !== undefined && product.stock <= 0
+          ? 'https://schema.org/OutOfStock'
+          : 'https://schema.org/InStock',
+      url: `https://tiemnho.shop/@${profile.username}/products/${product.id}`
+    }
+  };
+
   return (
     <main className='min-h-screen bg-[#F6F6F8] w-full'>
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       <ProductDetailView product={product} profile={profile} paymentConfig={paymentConfig} />
     </main>
   );

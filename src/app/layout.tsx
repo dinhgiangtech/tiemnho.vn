@@ -24,36 +24,67 @@ const META_THEME_COLORS = {
 };
 
 export const metadata: Metadata = {
-  ...(process.env.NEXT_PUBLIC_APP_URL
-    ? { metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL) }
-    : {}),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://tiemnho.shop'),
   title: {
-    default: 'Shadcn Dashboard - Next.js Admin Dashboard Template',
-    template: '%s | Shadcn Dashboard'
+    default: 'Tiệm Nhỏ - Nền tảng Bán Hàng & Link-in-Bio Cho Creator Việt Nam',
+    template: '%s | Tiệm Nhỏ'
   },
   description:
-    'Free, open source admin dashboard starter built with Next.js 16, shadcn/ui, Tailwind CSS, and TypeScript.',
+    'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng, tiền về thẳng 100% tài khoản ngân hàng của bạn.',
+  keywords: [
+    'tiệm nhỏ',
+    'tiemnho',
+    'tiemnho.shop',
+    'tiemnho.vn',
+    'link in bio',
+    'bán tài liệu số',
+    'creator economy việt nam',
+    'vietqr tự động',
+    'bán ebook',
+    'stan store việt nam',
+    'bán khóa học',
+    'nhận tiền qua vietqr'
+  ],
+  authors: [{ name: 'Tiệm Nhỏ Team', url: 'https://tiemnho.shop' }],
+  creator: 'Tiệm Nhỏ',
+  publisher: 'Tiệm Nhỏ',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1
+    }
+  },
+  alternates: {
+    canonical: '/'
+  },
   openGraph: {
-    title: 'Shadcn Dashboard - Next.js Admin Dashboard Template',
+    title: 'Tiệm Nhỏ - Nền tảng Bán Hàng & Link-in-Bio Cho Creator',
     description:
-      'Free, open source admin dashboard starter built with Next.js 16, shadcn/ui, Tailwind CSS, and TypeScript.',
-    siteName: 'Shadcn Dashboard',
+      'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng, tiền về thẳng tài khoản ngân hàng.',
+    siteName: 'Tiệm Nhỏ',
     type: 'website',
+    locale: 'vi_VN',
+    url: 'https://tiemnho.shop',
     images: [
       {
-        url: '/shadcn-dashboard.png',
-        width: 3200,
-        height: 1600,
-        alt: 'Shadcn Dashboard overview page'
+        url: '/logo-store.png',
+        width: 512,
+        height: 512,
+        alt: 'Tiệm Nhỏ - Nền tảng Bán Hàng Cho Creator'
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Shadcn Dashboard - Next.js Admin Dashboard Template',
+    title: 'Tiệm Nhỏ - Nền tảng Bán Hàng & Link-in-Bio Cho Creator',
     description:
-      'Free, open source admin dashboard starter built with Next.js 16, shadcn/ui, Tailwind CSS, and TypeScript.',
-    images: ['/shadcn-dashboard.png']
+      'Biến Link-in-Bio thành cỗ máy bán tài nguyên số & nhận tiền tự động 24/7 bằng VietQR. 0% hoa hồng.',
+    images: ['/logo-store.png']
   }
 };
 
@@ -69,7 +100,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html
-      lang='en'
+      lang='vi'
       suppressHydrationWarning
       data-theme={themeToApply}
       className={fontSans.variable}

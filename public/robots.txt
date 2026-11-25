@@ -1,6 +1,14 @@
 User-agent: *
-Disallow: /auth
-Disallow: /dashboard
-Disallow: /sign-in
-Disallow: /sign-up
-Disallow: /v1/
+Allow: /
+Allow: /@*
+Allow: /store/*
+Allow: /privacy
+Allow: /terms
+Disallow: /auth/
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /download/
+Disallow: /_next/
+
+Sitemap: https://tiemnho.shop/sitemap.xml

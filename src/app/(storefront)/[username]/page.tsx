@@ -20,13 +20,40 @@ export async function generateMetadata({ params }: StorefrontPageProps): Promise
     return { title: 'Không tìm thấy gian hàng | Tiệm Nhỏ' };
   }
 
+  const title = `${profile.displayName} (@${profile.username}) - Gian hàng chính thức | Tiệm Nhỏ`;
+  const description =
+    profile.bio ||
+    `Ghé thăm gian hàng của ${profile.displayName} trên Tiệm Nhỏ để xem và tải các tài nguyên số độc quyền, đặt hàng và liên kết hữu ích.`;
+  const canonicalUrl = `/@${profile.username}`;
+  const avatar = profile.avatarUrl || '/default-avatar.svg';
+
   return {
-    title: `${profile.displayName} (@${profile.username}) | Tiệm Nhỏ`,
-    description: profile.bio,
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl
+    },
     openGraph: {
-      title: `${profile.displayName} (@${profile.username}) - Bio Storefront`,
-      description: profile.bio,
-      images: [{ url: profile.avatarUrl || '/default-avatar.svg' }]
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: 'Tiệm Nhỏ',
+      type: 'profile',
+      locale: 'vi_VN',
+      images: [
+        {
+          url: avatar,
+          width: 400,
+          height: 400,
+          alt: profile.displayName
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: [avatar]
     }
   };
 }
@@ -42,8 +69,35 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
     getPaymentConfig(cleanUsername)
   ]);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    mainEntity: {
+      '@type': 'Person',
+      name: profile.displayName,
+      alternateName: `@${profile.username}`,
+      description: profile.bio,
+      image: profile.avatarUrl || undefined,
+      url: `https://tiemnho.shop/@${profile.username}`
+    },
+    hasPart: {
+      '@type': 'ItemList',
+      itemListElement: products.map((p, idx) => ({
+        '@type': 'ListItem',
+        position: idx + 1,
+        name: p.title,
+        description: p.subtitle || p.description?.slice(0, 100),
+        url: `https://tiemnho.shop/@${profile.username}/products/${p.id}`
+      }))
+    }
+  };
+
   return (
     <main className='min-h-screen bg-[#F6F6F8] text-[#161823] w-full'>
+      <script
+        type='application/ld+json'
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ResponsiveStorefrontView
         profile={profile}
         products={products}
