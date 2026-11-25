@@ -29,18 +29,19 @@ services:
   # Database Management: Prisma Studio (db.tiemnho.shop)
   # ============================================
   studio:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: node:22-slim
     container_name: tiemnho-studio
     restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./prisma:/app/prisma
     ports:
       - '127.0.0.1:5555:5555'
     env_file:
       - .env
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-tiemnho}:${POSTGRES_PASSWORD:-tiemnho_secret_password}@postgres:5432/${POSTGRES_DB:-tiemnho_db}?schema=public
-    command: npx prisma@6 studio --port 5555 --hostname 0.0.0.0
+    command: sh -c "apt-get update && apt-get install -y openssl && npx prisma@6 studio --port 5555 --hostname 0.0.0.0"
     depends_on:
       postgres:
         condition: service_healthy

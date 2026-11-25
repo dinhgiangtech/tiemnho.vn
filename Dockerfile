@@ -43,9 +43,9 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 ARG NEXT_PUBLIC_APP_URL=https://tiemnho.vn
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
-# Build Next.js application với Next.js cache mount để tăng tốc các lần build tiếp theo
+# Build Next.js application (tắt Turbopack build ngốn RAM, dùng webpack chuẩn sản xuất)
 RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build
+    npx next build --no-lint --webpack
 
 # ============================================
 # Stage 3: Runner
