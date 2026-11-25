@@ -43,31 +43,43 @@ export async function getPaymentConfig(userIdOrUsername?: string): Promise<Payme
 
   // Nếu xác định được user
   if (targetUserId) {
-    let config = await prisma.paymentConfig.findUnique({
-      where: { userId: targetUserId }
+    // 1. Kiểm tra xem user này có thực sự tồn tại trong CSDL không (tránh lỗi Foreign Key nếu user đã bị xóa mà cookie session cũ còn lưu)
+    const existingUser = await prisma.user.findUnique({
+      where: { id: targetUserId }
     });
 
-    if (!config) {
-      // Tìm thông tin creator để khởi tạo tên chủ tài khoản thật nếu có
-      const creator = await prisma.user.findUnique({ where: { id: targetUserId } });
-      const defaultName = (creator?.displayName || creator?.name || 'CHỦ TÀI KHOẢN').toUpperCase();
-
-      config = await prisma.paymentConfig.create({
-        data: {
-          userId: targetUserId,
-          bankBin: '',
-          bankAccountNumber: '',
-          bankAccountName: defaultName,
-          bankId: 'MB',
-          bankName: 'Ngân hàng TMCP Quân Đội (MB Bank)',
-          provider: PaymentProvider.PAYOS,
-          isActive: false,
-          isPayosEnabled: false
-        }
+    if (!existingUser) {
+      // User không tồn tại (do vừa clear database), bỏ qua targetUserId để chuyển sang fallback
+      targetUserId = null;
+    } else {
+      let config = await prisma.paymentConfig.findUnique({
+        where: { userId: targetUserId }
       });
-    }
 
-    return formatPaymentConfig(config);
+      if (!config) {
+        const defaultName = (
+          existingUser.displayName ||
+          existingUser.name ||
+          'CHỦ TÀI KHOẢN'
+        ).toUpperCase();
+
+        config = await prisma.paymentConfig.create({
+          data: {
+            userId: targetUserId,
+            bankBin: '',
+            bankAccountNumber: '',
+            bankAccountName: defaultName,
+            bankId: 'MB',
+            bankName: 'Ngân hàng TMCP Quân Đội (MB Bank)',
+            provider: PaymentProvider.PAYOS,
+            isActive: false,
+            isPayosEnabled: false
+          }
+        });
+      }
+
+      return formatPaymentConfig(config);
+    }
   }
 
   // Fallback: Lấy user đầu tiên trong hệ thống để tìm đúng paymentConfig của user đó
