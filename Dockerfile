@@ -45,7 +45,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
 # Build Next.js application (tắt Turbopack build ngốn RAM, dùng webpack chuẩn sản xuất)
 RUN --mount=type=cache,target=/app/.next/cache \
-    npx next build --no-lint --webpack
+    npx next build --webpack
 
 # ============================================
 # Stage 3: Runner
