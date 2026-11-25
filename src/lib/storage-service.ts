@@ -72,9 +72,10 @@ export async function uploadToLocal(
   // Chuẩn hóa tên thư mục con (ví dụ: 'avatars', 'products', ...)
   // Nếu truyền 'uploads' hoặc rỗng thì lưu trực tiếp vào root /uploads
   const cleanFolder = folder.replace(/^\/+|\/+$/g, '').replace(/^uploads\/?/, '');
-  const targetDir = cleanFolder
-    ? path.join(process.cwd(), 'uploads', cleanFolder)
-    : path.join(process.cwd(), 'uploads');
+
+  // Xác định đường dẫn thư mục uploads chính xác trong cả môi trường local và Docker standalone
+  const baseUploadsDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
+  const targetDir = cleanFolder ? path.join(baseUploadsDir, cleanFolder) : baseUploadsDir;
 
   // Đảm bảo thư mục tồn tại
   await mkdir(targetDir, { recursive: true });

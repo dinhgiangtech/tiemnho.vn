@@ -219,8 +219,8 @@ export function StanStoreRegisterForm() {
       }
 
       toast.success('Xác thực email và mở tiệm thành công!');
-      router.push('/dashboard/products');
-      router.refresh();
+      // Dùng window.location.href để reload cứng và đồng bộ toàn bộ session cookie mới nhất
+      window.location.href = '/dashboard/products';
     } catch (err: any) {
       console.error(err);
       setErrorMessage('Không thể xác thực mã OTP. Vui lòng thử lại!');

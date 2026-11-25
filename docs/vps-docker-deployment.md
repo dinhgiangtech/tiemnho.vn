@@ -1,58 +1,90 @@
 # HƯỚNG DẪN ĐÓNG GÓI DOCKER & TRIỂN KHAI PRODUCTION LÊN VPS (tiemnho.vn)
 
-Tài liệu hướng dẫn từng bước (Step-by-Step) để build, đóng gói ứng dụng **Tiệm Nhỏ** bằng Docker và triển khai lên máy chủ VPS (Ubuntu/Debian) với PostgreSQL, Nginx Reverse Proxy và SSL Let's Encrypt tự động.
+Tài liệu hướng dẫn từng bước (Step-by-Step) để build, đóng gói ứng dụng **Tiệm Nhỏ** bằng Docker và triển khai lên máy chủ VPS (Debian 12 / Ubuntu) với PostgreSQL, Nginx Reverse Proxy và SSL Let's Encrypt tự động.
 
 ---
 
 ## MỤC LỤC
-1. [Chuẩn bị máy chủ VPS](#bước-1-chuẩn-bị-và-cài-đặt-docker-trên-vps)
-2. [Tải mã nguồn về VPS](#bước-2-tải-mã-nguồn-về-vps)
-3. [Cấu hình biến môi trường (.env)](#bước-3-cấu-hình-biến-môi-trường-env)
-4. [Build và khởi chạy Docker Compose](#bước-4-build-và-khởi-chạy-docker-compose)
-5. [Đồng bộ cơ sở dữ liệu (Prisma db push)](#bước-5-đồng-bộ-cơ-sở-dữ-liệu-prisma-db-push)
-6. [Cấu hình Nginx Reverse Proxy & SSL (HTTPS)](#bước-6-cấu-hình-nginx-reverse-proxy--ssl-https)
-7. [Các lệnh quản trị và bảo trì thường dùng](#bước-7-các-lệnh-quản-trị-và-bảo-trì-thường-dùng)
+1. [Chuẩn bị máy chủ VPS, SSH & Tạo SWAP (Chống tràn RAM)](#bước-1-chuẩn-bị-máy-chủ-vps-ssh--tạo-swap)
+2. [Cài đặt Docker & Git trên VPS](#bước-2-cài-đặt-docker--git-trên-vps)
+3. [Tải mã nguồn về VPS](#bước-3-tải-mã-nguồn-về-vps)
+4. [Cấu hình biến môi trường (.env)](#bước-4-cấu-hình-biến-môi-trường-env)
+5. [Build và khởi chạy Docker Compose](#bước-5-build-và-khởi-chạy-docker-compose)
+6. [Đồng bộ cơ sở dữ liệu (Prisma db push chuẩn Prisma v6)](#bước-6-đồng-bộ-cơ-sở-dữ-liệu-prisma-db-push)
+7. [Mở cổng tường lửa kiểm tra web trực tiếp](#bước-7-mở-cổng-tường-lửa-kiểm-tra-web-trực-tiếp)
+8. [Cấu hình Nginx Reverse Proxy & SSL (HTTPS)](#bước-8-cấu-hình-nginx-reverse-proxy--ssl-https)
+9. [Các lệnh quản trị và bảo trì thường dùng](#bước-9-các-lệnh-quản-trị-và-bảo-trì-thường-dùng)
 
 ---
 
-## BƯỚC 1: Chuẩn bị và cài đặt Docker trên VPS
+## BƯỚC 1: Chuẩn bị máy chủ VPS, SSH & Tạo SWAP
 
-Nếu VPS của bạn mới tạo chưa cài đặt Docker, hãy SSH vào VPS (`ssh root@<IP_VPS>`) và chạy lệnh:
+### 1.1 Khắc phục lỗi SSH & Cấp quyền truy cập từ máy tính
+Nếu gặp lỗi `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`, trên máy tính cá nhân (PowerShell) chạy:
+```powershell
+ssh-keygen -R <IP_VPS>
+```
+
+Nếu SSH bị ngắt ngay lập tức (`Connection closed by port 22`), đăng nhập qua Web Console của VPS và chạy:
+```bash
+chmod 700 /root && chmod 700 /root/.ssh
+chmod 600 /root/.ssh/authorized_keys 2>/dev/null || true
+sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+systemctl restart ssh || systemctl restart sshd
+```
+
+### 1.2 Tạo bộ nhớ ảo SWAP (Bắt buộc cho VPS <= 2GB RAM để tránh lỗi Out of Memory)
+```bash
+# Tạo file swap 3GB
+fallocate -l 3G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+
+# Tự động mount swap khi reboot server
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+# Kiểm tra dung lượng RAM & Swap
+free -h
+```
+
+---
+
+## BƯỚC 2: Cài đặt Docker & Git trên VPS
+
+SSH vào VPS (`ssh root@<IP_VPS>`) và chạy:
 
 ```bash
-# 1. Cập nhật các gói phần mềm của hệ thống
-sudo apt update && sudo apt upgrade -y
+# 1. Cập nhật hệ điều hành và cài đặt Git, cURL
+apt update && apt install -y git curl ufw
 
 # 2. Cài đặt Docker Engine chính thức
 curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+sh get-docker.sh
 
-# 3. Phân quyền chạy Docker không cần sudo
-sudo usermod -aG docker $USER
-newgrp docker
-
-# 4. Kiểm tra phiên bản cài đặt thành công
+# 3. Kiểm tra phiên bản
 docker --version
 docker compose version
 ```
 
 ---
 
-## BƯỚC 2: Tải mã nguồn về VPS
+## BƯỚC 3: Tải mã nguồn về VPS
 
 ```bash
-# Tạo thư mục và clone source code từ GitHub
-git clone https://github.com/dinhgiangtech/tiemnho.vn.git /opt/tiemnho
+# Clone source code từ GitHub về thư mục root hoặc /opt/tiemnho
+git clone https://github.com/dinhgiangtech/tiemnho.vn.git ~/tiemnho.vn
 
 # Di chuyển vào thư mục dự án
-cd /opt/tiemnho
+cd ~/tiemnho.vn
 ```
 
 ---
 
-## BƯỚC 3: Cấu hình biến môi trường (.env)
+## BƯỚC 4: Cấu hình biến môi trường (.env)
 
-Tạo file `.env` trên VPS trong thư mục `/opt/tiemnho`:
+Tạo file `.env` trong thư mục dự án:
 
 ```bash
 nano .env
@@ -68,7 +100,7 @@ POSTGRES_USER="tiemnho"
 POSTGRES_PASSWORD="tiemnho_secret_password"
 POSTGRES_DB="tiemnho_db"
 
-# Port ngoài VPS (có thể đổi nếu trùng)
+# Port mapping ngoài VPS
 APP_PORT=3088
 DB_PORT=5488
 
@@ -108,33 +140,37 @@ PAYOS_CHECKSUM_KEY=""
 
 ---
 
-## BƯỚC 4: Build và khởi chạy Docker Compose
+## BƯỚC 5: Build và khởi chạy Docker Compose
 
-Dự án đã có sẵn cấu hình tối ưu đa tầng (Multi-stage build) trong `Dockerfile` và `docker-compose.yml`:
-- Tự động cài đặt OpenSSL cho Prisma.
-- Đóng gói chế độ Next.js `standalone` siêu nhẹ (~150MB).
-- Tự động gắn volume `uploads_data` để ảnh/file tài liệu số của Creator không bị mất khi restart container.
+Dự án đã có sẵn cấu hình tối ưu đa tầng (Multi-stage build) trong `Dockerfile` bằng Node.js 22 chuẩn:
+- Tự động bỏ qua lint/typecheck lặp lại để tăng tốc build tối đa.
+- Cấp sẵn dummy `DATABASE_URL` và `SESSION_SECRET` lúc build để biên dịch trơn tru các server action.
+- Tự động mount persistent volume `uploads_data` giữ an toàn cho file tải lên.
 
 Chạy lệnh build:
 
 ```bash
-# Build images và khởi chạy background
+# Build images và khởi chạy ngầm
 docker compose up -d --build
 
-# Xem trạng thái các container đang chạy
+# Kiểm tra trạng thái containers
 docker compose ps
 ```
 
-*Kết quả mong đợi:* Cả 2 container `tiemnho-app` và `tiemnho-postgres` đều có trạng thái `Up (healthy)`.
+*Kết quả mong đợi:*
+- `tiemnho-postgres`: `Up (healthy)`
+- `tiemnho-app`: `Up ... 0.0.0.0:3088->3000/tcp`
 
 ---
 
-## BƯỚC 5: Đồng bộ cơ sở dữ liệu (Prisma db push)
+## BƯỚC 6: Đồng bộ cơ sở dữ liệu (Prisma db push)
 
-Sau khi PostgreSQL khởi động thành công, chạy lệnh đẩy cấu trúc bảng vào DB container:
+> [!IMPORTANT]
+> **Chú ý phiên bản Prisma:** Dự án đang sử dụng **Prisma v6**. Không chạy lệnh `npx prisma db push` trần vì npx sẽ tự kéo Prisma v8 (bị đổi lệnh gây lỗi). Hãy chỉ định rõ `@6`:
 
 ```bash
-docker compose exec app npx prisma db push
+# Đồng bộ schema vào PostgreSQL container
+docker compose run --rm app npx prisma@6 db push
 ```
 
 *(Tùy chọn) Nâng quyền Super Admin cho tài khoản của bạn ngay trong DB container:*
@@ -144,20 +180,36 @@ docker compose exec app node -e "const { PrismaClient } = require('@prisma/clien
 
 ---
 
-## BƯỚC 6: Cấu hình Nginx Reverse Proxy & SSL (HTTPS)
+## BƯỚC 7: Mở cổng tường lửa kiểm tra web trực tiếp
+
+Mở cổng `3088` trên VPS:
+```bash
+ufw allow 3088/tcp 2>/dev/null || true
+iptables -I INPUT -p tcp --dport 3088 -j ACCEPT
+```
+
+Bây giờ bạn có thể mở trình duyệt trên máy tính gõ:
+```text
+http://<IP_VPS>:3088
+```
+để kiểm tra xem trang chủ và dashboard đã hoạt động trơn tru hay chưa.
+
+---
+
+## BƯỚC 8: Cấu hình Nginx Reverse Proxy & SSL (HTTPS)
 
 Trỏ tên miền `tiemnho.vn` và `www.tiemnho.vn` về IP của VPS trên trang quản lý DNS (Cloudflare, Namecheap, v.v.).
 
 Cài đặt Nginx và Certbot:
 
 ```bash
-sudo apt install -y nginx certbot python3-certbot-nginx
+apt install -y nginx certbot python3-certbot-nginx
 ```
 
 Tạo file cấu hình Virtual Host:
 
 ```bash
-sudo nano /etc/nginx/sites-available/tiemnho.vn
+nano /etc/nginx/sites-available/tiemnho.vn
 ```
 
 Dán nội dung cấu hình sau:
@@ -187,21 +239,21 @@ Kích hoạt cấu hình và cấp chứng chỉ SSL miễn phí:
 
 ```bash
 # Tạo symlink
-sudo ln -s /etc/nginx/sites-available/tiemnho.vn /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/tiemnho.vn /etc/nginx/sites-enabled/
 
 # Kiểm tra cú pháp cấu hình Nginx
-sudo nginx -t
+nginx -t
 
 # Tải lại cấu hình Nginx
-sudo systemctl reload nginx
+systemctl reload nginx
 
-# Cấp chứng chỉ SSL tự động gia hạn
-sudo certbot --nginx -d tiemnho.vn -d www.tiemnho.vn
+# Cấp chứng chỉ SSL tự động gia hạn (Let's Encrypt)
+certbot --nginx -d tiemnho.vn -d www.tiemnho.vn
 ```
 
 ---
 
-## BƯỚC 7: Các lệnh quản trị và bảo trì thường dùng
+## BƯỚC 9: Các lệnh quản trị và bảo trì thường dùng
 
 ### 1. Xem log ứng dụng
 ```bash
@@ -216,13 +268,19 @@ docker compose logs -f postgres
 Mỗi khi bạn `git push` code mới lên GitHub, trên VPS chỉ cần chạy:
 
 ```bash
-cd /opt/tiemnho
+cd ~/tiemnho.vn
 git pull origin main
 docker compose up -d --build
-docker compose exec app npx prisma db push
+docker compose run --rm app npx prisma@6 db push
 ```
 
-### 3. Sao lưu (Backup) Database định kỳ
+### 3. Dọn sạch Docker cache khi cần build lại từ đầu
+```bash
+docker builder prune -a -f
+docker system prune -f
+```
+
+### 4. Sao lưu (Backup) Database định kỳ
 ```bash
 # Tạo file backup sql
 docker compose exec -t postgres pg_dump -U tiemnho tiemnho_db > backup_$(date +%F).sql

@@ -51,6 +51,6 @@ next-env.d.ts
 .env.sentry-build-plugin
 
 # Uploads storage (outside public)
-uploads/
 /uploads/
+!src/app/uploads/
 

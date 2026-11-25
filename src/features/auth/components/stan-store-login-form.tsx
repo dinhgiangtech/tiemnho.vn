@@ -81,8 +81,8 @@ export function StanStoreLoginForm() {
       }
 
       toast.success('Đăng nhập thành công!');
-      router.push('/dashboard/products');
-      router.refresh();
+      // Dùng window.location.href để ép trình duyệt load lại toàn bộ cookie session mới nhất
+      window.location.href = '/dashboard/products';
     } catch (err: any) {
       console.error(err);
       setErrorMessage('Không thể kết nối đến máy chủ. Vui lòng thử lại!');
@@ -148,8 +148,8 @@ export function StanStoreLoginForm() {
       }
 
       toast.success('Đăng nhập thành công!');
-      router.push('/dashboard/products');
-      router.refresh();
+      // Dùng window.location.href để ép trình duyệt load lại toàn bộ cookie session mới nhất
+      window.location.href = '/dashboard/products';
     } catch (err: any) {
       console.error(err);
       setErrorMessage('Không thể xác thực mã OTP. Vui lòng thử lại!');

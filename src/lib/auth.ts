@@ -47,7 +47,8 @@ export async function createSession(userId: string) {
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    // Chỉ bật secure khi có HTTPS thật (tránh bị trình duyệt chặn cookie khi truy cập qua HTTP IP:Port)
+    secure: process.env.NEXT_PUBLIC_APP_URL?.startsWith('https://') ?? false,
     sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60, // 30 ngày
     path: '/'
