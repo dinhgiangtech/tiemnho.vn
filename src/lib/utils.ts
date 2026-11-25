@@ -37,3 +37,23 @@ export function getAppBaseUrl(): string {
   }
   return 'http://localhost:3000';
 }
+
+/**
+ * Lấy tên miền (Domain/Host) từ biến môi trường NEXT_PUBLIC_APP_URL hoặc window.location
+ * Ví dụ: 'tiemnho.shop', 'tiemnho.vn', 'localhost:3000'
+ */
+export function getAppDomain(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      const url = new URL(appUrl.startsWith('http') ? appUrl : `https://${appUrl}`);
+      return url.host;
+    } catch {
+      return process.env.NEXT_PUBLIC_APP_URL.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    }
+  }
+  if (typeof window !== 'undefined' && window.location.host) {
+    return window.location.host;
+  }
+  return 'tiemnho.shop';
+}

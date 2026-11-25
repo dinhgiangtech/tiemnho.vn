@@ -73,9 +73,7 @@ export default function AdminSidebar() {
             </div>
             <div className='flex flex-col'>
               <span className='font-bold text-sm tracking-tight'>SUPER ADMIN</span>
-              <span className='text-[10px] text-muted-foreground font-mono'>
-                tiemnho.vn platform
-              </span>
+              <span className='text-[10px] text-muted-foreground font-mono'>Tiệm Nhỏ Platform</span>
             </div>
           </div>
         </div>

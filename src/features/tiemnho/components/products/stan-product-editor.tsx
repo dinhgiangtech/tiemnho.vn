@@ -17,6 +17,7 @@ import {
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import { FileText, Gift, Package, Link2, ExternalLink, CheckCircle2, Globe, X } from 'lucide-react';
+import { useAppDomain } from '@/hooks/use-app-domain';
 
 interface StanProductEditorProps {
   product?: Product | null;
@@ -38,6 +39,7 @@ export function StanProductEditor({
   onBack,
   onSaved
 }: StanProductEditorProps) {
+  const domain = useAppDomain();
   const isEdit = !!product;
   const [activeTab, setActiveTab] = React.useState<TabType>('thumbnail');
   const [previewDevice, setPreviewDevice] = React.useState<'phone' | 'desktop'>('phone');
@@ -312,7 +314,9 @@ export function StanProductEditor({
               className='inline-flex items-center gap-1.5 text-xs font-semibold text-[#5851DF] hover:underline cursor-pointer'
               title='Sao chép liên kết tiệm của bạn'
             >
-              <span>tiemnho.vn/@{profile.username}</span>
+              <span>
+                {domain}/@{profile.username}
+              </span>
               <Icons.copy className='h-3.5 w-3.5' />
             </button>
 
@@ -1050,7 +1054,7 @@ export function StanProductEditor({
                   <div className='h-2.5 w-2.5 rounded-full bg-yellow-400' />
                   <div className='h-2.5 w-2.5 rounded-full bg-green-400' />
                   <div className='mx-auto px-4 py-0.5 rounded-md bg-white dark:bg-slate-800 text-[10px] text-slate-500 border border-border truncate max-w-[200px]'>
-                    tiemnho.vn/@{profile.username}
+                    {domain}/@{profile.username}
                   </div>
                 </div>
 

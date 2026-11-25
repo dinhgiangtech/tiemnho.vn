@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAppDomain } from '@/hooks/use-app-domain';
 
 // Danh sách mã quốc gia hỗ trợ
 const COUNTRY_CODES = [
@@ -45,6 +46,7 @@ const COUNTRY_CODES = [
 
 export function StanStoreRegisterForm() {
   const router = useRouter();
+  const domain = useAppDomain();
 
   // Wizard Step: INFO (Điền thông tin) -> OTP (Xác thực email qua Resend)
   const [step, setStep] = React.useState<'INFO' | 'OTP'>('INFO');
@@ -330,7 +332,7 @@ export function StanStoreRegisterForm() {
                 {/* Ô input link có prefix tiemnho.vn/@ */}
                 <div className='relative flex items-center rounded-xl border border-[#E3E3E4] dark:border-neutral-800 bg-white dark:bg-neutral-900 focus-within:border-[#FE2C55] focus-within:ring-2 focus-within:ring-[#FE2C55]/15 transition-all shadow-2xs'>
                   <div className='flex items-center pl-3.5 pr-0.5 text-neutral-400 dark:text-neutral-500 font-medium text-sm select-none'>
-                    <span>tiemnho.vn/@</span>
+                    <span>{domain}/@</span>
                   </div>
                   <Input
                     id='username'

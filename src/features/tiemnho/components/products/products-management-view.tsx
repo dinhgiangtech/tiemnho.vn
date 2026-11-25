@@ -42,10 +42,12 @@ import { Icons } from '@/components/icons';
 import { SocialIconBadge } from '@/components/common/social-icons';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAppDomain } from '@/hooks/use-app-domain';
 
 export function ProductsManagementView() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const domain = useAppDomain();
 
   // TanStack React Query hooks
   const { data: rawProducts = [], isLoading: loadingProducts } = useQuery(productsQueryOptions());
@@ -228,7 +230,9 @@ export function ProductsManagementView() {
                     <span className='font-medium'>@{profile?.username || 'giangdinh'}</span>
                     <span className='text-neutral-300 dark:text-neutral-700'>•</span>
                     <div className='flex items-center gap-1 font-mono text-neutral-600 dark:text-neutral-300'>
-                      <span>tiemnho.vn/@{profile?.username || 'giangdinh'}</span>
+                      <span>
+                        {domain}/@{profile?.username || 'giangdinh'}
+                      </span>
                       <button
                         type='button'
                         onClick={handleCopyBioLink}

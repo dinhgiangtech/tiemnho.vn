@@ -22,6 +22,7 @@ import {
   analyticsQueryOptions
 } from '@/features/tiemnho/api/queries';
 import { pingTest } from '@/features/tiemnho/api/service';
+import { useAppDomain } from '@/hooks/use-app-domain';
 
 export default function OverViewLayout({
   sales,
@@ -34,6 +35,7 @@ export default function OverViewLayout({
   bar_stats: React.ReactNode;
   area_stats: React.ReactNode;
 }) {
+  const domain = useAppDomain();
   const { data: profile } = useQuery(profileQueryOptions());
   const { data: paymentConfig } = useQuery(paymentConfigQueryOptions());
   const { data: analytics } = useQuery(analyticsQueryOptions());
@@ -78,7 +80,7 @@ export default function OverViewLayout({
                 rel='noreferrer'
                 className='font-mono font-semibold text-primary hover:underline inline-flex items-center gap-1'
               >
-                tiemnho.vn/@{username}
+                {domain}/@{username}
                 <Icons.externalLink className='h-3 w-3' />
               </a>
             </p>
