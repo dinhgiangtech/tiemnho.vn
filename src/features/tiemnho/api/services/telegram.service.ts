@@ -263,6 +263,56 @@ ${order.shippingAddress ? `📍 <b>Địa chỉ:</b> ${order.shippingAddress}` :
 }
 
 /**
+ * Gửi thông báo đơn hàng ĐÃ THANH TOÁN THÀNH CÔNG (PayOS, VietQR, Manual) tới Creator qua Telegram
+ */
+export async function sendOrderPaidAlertToCreator(
+  orderCode: string,
+  gateway: string = 'PAYOS'
+): Promise<boolean> {
+  const order = await prisma.order.findUnique({
+    where: { orderCode },
+    include: {
+      user: true
+    }
+  });
+
+  if (!order) return false;
+
+  const creator =
+    order.user ||
+    (await prisma.user.findFirst({
+      where: {
+        OR: [{ id: order.creatorId }, { username: order.creatorId }]
+      }
+    }));
+
+  if (!creator?.telegramChatId) {
+    console.info(`[Telegram] Creator #${creator?.id} chưa liên kết Telegram.`);
+    return false;
+  }
+
+  const formattedAmount = new Intl.NumberFormat('vi-VN').format(order.amount) + ' đ';
+
+  const text = `
+🎉 <b>ĐƠN HÀNG ĐÃ THANH TOÁN THÀNH CÔNG!</b>
+
+🛍️ <b>Sản phẩm:</b> ${order.productTitle}
+🏷️ <b>Mã đơn:</b> <code>#${order.orderCode}</code>
+💰 <b>Số tiền:</b> <b>${formattedAmount}</b>
+⚡ <b>Cổng thanh toán:</b> ${gateway}
+👤 <b>Khách hàng:</b> ${order.customerName}
+📧 <b>Email:</b> ${order.customerEmail}
+📞 <b>SĐT:</b> ${order.customerPhone || 'Không có'}
+${order.shippingAddress ? `📍 <b>Địa chỉ:</b> ${order.shippingAddress}` : ''}
+${order.customerNote ? `📝 <b>Ghi chú:</b> ${order.customerNote}` : ''}
+
+<i>Hệ thống đã tự động xác nhận đơn hàng thành công! 🚀</i>
+  `.trim();
+
+  return await sendTelegramMessage(creator.telegramChatId, text);
+}
+
+/**
  * Xử lý webhook update từ Telegram Bot
  */
 export async function handleTelegramWebhookUpdate(update: any) {

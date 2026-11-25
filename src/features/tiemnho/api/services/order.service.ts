@@ -463,6 +463,14 @@ export async function settleOrderAndFulfill(
     });
   }
 
+  // 4.5. Bắn thông báo đơn hàng đã thanh toán thành công về Telegram của Creator
+  try {
+    const { sendOrderPaidAlertToCreator } = await import('./telegram.service');
+    await sendOrderPaidAlertToCreator(current.orderCode, gateway);
+  } catch (teleErr) {
+    console.warn('[Telegram Alert Failed]:', teleErr);
+  }
+
   // 5. Ghi log hoàn tất thanh toán (PaymentLog)
   const isManual = gateway.includes('MANUAL') || gateway.includes('TELEGRAM');
   await createPaymentLog({

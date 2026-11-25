@@ -353,6 +353,11 @@ export function AdaptiveCheckout({
     if (!currentOrder) return;
     setLoading(true);
     try {
+      // Bắn thông báo đơn hàng chờ duyệt về bot Telegram của Creator
+      fetch(`/api/orders/${currentOrder.orderCode}/notify-transfer`, {
+        method: 'POST'
+      }).catch(() => null);
+
       const res = await fetch(`/api/orders/${currentOrder.id}/status`, {
         method: 'POST'
       });
