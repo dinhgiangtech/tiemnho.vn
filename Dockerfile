@@ -8,14 +8,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Copy package files & Prisma schema
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (fallback npm install nếu chưa có package-lock)
-RUN \
-  if [ -f package-lock.json ]; then npm ci; \
-  else npm install --legacy-peer-deps; \
-  fi
+# Cài đặt dependencies chuẩn xác với npm install
+RUN npm install --legacy-peer-deps --no-audit
 
 # Generate Prisma Client ngay trong deps
 RUN npx prisma generate
