@@ -2,7 +2,7 @@
  * Default theme that loads when no user preference is set
  * Change this value to set a different default theme
  */
-export const DEFAULT_THEME = 'tiktok';
+export const DEFAULT_THEME = 'tiki-blue';
 
 export const THEMES: { name: string; value: string; color?: string }[] = [
   {
