@@ -8,13 +8,22 @@ import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import NextTopLoader from 'nextjs-toploader';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import { Newsreader, Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/globals.css';
 
 const fontSans = Plus_Jakarta_Sans({
   subsets: ['vietnamese', 'latin'],
   weight: ['400', '500', '600', '700', '800'],
+  style: ['normal', 'italic'],
   variable: '--font-sans',
+  display: 'swap'
+});
+
+const fontNewsreader = Newsreader({
+  subsets: ['vietnamese', 'latin'],
+  style: ['normal', 'italic'],
+  weight: ['400', '500'],
+  variable: '--font-newsreader',
   display: 'swap'
 });
 
@@ -103,7 +112,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang='vi'
       suppressHydrationWarning
       data-theme={themeToApply}
-      className={fontSans.variable}
+      className={cn(fontSans.variable, fontNewsreader.variable)}
     >
       <head>
         <script
@@ -123,6 +132,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         className={cn(
           'bg-background overflow-x-hidden overscroll-none font-sans antialiased',
           fontSans.variable,
+          fontNewsreader.variable,
           fontVariables
         )}
       >
