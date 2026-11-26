@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
 import type { CreatorProfile, Product, PaymentConfig } from '@/constants/mock-tiemnho';
@@ -10,28 +10,23 @@ import '../styles/pro-landing.css';
 interface ProLandingProps {
   userId?: string | null;
   storeHandle?: string;
-  profile?: CreatorProfile | null;
-  products?: Product[];
-  paymentConfig?: PaymentConfig | null;
 }
 
-export function ProLanding({
-  userId,
-  storeHandle = 'dinhgiang',
-  profile,
-  products = [],
-  paymentConfig
-}: ProLandingProps) {
+export function ProLanding({ userId, storeHandle = 'annhien' }: ProLandingProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [showcaseTab, setShowcaseTab] = useState<'desktop' | 'mobile' | 'checkout' | 'detail'>(
+    'desktop'
+  );
 
-  const creatorName = profile?.displayName || 'Đinh Trường Giang';
-  const handle = profile?.username || storeHandle || 'dinhgiang';
+  // Dữ liệu mẫu Internet Creator độc lập (Không dùng dữ liệu cá nhân của người dùng)
+  const creatorName = 'An Nhiên';
+  const handle = 'annhien';
   const creatorBio =
-    profile?.bio || 'Đóng gói kiến thức & tài nguyên số thành cỗ máy nhận tiền tự động 24/7.';
-  const avatarUrl = profile?.avatarUrl || '/default-avatar.svg';
-  const bankName = paymentConfig?.bankName || 'Ngân hàng Quân Đội (MB Bank)';
-  const bankAccountNumber = paymentConfig?.accountNumber || '0988667788';
-  const bankAccountName = paymentConfig?.accountName || 'DINH TRUONG GIANG';
+    'Chia sẻ Template Notion, Ebooks & hệ thống tổ chức cuộc sống và tài chính cá nhân.';
+  const avatarUrl = '/landing/storefront/demo-avatar.jpg';
+  const bankName = 'MB Bank';
+  const bankAccountNumber = '999988886666';
+  const bankAccountName = 'NGUYEN AN NHIEN';
 
   useEffect(() => {
     if (!rootRef.current || typeof window === 'undefined') return;
@@ -165,7 +160,7 @@ export function ProLanding({
       if (r.bottom < -vh || r.top > vh * 2) return;
       const p = clamp(-r.top / Math.max(1, r.height - vh));
 
-      const idx = p < 0.2 ? 0 : p < 0.4 ? 1 : p < 0.56 ? 2 : p < 0.8 ? 3 : 4;
+      const idx = p < 0.22 ? 0 : p < 0.44 ? 1 : p < 0.65 ? 2 : p < 0.82 ? 3 : 4;
       steps.forEach((li, i) => {
         li.classList.toggle('is-on', i === idx);
         li.classList.toggle('is-done', i < idx);
@@ -174,30 +169,41 @@ export function ProLanding({
         stepsBox.style.setProperty('--fill', String(clamp(p / 0.92)));
       }
 
-      show(p < 0.2 ? 'profile' : p < 0.4 ? 'shop' : 'pay');
+      show(p < 0.22 ? 'shop' : p < 0.44 ? 'detail' : 'pay');
 
-      // Hand movement to bio link
-      const m = ease(clamp((p - 0.02) / 0.11));
-      const tap = clamp((p - 0.13) / 0.06);
+      // Hand tap choreography across screens
       if (!reduce && hand && ring) {
-        hand.style.opacity = m > 0.01 ? '1' : '0';
-        hand.style.transform = `translate(${(1 - m) * 100}px, ${(1 - m) * 180}px) rotate(${(1 - m) * 16}deg) scale(${tap > 0 && tap < 0.7 ? 0.84 : 1})`;
-        ring.style.setProperty('--ro', String(tap > 0 && tap < 1 ? 1 - tap : 0));
-        ring.style.setProperty('--rs', String(0.5 + tap * 1.1));
+        if (p < 0.22) {
+          const m = ease(clamp((p - 0.03) / 0.09));
+          const tap = clamp((p - 0.12) / 0.06);
+          hand.style.opacity = m > 0.01 ? '1' : '0';
+          hand.style.transform = `translate(${(1 - m) * 60 + 50}px, ${(1 - m) * 80 + 72}px) rotate(${(1 - m) * 14}deg) scale(${tap > 0 && tap < 0.7 ? 0.85 : 1})`;
+          ring.style.setProperty('--ro', String(tap > 0 && tap < 1 ? 1 - tap : 0));
+          ring.style.setProperty('--rs', String(0.5 + tap * 1.1));
+        } else if (p >= 0.22 && p < 0.44) {
+          const m = ease(clamp((p - 0.24) / 0.09));
+          const tap = clamp((p - 0.33) / 0.06);
+          hand.style.opacity = m > 0.01 ? '1' : '0';
+          hand.style.transform = `translate(${(1 - m) * 40}px, ${(1 - m) * 60 + 265}px) rotate(${(1 - m) * 10}deg) scale(${tap > 0 && tap < 0.7 ? 0.85 : 1})`;
+          ring.style.setProperty('--ro', String(tap > 0 && tap < 1 ? 1 - tap : 0));
+          ring.style.setProperty('--rs', String(0.5 + tap * 1.1));
+        } else {
+          hand.style.opacity = '0';
+        }
       }
       if (pick) {
-        pick.classList.toggle('is-picked', p > 0.3);
+        pick.classList.toggle('is-picked', p > 0.13);
       }
 
       // QR scan laser
       if (qr) {
-        const scVal = clamp((p - 0.44) / 0.1);
+        const scVal = clamp((p - 0.45) / 0.14);
         qr.style.setProperty('--scan', String(scVal));
         qr.style.setProperty('--scano', String(scVal > 0 && scVal < 1 ? 1 : 0));
       }
 
       // The signature move: Money travels from QR to bank card, bypassing the middleman
-      const k = ease(clamp((p - 0.56) / 0.2));
+      const k = ease(clamp((p - 0.62) / 0.18));
       const wide = !narrow.matches;
       if (wide && stage && qr && bank && svg && ghost && line && mid && money) {
         const s = stage.getBoundingClientRect();
@@ -220,11 +226,11 @@ export function ProLanding({
         const len = line.getTotalLength();
         line.style.strokeDasharray = String(len);
         line.style.strokeDashoffset = String(len * (1 - k));
-        ghost.style.opacity = String(clamp((p - 0.5) / 0.05));
+        ghost.style.opacity = String(clamp((p - 0.58) / 0.05));
         mid.style.left = `${mx}px`;
         mid.style.top = `${my}px`;
-        mid.style.opacity = String(clamp((p - 0.5) / 0.05));
-        mid.style.setProperty('--strike', String(ease(clamp((p - 0.6) / 0.06))));
+        mid.style.opacity = String(clamp((p - 0.58) / 0.05));
+        mid.style.setProperty('--strike', String(ease(clamp((p - 0.64) / 0.06))));
 
         const pt = line.getPointAtLength(len * k);
         money.style.opacity = k > 0.02 && k < 0.98 ? '1' : '0';
@@ -233,11 +239,11 @@ export function ProLanding({
 
       // Landing: bank balance ticks up, file reaches buyer
       const land = clamp((p - 0.76) / 0.06);
-      if (bankAmt) bankAmt.textContent = `+${vnd(49000 * ease(land))}đ`;
+      if (bankAmt) bankAmt.textContent = `+${vnd(149000 * ease(land))}đ`;
       if (bankWhen) bankWhen.textContent = land > 0 ? 'vừa xong' : 'Chờ thanh toán';
       if (bank) bank.classList.toggle('is-hit', land >= 1);
       if (scr.pay) scr.pay.classList.toggle('is-paid', land >= 1);
-      if (mail) mail.classList.toggle('is-on', p > 0.84);
+      if (mail) mail.classList.toggle('is-on', p > 0.82);
     }
 
     function req() {
@@ -280,25 +286,6 @@ export function ProLanding({
           <a href='#pricing' className='hover:text-primary transition-colors'>
             Bảng giá
           </a>
-          <Link
-            href={`/@${handle}`}
-            target='_blank'
-            className='hover:text-primary text-neutral-700 transition-colors flex items-center gap-1.5'
-          >
-            Store mẫu (@{handle})
-            <svg
-              width='12'
-              height='12'
-              viewBox='0 0 24 24'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-            >
-              <path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' />
-              <polyline points='15 3 21 3 21 9' />
-              <line x1='10' y1='14' x2='21' y2='3' />
-            </svg>
-          </Link>
         </nav>
 
         <div className='flex items-center gap-2.5'>
@@ -361,18 +348,6 @@ export function ProLanding({
                     />
                   </svg>
                 </Link>
-                <Link href={`/@${handle}`} target='_blank' className='hero__store-btn'>
-                  Ghé tiệm mẫu @{handle}
-                  <svg
-                    viewBox='0 0 16 16'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeWidth='1.6'
-                    className='w-4 h-4'
-                  >
-                    <path d='M6 3h7v7M13 3L3 13' />
-                  </svg>
-                </Link>
               </div>
 
               {/* Điểm bảo chứng uy tín */}
@@ -402,7 +377,7 @@ export function ProLanding({
                   {/* Header Creator */}
                   <div className='hero__phone-head'>
                     <div className='hero__phone-avatar'>
-                      <img src={profile?.avatarUrl || '/landing/hero.jpg'} alt={creatorName} />
+                      <img src='/landing/storefront/demo-avatar.jpg' alt={creatorName} />
                     </div>
                     <div>
                       <div className='hero__phone-name'>
@@ -411,52 +386,84 @@ export function ProLanding({
                           ✓
                         </span>
                       </div>
-                      <div className='hero__phone-handle'>@{handle} · Creator Store</div>
+                      <div className='hero__phone-handle'>@{handle} · Tiệm Nhỏ Store</div>
                     </div>
                   </div>
 
-                  <p className='hero__phone-bio'>
-                    Chia sẻ Template Notion, Ebooks & hệ thống tổ chức cuộc sống cá nhân.
-                  </p>
+                  <p className='hero__phone-bio'>{creatorBio}</p>
 
                   {/* Danh sách sản phẩm thực tế */}
                   <div className='hero__phone-products'>
                     <div className='hero__phone-item is-featured'>
                       <div className='hero__phone-thumb'>
-                        <span>N</span>
+                        <img
+                          src='/landing/storefront/demo-notion.jpg'
+                          alt='PARA Life OS'
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '6px'
+                          }}
+                        />
                       </div>
                       <div className='hero__phone-meta'>
                         <div className='hero__phone-title'>PARA Life OS · Notion</div>
-                        <div className='hero__phone-price'>149.000đ</div>
+                        <div className='hero__phone-price'>
+                          149.000đ{' '}
+                          <small
+                            style={{
+                              textDecoration: 'line-through',
+                              opacity: 0.6,
+                              fontSize: '10px'
+                            }}
+                          >
+                            299.000đ
+                          </small>
+                        </div>
                       </div>
                       <span className='hero__phone-buy'>Mua ngay</span>
                     </div>
 
                     <div className='hero__phone-item'>
-                      <div
-                        className='hero__phone-thumb'
-                        style={{ background: '#FEF3C7', color: '#D97706' }}
-                      >
-                        <span>PDF</span>
+                      <div className='hero__phone-thumb'>
+                        <img
+                          src='/landing/storefront/demo-ebook.jpg'
+                          alt='Ebook 7 bước đóng gói'
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '6px'
+                          }}
+                        />
                       </div>
                       <div className='hero__phone-meta'>
-                        <div className='hero__phone-title'>Ebook 7 bước đóng gói</div>
+                        <div className='hero__phone-title'>Ebook: 7 Bước Đóng Gói</div>
                         <div className='hero__phone-price' style={{ color: '#0E7A4A' }}>
                           Miễn phí (0đ)
                         </div>
                       </div>
-                      <span className='hero__phone-buy'>Tải ngay</span>
+                      <span className='hero__phone-buy' style={{ background: '#18181B' }}>
+                        Tải ngay
+                      </span>
                     </div>
 
                     <div className='hero__phone-item'>
-                      <div
-                        className='hero__phone-thumb'
-                        style={{ background: '#EFF6FF', color: '#2563EB' }}
-                      >
-                        <span>LUT</span>
+                      <div className='hero__phone-thumb'>
+                        <img
+                          src='/landing/storefront/demo-preset.jpg'
+                          alt='Preset Film 2026'
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '6px'
+                          }}
+                        />
                       </div>
                       <div className='hero__phone-meta'>
-                        <div className='hero__phone-title'>Bộ Preset ảnh Film 2025</div>
+                        <div className='hero__phone-title'>Bộ Preset Film 2026</div>
                         <div className='hero__phone-price'>99.000đ</div>
                       </div>
                       <span className='hero__phone-buy'>Mua ngay</span>
@@ -471,7 +478,7 @@ export function ProLanding({
                     <div className='hero__chip-bold'>
                       +149.000đ <small>vừa về</small>
                     </div>
-                    <div className='hero__chip-sub'>MB Bank · {creatorName.toUpperCase()}</div>
+                    <div className='hero__chip-sub'>MB Bank · NGUYEN AN NHIEN</div>
                   </div>
                 </div>
 
@@ -498,7 +505,7 @@ export function ProLanding({
           className='tension'
           id='store'
           data-sc-act='pin'
-          data-sc-span='3'
+          data-sc-span='1.4'
           data-sc-drift='#F1F5F9'
         >
           <div data-sc-stage>
@@ -528,185 +535,12 @@ export function ProLanding({
           </div>
         </section>
 
-        {/* 3 · Bừng sáng: Real Tiệm Nhỏ Storefront in Browser Mockup (Turn) */}
-        <section className='turn' data-sc-act='flow' data-sc-drift='#F8FAFC'>
-          <div className='turn__grid'>
-            <div className='sc-stack' data-sc-in data-sc-stagger='70'>
-              <span className='tag'>Giao diện Storefront Tiệm Nhỏ</span>
-              <h2 className='d-lg'>
-                Một đường link. <em>Một cửa tiệm hoàn chỉnh.</em>
-              </h2>
-              <p className='lede'>
-                Ảnh đại diện, tích xanh verified, lời chào, sản phẩm số, giá và thanh toán VietQR.
-                Mở mượt mà trong trình duyệt TikTok, khách không cần cài app.
-              </p>
-            </div>
-            <figure style={{ margin: 0 }} data-sc-reveal='iris' data-sc-reveal-at='0.08 0.46'>
-              <div className='browser' role='img' aria-label={`Gian hàng mẫu của ${creatorName}`}>
-                <div className='browser__bar' aria-hidden='true'>
-                  <i />
-                  <i />
-                  <i />
-                  <span className='browser__url'>tiemnho.shop/@{handle}</span>
-                </div>
-                <div className='browser__page' aria-hidden='true'>
-                  <div className='shop-h'>
-                    <div
-                      className='av'
-                      style={{
-                        backgroundImage: `url(${avatarUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                      }}
-                    />
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <b style={{ fontSize: '1.25rem' }}>{creatorName}</b>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '16px',
-                            height: '16px',
-                            borderRadius: '50%',
-                            background: '#0E7A4A',
-                            color: '#fff',
-                            fontSize: '10px',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          ✓
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '0.85rem', color: '#6A6B70' }}>
-                        @{handle} • Creator Tiệm Nhỏ
-                      </span>
-                    </div>
-                  </div>
-                  <p className='shop-hi'>{creatorBio}</p>
-
-                  <div className='shop-grid'>
-                    <div className='pcard'>
-                      <div
-                        className='th'
-                        style={{
-                          background: 'linear-gradient(135deg, #1C2321, #2A3632)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between'
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            letterSpacing: '0.06em',
-                            color: '#7BE3A8'
-                          }}
-                        >
-                          SẢN PHẨM SỐ
-                        </span>
-                        <span>PARA System</span>
-                      </div>
-                      <div className='bd'>
-                        <div className='nm'>Kho Template Notion Quản Lý Cuộc Sống</div>
-                        <div className='row'>
-                          <span className='pr'>49.000đ</span>
-                          <span className='bt'>Mua ngay</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className='pcard'>
-                      <div
-                        className='th'
-                        style={{
-                          background: 'linear-gradient(135deg, #2D2319, #423224)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between'
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            letterSpacing: '0.06em',
-                            color: '#FFBD2E'
-                          }}
-                        >
-                          QUÀ TẶNG 0Đ
-                        </span>
-                        <span>Ebook Tải Về</span>
-                      </div>
-                      <div className='bd'>
-                        <div className='nm'>Ebook: 7 Bước Thu Nhập $1,000 Đầu Tiên</div>
-                        <div className='row'>
-                          <span className='pr'>0đ</span>
-                          <span
-                            className='bt'
-                            style={{ background: 'var(--sc-accent)', color: '#fff' }}
-                          >
-                            Nhận ngay
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className='pcard'>
-                      <div
-                        className='th'
-                        style={{
-                          background: 'linear-gradient(135deg, #1B212D, #273042)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'space-between'
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            letterSpacing: '0.06em',
-                            color: '#60A5FA'
-                          }}
-                        >
-                          HÀNG VẬT LÝ
-                        </span>
-                        <span>Sổ Tay & Bút</span>
-                      </div>
-                      <div className='bd'>
-                        <div className='nm'>Sổ Tay 90 Ngày & Bút Ký Kim Loại</div>
-                        <div className='row'>
-                          <span className='pr'>189.000đ</span>
-                          <span className='bt'>Đặt trước</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className='browser__foot'>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Logo size='sm' href='#' showIconBadge={true} />
-                      <span style={{ fontSize: '11px', color: '#6A6B70' }}>
-                        • Thanh toán VietQR Napas247 • Tự động 100%
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '11px', color: '#6A6B70' }}>Storefront mẫu</span>
-                  </div>
-                </div>
-              </div>
-            </figure>
-          </div>
-        </section>
-
         {/* 4 · Thán phục: The Peak (One Order End-to-End Smartphone Mockup) */}
         <section
           className='order'
           id='order'
           data-sc-act='pin'
-          data-sc-span='4.6'
+          data-sc-span='2.2'
           data-sc-drift='#F1F5F9'
         >
           <div data-sc-stage>
@@ -720,24 +554,24 @@ export function ProLanding({
 
               <ol className='steps' id='steps'>
                 <li>
-                  Bấm link trong bio
-                  <small>Người xem chạm vào tiemnho.shop/@{handle}</small>
+                  Xem danh sách sản phẩm
+                  <small>Người mua truy cập bio link tiemnho.shop/@{handle}</small>
                 </li>
                 <li>
-                  Chọn sản phẩm
-                  <small>Gian hàng mở ngay lập tức, không cần cài app</small>
+                  Chọn sản phẩm & điền email
+                  <small>Xem chi tiết, điền email nhận file tự động</small>
                 </li>
                 <li>
-                  Quét VietQR
-                  <small>Đúng số tiền, đúng mã đơn hàng tự động</small>
+                  Quét VietQR tự động
+                  <small>Đúng số tiền 149.000đ, đúng mã nội dung</small>
                 </li>
                 <li>
                   Tiền về tài khoản bạn
-                  <small>Thẳng tới ngân hàng của bạn, không qua ví trung gian</small>
+                  <small>Thẳng tới MB Bank trong 3s, 0% hoa hồng</small>
                 </li>
                 <li>
                   File tự tới email khách
-                  <small>Hệ thống tự động bàn giao, không phải gửi tay</small>
+                  <small>Hệ thống tự động bàn giao tức thì 24/7</small>
                 </li>
               </ol>
 
@@ -745,56 +579,13 @@ export function ProLanding({
                 className='phone'
                 id='phone'
                 role='img'
-                aria-label='Minh hoạ: hồ sơ TikTok mẫu, gian hàng, mã VietQR và xác nhận đã thanh toán.'
+                aria-label='Minh hoạ: danh sách sản phẩm, chọn sản phẩm, quét VietQR, nhận tiền và gửi file tự động.'
               >
                 <div className='phone__screen' aria-hidden='true'>
                   <span className='notch' />
 
-                  {/* Screen 1: TikTok Profile Screen */}
-                  <div className='scr tt is-on' data-scr='profile'>
-                    <div
-                      className='av'
-                      style={{
-                        backgroundImage: `url(${avatarUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                      }}
-                    />
-                    <div className='nm'>@{handle}.creator</div>
-                    <p className='bio'>
-                      Xây dựng nguồn thu nhập thụ động từ sản phẩm số 🚀
-                      <br />
-                      <span className='link'>
-                        tiemnho.shop/@{handle}
-                        <span className='ring' />
-                        <span className='hand'>
-                          <svg viewBox='0 0 24 24'>
-                            <path
-                              d='M9 11V4.5a1.5 1.5 0 0 1 3 0V10h.5V8.5a1.5 1.5 0 0 1 3 0V10h.5V9.5a1.5 1.5 0 0 1 3 0V15c0 3.3-2.7 6-6 6h-1.2c-1.9 0-3.6-.9-4.7-2.4L3.6 14.3a1.5 1.5 0 0 1 2.3-1.9L9 15V11z'
-                              fill='#fff'
-                              stroke='#16171A'
-                              strokeWidth='1.4'
-                              strokeLinejoin='round'
-                            />
-                          </svg>
-                        </span>
-                      </span>
-                    </p>
-                    <div className='grid'>
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                    </div>
-                  </div>
-
-                  {/* Screen 2: Real Tiệm Nhỏ Mobile Storefront */}
-                  <div className='scr' data-scr='shop'>
+                  {/* MÀN 1: MÀN DANH SÁCH SẢN PHẨM (Bio Link Storefront) */}
+                  <div className='scr is-on' data-scr='shop'>
                     <div className='mini'>
                       <div
                         className='av'
@@ -805,96 +596,205 @@ export function ProLanding({
                         }}
                       />
                       <div>
-                        <b>{creatorName}</b>
+                        <b>
+                          {creatorName}{' '}
+                          <span style={{ color: '#0D5CB6', fontSize: '11px' }}>✓</span>
+                        </b>
                         <span>tiemnho.shop/@{handle}</span>
                       </div>
                     </div>
+
                     <div className='sp' id='pick'>
                       <div
                         className='th'
                         style={{
-                          background: 'linear-gradient(135deg, #1C2321, #2A3632)',
-                          display: 'grid',
-                          placeItems: 'center',
-                          color: '#7BE3A8',
-                          fontWeight: 'bold',
-                          fontSize: '11px'
+                          background: '#F1F5F9',
+                          overflow: 'hidden',
+                          padding: 0
                         }}
                       >
-                        NOTION
+                        <img
+                          src='/landing/storefront/demo-notion.jpg'
+                          alt=''
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                       </div>
                       <div>
-                        <div className='nm'>Kho Template Notion Quản Lý Chi Tiêu</div>
+                        <div className='nm'>Kho Template Notion PARA Life OS</div>
                         <div className='row'>
-                          <span className='pr'>49.000đ</span>
+                          <span className='pr'>149.000đ</span>
                           <span className='bt'>Mua ngay</span>
                         </div>
                       </div>
                     </div>
+
                     <div className='sp'>
                       <div
                         className='th'
                         style={{
-                          background: 'linear-gradient(135deg, #2D2319, #423224)',
-                          display: 'grid',
-                          placeItems: 'center',
-                          color: '#FFBD2E',
-                          fontWeight: 'bold',
-                          fontSize: '11px'
+                          background: '#F1F5F9',
+                          overflow: 'hidden',
+                          padding: 0
                         }}
                       >
-                        EBOOK
+                        <img
+                          src='/landing/storefront/demo-ebook.jpg'
+                          alt=''
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                       </div>
                       <div>
-                        <div className='nm'>Ebook 7 Bước Thu Nhập $1,000</div>
+                        <div className='nm'>Ebook: 7 Bước Đóng Gói Sản Phẩm Số</div>
                         <div className='row'>
-                          <span className='pr'>0đ</span>
-                          <span className='bt'>Nhận 0đ</span>
+                          <span className='pr' style={{ color: '#0E7A4A' }}>
+                            Miễn phí
+                          </span>
+                          <span className='bt' style={{ background: '#18181B' }}>
+                            Nhận 0đ
+                          </span>
                         </div>
                       </div>
                     </div>
+
                     <div className='sp'>
                       <div
                         className='th'
                         style={{
-                          background: 'linear-gradient(135deg, #1B212D, #273042)',
-                          display: 'grid',
-                          placeItems: 'center',
-                          color: '#60A5FA',
-                          fontWeight: 'bold',
-                          fontSize: '11px'
+                          background: '#F1F5F9',
+                          overflow: 'hidden',
+                          padding: 0
                         }}
                       >
-                        SỔ TAY
+                        <img
+                          src='/landing/storefront/demo-preset.jpg'
+                          alt=''
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                       </div>
                       <div>
-                        <div className='nm'>Sổ Tay 90 Ngày & Bút Ký Chữ Ký</div>
+                        <div className='nm'>Bộ Preset Lightroom Film 2026</div>
                         <div className='row'>
-                          <span className='pr'>189.000đ</span>
-                          <span className='bt'>Đặt trước</span>
+                          <span className='pr'>99.000đ</span>
+                          <span className='bt'>Mua ngay</span>
                         </div>
+                      </div>
+                    </div>
+
+                    <div className='hand' style={{ top: '158px', left: '200px' }}>
+                      <svg viewBox='0 0 24 24'>
+                        <path
+                          d='M9 11V4.5a1.5 1.5 0 0 1 3 0V10h.5V8.5a1.5 1.5 0 0 1 3 0V10h.5V9.5a1.5 1.5 0 0 1 3 0V15c0 3.3-2.7 6-6 6h-1.2c-1.9 0-3.6-.9-4.7-2.4L3.6 14.3a1.5 1.5 0 0 1 2.3-1.9L9 15V11z'
+                          fill='#fff'
+                          stroke='#16171A'
+                          strokeWidth='1.4'
+                          strokeLinejoin='round'
+                        />
+                      </svg>
+                    </div>
+                    <div className='ring' style={{ top: '162px', left: '215px' }} />
+                  </div>
+
+                  {/* MÀN 2: CHỌN SẢN PHẨM & ĐIỀN THÔNG TIN (Product Detail & Order Form) */}
+                  <div className='scr detail' data-scr='detail'>
+                    <div className='scr-detail__nav'>
+                      <span className='scr-detail__back'>‹ Quay lại tiệm</span>
+                      <svg
+                        viewBox='0 0 24 24'
+                        width='13'
+                        height='13'
+                        fill='none'
+                        stroke='#64748b'
+                        strokeWidth='2'
+                      >
+                        <circle cx='18' cy='5' r='3' />
+                        <circle cx='6' cy='12' r='3' />
+                        <circle cx='18' cy='19' r='3' />
+                        <line x1='8.59' y1='13.51' x2='15.42' y2='17.49' />
+                        <line x1='15.41' y1='6.51' x2='8.59' y2='10.49' />
+                      </svg>
+                    </div>
+
+                    <div className='scr-detail__hero'>
+                      <span className='scr-detail__badge'>NỔI BẬT</span>
+                      <img src='/landing/storefront/demo-notion.jpg' alt='' />
+                    </div>
+
+                    <div className='scr-detail__title'>Kho Template Notion PARA Life OS</div>
+                    <div className='scr-detail__price-row'>
+                      <span className='scr-detail__price'>149.000 đ</span>
+                      <span className='scr-detail__price-old'>299.000 đ</span>
+                    </div>
+
+                    <div className='scr-detail__form'>
+                      <div className='scr-detail__field'>
+                        <span className='scr-detail__label'>Email nhận tài liệu *</span>
+                        <input
+                          type='text'
+                          readOnly
+                          defaultValue='khachhang@gmail.com'
+                          className='scr-detail__input'
+                        />
+                      </div>
+                      <div className='scr-detail__field'>
+                        <span className='scr-detail__label'>Họ và tên *</span>
+                        <input
+                          type='text'
+                          readOnly
+                          defaultValue='Trần Văn An'
+                          className='scr-detail__input'
+                        />
+                      </div>
+                      <div className='scr-detail__btn' id='btnPay'>
+                        Tiếp tục thanh toán 149.000đ →
                       </div>
                     </div>
                   </div>
 
-                  {/* Screen 3: Real Tiệm Nhỏ VietQR Checkout Screen */}
+                  {/* MÀN 3: QUÉT VIETQR (VietQR Checkout Modal) */}
                   <div className='scr pay' data-scr='pay'>
-                    <div className='t'>Quét mã VietQR Napas247</div>
-                    <div className='s'>Template Notion Quản Lý Chi Tiêu</div>
-                    <div className='qr' id='qr'>
+                    <div className='scr-pay__head'>
+                      <span className='scr-pay__title'>Thanh toán VietQR</span>
+                      <span className='scr-pay__timer'>⏱ 14:57</span>
+                    </div>
+
+                    <div className='scr-pay__qr' id='qr'>
                       <img src='/landing/qr-mau.svg' alt='' />
                     </div>
-                    <div className='amt'>49.000đ</div>
-                    <div className='memo' style={{ fontWeight: 600, color: '#16171A' }}>
-                      {bankName}
+
+                    <div
+                      className='amt'
+                      style={{ fontSize: '18px', margin: '2px 0', fontWeight: 800 }}
+                    >
+                      149.000đ
                     </div>
-                    <div className='memo' style={{ fontSize: '10.5px' }}>
-                      STK: {bankAccountNumber} ({bankAccountName})
+
+                    <div className='scr-pay__bank-card'>
+                      <div className='scr-pay__row'>
+                        <span className='scr-pay__label'>Ngân hàng:</span>
+                        <span className='scr-pay__val'>
+                          {bankName} • {bankAccountName}
+                        </span>
+                      </div>
+                      <div className='scr-pay__row'>
+                        <span className='scr-pay__label'>STK:</span>
+                        <span className='scr-pay__val' style={{ fontFamily: 'monospace' }}>
+                          {bankAccountNumber}
+                        </span>
+                      </div>
+                      <div className='scr-pay__memo-box'>
+                        <div className='scr-pay__row'>
+                          <span className='scr-pay__label' style={{ color: '#b45309' }}>
+                            Nội dung CK:
+                          </span>
+                          <span className='scr-pay__memo-code'>TN10826</span>
+                        </div>
+                      </div>
                     </div>
+
                     <div className='ok'>✓ Đã nhận thanh toán thành công</div>
                   </div>
 
-                  <span className='demo'>Dữ liệu mô phỏng theo STK thực</span>
+                  <span className='demo'>Dữ liệu mô phỏng thanh toán thật</span>
                 </div>
               </div>
 
@@ -911,7 +811,7 @@ export function ProLanding({
                           background: '#7BE3A8'
                         }}
                       />
-                      <span style={{ fontWeight: 600, color: '#F2F0EC' }}>{bankName}</span>
+                      <span style={{ fontWeight: 600, color: '#F2F0EC' }}>MB Bank</span>
                     </div>
                     <span id='bankWhen'>Chờ thanh toán</span>
                   </div>
@@ -921,7 +821,7 @@ export function ProLanding({
                     </span>
                   </div>
                   <div className='sub' style={{ fontSize: '12px', marginTop: '6px' }}>
-                    Tài khoản: ****{bankAccountNumber.slice(-4)} ({bankAccountName})
+                    Tài khoản: ****6666 (NGUYEN AN NHIEN)
                   </div>
                   <div
                     className='sub'
@@ -937,9 +837,9 @@ export function ProLanding({
                     <span>vừa xong</span>
                   </div>
                   <div className='ttl' style={{ fontSize: '13px', lineHeight: 1.4 }}>
-                    [Tiệm Nhỏ] Đơn hàng #DH001 của bạn đã sẵn sàng
+                    [Tiệm Nhỏ] Đơn hàng #TN10826 của bạn đã sẵn sàng
                   </div>
-                  <span className='file'>↓ Tải file · Notion-PARA-Template.zip (18.4 MB)</span>
+                  <span className='file'>↓ Tải file · Notion-PARA-Life-OS.zip (18.4 MB)</span>
                 </div>
               </div>
 
@@ -951,7 +851,7 @@ export function ProLanding({
                 <b>Sàn trung gian</b>trừ 15–30% phí mỗi đơn
               </div>
               <div className='money' id='money' aria-hidden='true'>
-                +49.000đ
+                +149.000đ
               </div>
               <p className='order__note'>
                 Dòng tiền đi thẳng từ VietQR vào tài khoản ngân hàng của Creator.
@@ -961,7 +861,7 @@ export function ProLanding({
         </section>
 
         {/* 5 · Mở rộng: 7 Danh mục sản phẩm Tiệm Nhỏ */}
-        <section className='range' data-sc-act='pan' data-sc-span='3.4' data-sc-drift='#F8FAFC'>
+        <section className='range' data-sc-act='pan' data-sc-span='1.8' data-sc-drift='#F8FAFC'>
           <div data-sc-stage>
             <div className='rail' data-sc-pan='0.04'>
               <div className='rail__lead'>
@@ -977,14 +877,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 1 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/notion.jpg' alt='Template Notion' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1005,14 +901,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 2 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #FFFBEB 0%, #FDE68A 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/ebook.jpg' alt='Ebook & Cẩm nang' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1033,14 +925,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 3 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/preset.jpg' alt='Preset & LUTs Video' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1061,14 +949,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 4 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/sheets.jpg' alt='Bảng tính Excel & Sheets' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1089,14 +973,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 5 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #FAF5FF 0%, #EDE9FE 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/course.jpg' alt='Khoá học mini & Video' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1117,14 +997,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 6 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/physical.jpg' alt='Sách in & Đồ handmade' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1145,14 +1021,10 @@ export function ProLanding({
 
               <article className='k' style={{ '--n': 7 } as React.CSSProperties}>
                 <div data-sc-tilt='6'>
-                  <div
-                    className='art'
-                    style={
-                      {
-                        '--a': 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)'
-                      } as React.CSSProperties
-                    }
-                  />
+                  <div className='art'>
+                    <img src='/landing/products/affiliate.jpg' alt='Kênh ngoài & Affiliate' />
+                    <div className='art-overlay' />
+                  </div>
                   <div>
                     <span
                       style={{
@@ -1239,66 +1111,30 @@ export function ProLanding({
           </div>
         </section>
 
-        {/* 7 · Quyết định: Close & Spotlight */}
-        <section
-          className='close'
-          id='mo-tiem'
-          data-sc-act='pin'
-          data-sc-span='1.2'
-          data-sc-drift='#F8FAFC'
-        >
-          <div data-sc-stage data-sc-spotlight>
-            <div className='stage-in'>
-              <div className='close__in'>
-                <h2 className='d-xl' data-sc-cue='0 1 0 0' data-sc-kinetic='lines'>
-                  Link bio của bạn sắp thành <em>một cửa tiệm.</em>
-                </h2>
-                <Link
-                  className='cta cta--xl'
-                  href={userId ? '/dashboard/overview' : '/auth/sign-up'}
-                  data-sc-magnet='0.28'
-                  data-sc-cue='0 1 0 0'
-                  data-sc-rise='0'
-                >
-                  {userId ? 'Vào Dashboard của bạn' : 'Mở tiệm miễn phí'}
-                  <svg viewBox='0 0 16 16' aria-hidden='true'>
-                    <path
-                      d='M3 8h10M9 4l4 4-4 4'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='1.8'
-                    />
-                  </svg>
-                </Link>
-                <p className='small' data-sc-cue='0 1 0 0'>
-                  Tiền về thẳng tài khoản ngân hàng của bạn. Không thu phần trăm.
-                </p>
-              </div>
-
-              <footer className='foot'>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Logo size='sm' href='/' showIconBadge={true} />
-                  <span style={{ fontSize: '12px', opacity: 0.6 }}>
-                    • Nền tảng Bán Hàng Cho Creator Việt Nam
-                  </span>
-                </div>
-                <nav aria-label='Chân trang'>
-                  <a href='#order'>Quy trình đơn hàng</a>
-                  <a href='#pricing'>Bảng giá SaaS</a>
-                  <Link href={`/@${handle}`} target='_blank'>
-                    Tiệm @{handle}
-                  </Link>
-                  <Link href={userId ? '/dashboard/overview' : '/auth/sign-in'}>
-                    {userId ? 'Dashboard' : 'Đăng nhập'}
-                  </Link>
-                  <a href='https://zalo.me' target='_blank' rel='noopener noreferrer'>
-                    Hỗ trợ Zalo
-                  </a>
-                </nav>
-              </footer>
+        {/* Footer */}
+        <footer className='landing-footer'>
+          <div className='landing-footer__wrap'>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Logo size='sm' href='/' showIconBadge={true} />
+              <span style={{ fontSize: '12px', opacity: 0.6 }}>
+                • Nền tảng Bán Hàng Cho Creator Việt Nam
+              </span>
             </div>
+            <nav aria-label='Chân trang'>
+              <a href='#order'>Quy trình đơn hàng</a>
+              <a href='#pricing'>Bảng giá SaaS</a>
+              <Link href={`/@${handle}`} target='_blank'>
+                Tiệm @{handle}
+              </Link>
+              <Link href={userId ? '/dashboard/overview' : '/auth/sign-in'}>
+                {userId ? 'Dashboard' : 'Đăng nhập'}
+              </Link>
+              <a href='https://zalo.me' target='_blank' rel='noopener noreferrer'>
+                Hỗ trợ Zalo
+              </a>
+            </nav>
           </div>
-        </section>
+        </footer>
       </main>
     </div>
   );

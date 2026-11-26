@@ -1,4 +1,3 @@
-import { getProfile, getProducts, getPaymentConfig } from '@/features/tiemnho/api/service';
 import { getSession } from '@/lib/auth';
 import { ProLanding } from '@/features/landing/components/pro-landing';
 
@@ -58,12 +57,6 @@ const jsonLd = {
 export default async function LandingPage() {
   const session = await getSession();
   const userId = session?.userId;
-  const [profile, products, paymentConfig] = await Promise.all([
-    getProfile(),
-    getProducts(),
-    getPaymentConfig()
-  ]);
-  const storeHandle = profile?.username || 'dinhgiang';
 
   return (
     <>
@@ -71,13 +64,7 @@ export default async function LandingPage() {
         type='application/ld+json'
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProLanding
-        userId={userId}
-        storeHandle={storeHandle}
-        profile={profile}
-        products={products}
-        paymentConfig={paymentConfig}
-      />
+      <ProLanding userId={userId} storeHandle='annhien' />
     </>
   );
 }
