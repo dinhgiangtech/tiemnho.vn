@@ -39,7 +39,7 @@ export const Logo: React.FC<LogoProps> = ({
 
   // Vector SVG túi mua sắm nguyên bản (không chứa chữ 't' bên trong):
   // - Quai túi uốn cong hình vòm cao
-  // - Thân túi hình thang phẳng màu đen
+  // - Thân túi hình thang phẳng màu xanh thương hiệu
   // - Hai khoen móc chữ U đục lỗ bo tròn miệng túi
   const OriginalBagIcon = (
     <svg
@@ -48,7 +48,8 @@ export const Logo: React.FC<LogoProps> = ({
       viewBox='0 0 100 100'
       fill='none'
       xmlns='http://www.w3.org/2000/svg'
-      className='shrink-0 transition-transform duration-200 group-hover:scale-105'
+      className='shrink-0 transition-transform duration-200 group-hover:scale-105 text-primary'
+      style={{ color: 'var(--primary, #0d5cb6)' }}
     >
       {/* 1. Quai túi uốn cong hình vòm cao */}
       <path
@@ -57,10 +58,16 @@ export const Logo: React.FC<LogoProps> = ({
         className='stroke-primary'
         strokeWidth='8'
         strokeLinecap='round'
+        style={{ stroke: 'var(--primary, #0d5cb6)' }}
       />
 
       {/* 2. Thân túi mua sắm hình thang */}
-      <path d='M14 26H86L94 100H6L14 26Z' fill='currentColor' className='fill-primary' />
+      <path
+        d='M14 26H86L94 100H6L14 26Z'
+        fill='currentColor'
+        className='fill-primary'
+        style={{ fill: 'var(--primary, #0d5cb6)' }}
+      />
 
       {/* 3. Hai khoen móc chữ U đục lỗ bo tròn miệng túi */}
       <path
@@ -96,6 +103,7 @@ export const Logo: React.FC<LogoProps> = ({
         </span>
         <span
           className={`inline-block ${currentSize.dotSize} rounded-full bg-primary ml-[3px] shrink-0 self-baseline`}
+          style={{ backgroundColor: 'var(--primary, #0d5cb6)' }}
         />
       </div>
     </div>

@@ -3132,17 +3132,22 @@
     font-size: 0.8rem;
   }
   .tiemnho-pro .hero__visual {
-    padding: 12px 0;
+    padding: 16px 0 24px;
     width: 100%;
+    overflow: visible;
   }
   .tiemnho-pro .hero__showcase {
-    max-width: 340px;
-    margin: 0 auto;
+    max-width: 330px;
+    margin: 16px auto 20px;
+    position: relative;
   }
   .tiemnho-pro .hero__phone {
-    padding: 16px 14px;
-    border-radius: 20px;
+    padding: 18px 14px 16px;
+    border-radius: 22px;
     gap: 12px;
+    box-shadow:
+      0 20px 45px -12px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
   }
   .tiemnho-pro .hero__phone-head {
     gap: 10px;
@@ -3179,9 +3184,12 @@
     padding: 4px 9px;
   }
   .tiemnho-pro .hero__chip {
-    padding: 6px 10px;
+    padding: 7px 11px;
     border-radius: 12px;
-    gap: 7px;
+    gap: 8px;
+    box-shadow:
+      0 12px 28px -6px rgba(0, 0, 0, 0.12),
+      0 0 0 1px rgba(0, 0, 0, 0.04);
   }
   .tiemnho-pro .hero__chip-ic {
     width: 24px;
@@ -3190,7 +3198,7 @@
     border-radius: 6px;
   }
   .tiemnho-pro .hero__chip-bold {
-    font-size: 0.75rem;
+    font-size: 0.76rem;
   }
   .tiemnho-pro .hero__chip-bold small {
     font-size: 0.65rem;
@@ -3199,13 +3207,13 @@
     font-size: 0.68rem;
   }
   .tiemnho-pro .hero__chip--money {
-    top: -10px;
+    top: -16px;
     right: -4px;
     transform: scale(0.92);
     transform-origin: top right;
   }
   .tiemnho-pro .hero__chip--email {
-    bottom: 14px;
+    bottom: -16px;
     left: -4px;
     transform: scale(0.92);
     transform-origin: bottom left;
@@ -3368,10 +3376,23 @@
 /* 4. Compact SmartPhone (<= 480px) */
 @media (max-width: 480px) {
   .tiemnho-pro .hero__showcase {
-    max-width: 320px;
+    max-width: 310px;
+    margin: 18px auto 20px;
   }
   .tiemnho-pro .hero__title {
     font-size: 1.85rem;
+  }
+  .tiemnho-pro .hero__chip--money {
+    top: -15px;
+    right: -2px;
+    transform: scale(0.86);
+    transform-origin: top right;
+  }
+  .tiemnho-pro .hero__chip--email {
+    bottom: -14px;
+    left: -2px;
+    transform: scale(0.86);
+    transform-origin: bottom left;
   }
   .tiemnho-pro .phone {
     transform: scale(0.65);
@@ -3396,25 +3417,30 @@
     padding: 0 12px;
   }
   .tiemnho-pro .hero {
-    padding: 72px 12px 30px;
+    padding: 72px 12px 28px;
   }
   .tiemnho-pro .hero__title {
     font-size: 1.68rem;
   }
   .tiemnho-pro .hero__showcase {
-    max-width: 290px;
+    max-width: 285px;
+    margin: 16px auto 18px;
   }
   .tiemnho-pro .hero__phone {
     padding: 12px 10px;
     gap: 10px;
   }
   .tiemnho-pro .hero__chip--money {
-    right: -2px;
-    transform: scale(0.85);
+    top: -14px;
+    right: 0;
+    transform: scale(0.8);
+    transform-origin: top right;
   }
   .tiemnho-pro .hero__chip--email {
-    left: -2px;
-    transform: scale(0.85);
+    bottom: -12px;
+    left: 0;
+    transform: scale(0.8);
+    transform-origin: bottom left;
   }
   .tiemnho-pro .phone {
     transform: scale(0.58);
